@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+httpx
+python-multipart
+tree-sitter
+tree-sitter-python
+tree-sitter-javascript

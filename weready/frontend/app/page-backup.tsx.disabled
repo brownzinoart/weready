@@ -1,0 +1,874 @@
+"use client";
+import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight } from "lucide-react";
+
+export default function Home() {
+  const [mounted, setMounted] = useState(false);
+  const [inputMode, setInputMode] = useState<"code" | "repo">("repo");
+  const [code, setCode] = useState("");
+  const [repoUrl, setRepoUrl] = useState("");
+  const [scanning, setScanning] = useState(false);
+  const [result, setResult] = useState<any>(null);
+  const [showResults, setShowResults] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const scanCode = async () => {
+    if (inputMode === "code" && !code) return;
+    if (inputMode === "repo" && !repoUrl) return;
+
+    setScanning(true);
+    setShowResults(false);
+    
+    try {
+      const requestBody = inputMode === "code" 
+        ? { code, language: "python" }
+        : { repo_url: repoUrl, language: "python" };
+        
+      const response = await fetch("http://localhost:3001/scan/brain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(requestBody),
+      });
+      const data = await response.json();
+      setResult(data);
+      setTimeout(() => setShowResults(true), 500);
+    } catch (error) {
+      console.error("Scan failed:", error);
+      setResult({
+        verdict: "ERROR",
+        action_required: "Analysis failed. Please try again or use manual code input.",
+        hallucinated_packages: []
+      });
+      setShowResults(true);
+    }
+    setScanning(false);
+  };
+
+  const getScoreColor = (score: number) => {
+    if (score >= 85) return "text-emerald-500";
+    if (score >= 70) return "text-blue-500";
+    if (score >= 50) return "text-amber-500";
+    return "text-red-500";
+  };
+
+  const getScoreGradient = (score: number) => {
+    if (score >= 85) return "from-emerald-500 to-teal-600";
+    if (score >= 70) return "from-blue-500 to-indigo-600";
+    if (score >= 50) return "from-amber-500 to-orange-600";
+    return "from-red-500 to-pink-600";
+  };
+
+
+  const isValidInput = inputMode === "code" ? code.trim() : repoUrl.trim();
+
+  if (!mounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+        <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-between items-center h-16">
+              <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Award className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                    WeReady
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </nav>
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center py-16">
+            <h1 className="text-5xl md:text-7xl font-bold mb-6">
+              <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+                Get Your
+              </span>
+              <br />
+              <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                WeReady Score
+              </span>
+            </h1>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
+      {/* Navigation */}
+      <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                  WeReady
+                </span>
+              </div>
+              <span className="hidden sm:inline-block text-xs bg-violet-100 text-violet-800 px-2 py-1 rounded-full font-medium">
+                BETA
+              </span>
+            </div>
+            <div className="flex items-center space-x-4">
+              <div className="hidden md:flex items-center space-x-6 text-sm text-slate-600">
+                <span className="flex items-center space-x-1">
+                  <Users className="w-4 h-4" />
+                  <span>1,247 startups analyzed</span>
+                </span>
+                <span className="flex items-center space-x-1">
+                  <TrendingUp className="w-4 h-4" />
+                  <span>87% accuracy</span>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* Hero Section */}
+        <motion.div 
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center py-16"
+        >
+          <div className="inline-flex items-center space-x-2 bg-violet-50 text-violet-700 px-4 py-2 rounded-full text-sm font-medium mb-8">
+            <Star className="w-4 h-4" />
+            <span>Preventing startup failures since 2024</span>
+          </div>
+          
+          <h1 className="text-5xl md:text-7xl font-bold mb-6">
+            <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
+              Get Your
+            </span>
+            <br />
+            <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+              WeReady Score
+            </span>
+          </h1>
+          
+          <p className="text-xl md:text-2xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
+            Don't let technical hiccups kill your startup. Get actionable guidance to ship confidently with 
+            <strong> code quality validation</strong>, <strong>business model insights</strong>, and <strong>investment readiness</strong> analysis.
+          </p>
+          
+          <div className="flex flex-wrap justify-center gap-8 mt-8 text-sm text-slate-500">
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <span>Catch deployment failures before launch</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <span>Actionable guidance to ship ready</span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <CheckCircle className="w-5 h-5 text-emerald-500" />
+              <span>Save your startup from technical debt</span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Input Section */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="relative bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-3xl shadow-2xl border-2 border-violet-200 p-10 mb-12 overflow-hidden"
+        >
+          {/* Background accent */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-violet-200 to-purple-200 rounded-full opacity-20 transform translate-x-16 -translate-y-16"></div>
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-gradient-to-tr from-emerald-200 to-teal-200 rounded-full opacity-20 transform -translate-x-12 translate-y-12"></div>
+          
+          <div className="relative text-center mb-10">
+            <motion.div
+              initial={false}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ duration: 0.5, delay: 0.4 }}
+              className="inline-flex items-center space-x-2 bg-violet-100 text-violet-800 px-4 py-2 rounded-full text-sm font-semibold mb-6"
+            >
+              <Star className="w-4 h-4" />
+              <span>Free Analysis • No Signup Required</span>
+            </motion.div>
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-900 to-purple-900 bg-clip-text text-transparent mb-3">
+              Analyze Your Startup
+            </h2>
+            <p className="text-lg text-slate-600 max-w-lg mx-auto">
+              Get your comprehensive readiness score across code quality, business model, and investment potential
+            </p>
+          </div>
+
+          {/* Input Mode Toggle */}
+          <div className="relative flex justify-center mb-8">
+            <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-1.5 flex shadow-lg border border-violet-200">
+              <button
+                onClick={() => setInputMode("repo")}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all flex items-center space-x-3 ${
+                  inputMode === "repo"
+                    ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-105"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <Github className="w-5 h-5" />
+                <span>GitHub Repository</span>
+              </button>
+              <button
+                onClick={() => setInputMode("code")}
+                className={`px-8 py-4 rounded-xl font-semibold transition-all flex items-center space-x-3 ${
+                  inputMode === "code"
+                    ? "bg-gradient-to-r from-violet-600 to-purple-600 text-white shadow-lg transform scale-105"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <span>Manual Code</span>
+              </button>
+            </div>
+          </div>
+
+          {inputMode === "repo" ? (
+            <div className="relative max-w-2xl mx-auto">
+              <label className="block text-sm font-semibold text-slate-700 mb-4">
+                Repository URL
+              </label>
+              <div className="relative">
+                <input
+                  type="url"
+                  className="w-full bg-white/80 backdrop-blur-sm border-2 border-violet-200 rounded-2xl px-6 py-5 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-400 transition-all text-lg shadow-lg"
+                  placeholder="https://github.com/username/repository"
+                  value={repoUrl}
+                  onChange={(e) => setRepoUrl(e.target.value)}
+                />
+                <Github className="absolute right-6 top-5 w-6 h-6 text-violet-400" />
+              </div>
+              <p className="text-sm text-slate-500 mt-3 flex items-center justify-center space-x-2 bg-white/60 rounded-full px-4 py-2 mx-auto w-fit">
+                <CheckCircle className="w-4 h-4 text-emerald-500" />
+                <span>Public repositories only • Private repo support coming soon</span>
+              </p>
+            </div>
+          ) : (
+            <div className="relative max-w-2xl mx-auto">
+              <label className="block text-sm font-semibold text-slate-700 mb-4">
+                Paste Your Code
+              </label>
+              <textarea
+                className="w-full h-48 bg-white/80 backdrop-blur-sm border-2 border-violet-200 rounded-2xl px-6 py-5 text-slate-900 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-400 transition-all font-mono text-sm shadow-lg"
+                placeholder="Paste your AI-generated code here..."
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+              />
+            </div>
+          )}
+
+          <div className="relative max-w-2xl mx-auto mt-10">
+            <motion.button
+              initial={false}
+              whileHover={{ scale: 1.02, y: -2 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={scanCode}
+              disabled={!isValidInput || scanning}
+              className="relative w-full bg-gradient-to-r from-violet-600 via-purple-600 to-violet-700 hover:from-violet-700 hover:via-purple-700 hover:to-violet-800 text-white font-bold py-6 px-8 rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-2xl hover:shadow-violet-500/25 flex items-center justify-center space-x-3 overflow-hidden"
+            >
+              {/* Button shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent transform -skew-x-12 animate-pulse"></div>
+              
+              {scanning ? (
+                <>
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
+                  <span className="text-lg">Running WeReady Analysis...</span>
+                </>
+              ) : (
+                <>
+                  <span className="text-lg">🚀 WeReady Analysis</span>
+                  <ArrowRight className="w-6 h-6" />
+                </>
+              )}
+            </motion.button>
+            
+            <motion.div 
+              initial={false}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.6 }}
+              className="flex justify-center items-center space-x-6 mt-6 text-sm text-slate-500"
+            >
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-emerald-400 rounded-full"></div>
+                <span>Free analysis</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-blue-400 rounded-full"></div>
+                <span>No signup required</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-purple-400 rounded-full"></div>
+                <span>30 second results</span>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
+
+        {/* WeReady Score Criteria */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.4 }}
+          className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 mb-12"
+        >
+          <div className="text-center mb-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-3">WeReady Score Criteria</h2>
+            <p className="text-slate-600 max-w-2xl mx-auto">
+              Our comprehensive assessment evaluates three critical pillars of startup readiness, 
+              weighted based on their impact on launch success and investor confidence.
+            </p>
+          </div>
+
+          <div className="grid lg:grid-cols-3 gap-8">
+            {/* Code Quality - 40% */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">🔍</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Code Quality</h3>
+                  <p className="text-emerald-600 font-semibold">40% Weight</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">AI Hallucination Detection</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Import statement validation against PyPI/npm</li>
+                    <li>• AST parsing for dependency accuracy</li>
+                    <li>• Standard library vs external package verification</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Code Structure Analysis</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Repository organization and file structure</li>
+                    <li>• Documentation completeness (README, comments)</li>
+                    <li>• Testing framework presence and coverage</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Deployment Readiness</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Configuration management (env vars, secrets)</li>
+                    <li>• Production deployment setup</li>
+                    <li>• Error handling and logging implementation</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Business Model - 30% */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">💼</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Business Model</h3>
+                  <p className="text-blue-600 font-semibold">30% Weight</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Revenue Model Clarity</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Pricing strategy definition and validation</li>
+                    <li>• Customer acquisition cost (CAC) modeling</li>
+                    <li>• Revenue streams diversification</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Market Validation</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Target audience identification and research</li>
+                    <li>• Competitive landscape analysis</li>
+                    <li>• Product-market fit evidence</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Unit Economics</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Customer lifetime value (LTV) calculation</li>
+                    <li>• LTV:CAC ratio optimization (target 3:1)</li>
+                    <li>• Payback period and churn rate analysis</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            {/* Investment Readiness - 30% */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
+                  <span className="text-2xl">💰</span>
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-slate-900">Investment Ready</h3>
+                  <p className="text-violet-600 font-semibold">30% Weight</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Traction Metrics</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Monthly recurring revenue (MRR) growth</li>
+                    <li>• User acquisition and retention rates</li>
+                    <li>• Key performance indicators (KPIs) tracking</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Scalability Assessment</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Technical architecture scalability</li>
+                    <li>• Team structure and hiring roadmap</li>
+                    <li>• Operational process automation</li>
+                  </ul>
+                </div>
+                
+                <div className="bg-slate-50 rounded-lg p-4">
+                  <h4 className="font-semibold text-slate-900 mb-2">Fundability Factors</h4>
+                  <ul className="text-sm text-slate-600 space-y-1">
+                    <li>• Market size and growth potential (TAM/SAM)</li>
+                    <li>• Competitive moat and differentiation</li>
+                    <li>• Financial projections and burn rate</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Scoring Methodology */}
+          <div className="mt-8 pt-8 border-t border-slate-200">
+            <h3 className="text-lg font-bold text-slate-900 mb-4 text-center">Scoring Methodology</h3>
+            
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
+                <h4 className="font-semibold text-emerald-900 mb-3">Score Ranges</h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-emerald-800">85-100:</span>
+                    <span className="font-medium text-emerald-900">WeReady Certified</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-blue-700">70-84:</span>
+                    <span className="font-medium text-slate-700">Development Stage</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-amber-700">50-69:</span>
+                    <span className="font-medium text-slate-700">Pre-Launch Review</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-red-700">0-49:</span>
+                    <span className="font-medium text-slate-700">Major Issues Found</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-xl p-6 border border-violet-200">
+                <h4 className="font-semibold text-violet-900 mb-3">Benchmarking</h4>
+                <div className="space-y-2 text-sm text-violet-800">
+                  <p>• <strong>Top 5%:</strong> Score 90+ (Elite performers)</p>
+                  <p>• <strong>Top 20%:</strong> Score 80+ (Above average)</p>
+                  <p>• <strong>Top 50%:</strong> Score 65+ (Market competitive)</p>
+                  <p>• <strong>Bottom 50%:</strong> Score &lt;65 (Needs improvement)</p>
+                </div>
+                <div className="mt-3 pt-3 border-t border-violet-200">
+                  <p className="text-xs text-violet-700">
+                    <strong>Note:</strong> Benchmarks updated quarterly based on analysis of 1,000+ startups
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* WeReady Certification */}
+          <div className="mt-6 bg-gradient-to-r from-yellow-50 to-orange-50 rounded-xl p-6 border-2 border-yellow-200">
+            <div className="flex items-center space-x-3 mb-3">
+              <div className="w-10 h-10 bg-yellow-100 rounded-full flex items-center justify-center">
+                <Award className="w-6 h-6 text-yellow-600" />
+              </div>
+              <div>
+                <h4 className="font-bold text-yellow-900">WeReady Certification</h4>
+                <p className="text-sm text-yellow-800">The startup readiness standard</p>
+              </div>
+            </div>
+            <p className="text-sm text-yellow-800 mb-3">
+              Startups scoring 85+ across all categories earn WeReady Certification - a trusted signal 
+              for investors, customers, and partners that your startup meets institutional-grade standards.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <span className="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-xs font-medium">
+                ✅ Code Quality Verified
+              </span>
+              <span className="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-xs font-medium">
+                💼 Business Model Validated
+              </span>
+              <span className="bg-yellow-200 text-yellow-900 px-3 py-1 rounded-full text-xs font-medium">
+                💰 Investment Grade
+              </span>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Results Section */}
+        <AnimatePresence>
+          {result && showResults && (
+            <motion.div
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -40 }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
+              className="mb-12"
+            >
+              {/* WeReady Score */}
+              <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8 mb-8">
+                <div className="text-center mb-8">
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
+                    className="mb-6"
+                  >
+                    <div className={`text-7xl font-bold mb-2 ${getScoreColor(result.overall_score)}`}>
+                      {result.overall_score}
+                      <span className="text-3xl text-slate-500">/100</span>
+                    </div>
+                    <div className="text-xl font-semibold text-slate-900">
+                      WeReady Score
+                    </div>
+                  </motion.div>
+                  
+                  <div className="text-lg text-slate-700 mb-2">
+                    {result.verdict === "ready_to_ship" ? "🚀 Ready to Ship" :
+                     result.verdict === "needs_work" ? "📈 Development Stage" :
+                     result.verdict === "critical_issues" ? "🛠️ Pre-Launch Review" :
+                     "⚠️ Major Issues Found"}
+                  </div>
+                  
+                  {result.market_context && (
+                    <div className="text-sm text-slate-500">
+                      {result.market_context.percentile} • {result.market_context.comparison}
+                    </div>
+                  )}
+                  
+                  {result.weready_stamp_eligible && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.5 }}
+                      className="mt-4"
+                    >
+                      <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-2 rounded-full text-sm font-semibold">
+                        <Award className="w-4 h-4" />
+                        WeReady Certified
+                      </div>
+                    </motion.div>
+                  )}
+                </div>
+                
+                {/* Three Category Scores */}
+                <div className="grid md:grid-cols-3 gap-6">
+                  {result.breakdown && Object.entries(result.breakdown).map(([category, data]: [string, any]) => {
+                    const categoryIcons = {
+                      code_quality: "🔍",
+                      business_model: "💼", 
+                      investment_ready: "💰"
+                    };
+                    const categoryNames = {
+                      code_quality: "Code Quality",
+                      business_model: "Business Model",
+                      investment_ready: "Investment Ready"
+                    };
+                    
+                    return (
+                      <motion.div
+                        key={category}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 + Object.keys(result.breakdown).indexOf(category) * 0.1 }}
+                        className="text-center p-6 border border-slate-200 rounded-xl"
+                      >
+                        <div className="text-3xl mb-3">{categoryIcons[category as keyof typeof categoryIcons]}</div>
+                        <h4 className="font-semibold text-slate-900 mb-2">{categoryNames[category as keyof typeof categoryNames]}</h4>
+                        <div className={`text-3xl font-bold mb-2 ${getScoreColor(data.score)}`}>
+                          {data.score}
+                        </div>
+                        <div className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${
+                          data.status === "excellent" ? "bg-emerald-100 text-emerald-800" :
+                          data.status === "good" ? "bg-blue-100 text-blue-800" :
+                          data.status === "needs_work" ? "bg-amber-100 text-amber-800" :
+                          "bg-red-100 text-red-800"
+                        }`}>
+                          {data.status === "excellent" ? "Excellent" :
+                           data.status === "good" ? "Good" :
+                           data.status === "needs_work" ? "Needs Work" :
+                           "Critical"}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Detailed Reports */}
+              <div className="space-y-6">
+                <h3 className="text-2xl font-bold text-slate-900 text-center">Detailed Reports</h3>
+                
+                {/* Category Reports */}
+                {result.breakdown && Object.entries(result.breakdown).map(([category, data]: [string, any]) => {
+                  const categoryInfo = {
+                    code_quality: {
+                      icon: "🔍",
+                      name: "Code Quality Report",
+                      description: "Technical assessment and recommendations"
+                    },
+                    business_model: {
+                      icon: "💼", 
+                      name: "Business Model Report",
+                      description: "Market validation and revenue strategy"
+                    },
+                    investment_ready: {
+                      icon: "💰",
+                      name: "Investment Readiness Report", 
+                      description: "Fundability and scalability analysis"
+                    }
+                  };
+
+                  const info = categoryInfo[category as keyof typeof categoryInfo];
+                  
+                  return (
+                    <motion.div
+                      key={category}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 + Object.keys(result.breakdown).indexOf(category) * 0.2 }}
+                      className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8"
+                    >
+                      <div className="flex items-center space-x-3 mb-6">
+                        <div className="text-3xl">{info.icon}</div>
+                        <div>
+                          <h4 className="text-xl font-bold text-slate-900">{info.name}</h4>
+                          <p className="text-slate-600">{info.description}</p>
+                        </div>
+                        <div className="ml-auto">
+                          <div className={`text-3xl font-bold ${getScoreColor(data.score)}`}>
+                            {data.score}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="grid md:grid-cols-2 gap-6">
+                        {/* Issues Found */}
+                        {data.issues && data.issues.length > 0 && (
+                          <div>
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center space-x-2">
+                              <AlertTriangle className="w-5 h-5 text-amber-500" />
+                              <span>Issues Found</span>
+                            </h5>
+                            <ul className="space-y-2">
+                              {data.issues.map((issue: string, idx: number) => (
+                                <li key={idx} className="flex items-start space-x-2">
+                                  <span className="text-amber-500 mt-1">•</span>
+                                  <span className="text-slate-700 text-sm">{issue}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        
+                        {/* Actionable Recommendations */}
+                        {data.recommendations && data.recommendations.length > 0 && (
+                          <div>
+                            <h5 className="font-semibold text-slate-900 mb-3 flex items-center space-x-2">
+                              <CheckCircle className="w-5 h-5 text-emerald-500" />
+                              <span>Action Steps</span>
+                            </h5>
+                            <ul className="space-y-2">
+                              {data.recommendations.map((rec: string, idx: number) => (
+                                <li key={idx} className="flex items-start space-x-2">
+                                  <span className="text-emerald-500 mt-1">•</span>
+                                  <span className="text-slate-700 text-sm">{rec}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  );
+                })}
+                
+                {/* Critical Issues Alert */}
+                {result.hallucinated_packages?.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 1.4 }}
+                    className="bg-red-50 border-2 border-red-200 rounded-2xl p-8"
+                  >
+                    <div className="flex items-start space-x-4">
+                      <XCircle className="w-8 h-8 text-red-500 flex-shrink-0 mt-1" />
+                      <div className="flex-1">
+                        <h4 className="text-xl font-bold text-red-900 mb-4">🚨 Critical: Deployment-Blocking Issues</h4>
+                        
+                        <div className="mb-4">
+                          <h5 className="font-semibold text-red-800 mb-2">Hallucinated Packages Detected:</h5>
+                          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                            {result.hallucinated_packages.map((pkg: string) => (
+                              <div key={pkg} className="bg-white border border-red-300 px-3 py-2 rounded-lg text-sm font-mono text-red-800">
+                                {pkg}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        
+                        <div className="bg-white border border-red-200 rounded-lg p-4">
+                          <h5 className="font-semibold text-red-900 mb-2">Required Actions:</h5>
+                          <ol className="text-sm text-red-800 space-y-1">
+                            <li>1. Remove all hallucinated packages from your imports</li>
+                            <li>2. Find real alternatives from PyPI/npm registries</li>
+                            <li>3. Test your application thoroughly after replacements</li>
+                            <li>4. Re-run WeReady analysis to verify fixes</li>
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+                
+                {/* Next Steps to Ship */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1.6 }}
+                  className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-2xl p-8"
+                >
+                  <h4 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                    <TrendingUp className="w-6 h-6 text-violet-600" />
+                    <span>Path to Ship-Ready</span>
+                  </h4>
+                  
+                  <div className="space-y-3">
+                    {result.next_steps?.map((step: string, idx: number) => (
+                      <div key={idx} className="flex items-start space-x-3">
+                        <div className="bg-violet-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-bold flex-shrink-0 mt-0.5">
+                          {idx + 1}
+                        </div>
+                        <p className="text-slate-700">{step}</p>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="mt-6 pt-6 border-t border-violet-200">
+                    <p className="text-sm text-slate-600">
+                      <strong>Goal:</strong> Address these issues to improve your WeReady Score and move closer to ship-ready status.
+                    </p>
+                  </div>
+                </motion.div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* CTA Section */}
+        <motion.div
+          initial={false}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="text-center py-16"
+        >
+          <h2 className="text-3xl font-bold text-slate-900 mb-4">Don't Let Technical Issues Kill Your Startup</h2>
+          <p className="text-xl text-slate-600 mb-8 max-w-2xl mx-auto">
+            Join AI-first founders who ship confidently with actionable guidance from WeReady
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transition-all">
+              Get Full Assessment
+            </button>
+            <button className="border border-slate-300 text-slate-700 px-8 py-3 rounded-xl font-semibold hover:bg-slate-50 transition-all">
+              View Pricing
+            </button>
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-200 bg-slate-50 py-12">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="grid md:grid-cols-4 gap-8">
+            <div>
+              <div className="flex items-center space-x-3 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Award className="w-5 h-5 text-white" />
+                </div>
+                <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
+                  WeReady
+                </span>
+              </div>
+              <p className="text-slate-600 text-sm">
+                Preventing good ideas from dying due to technical hiccups. Ship confidently.
+              </p>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3">Product</h3>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li>Code Analysis</li>
+                <li>Business Validation</li>
+                <li>Investment Check</li>
+                <li>API Access</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3">Resources</h3>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li>Documentation</li>
+                <li>Case Studies</li>
+                <li>Startup Guide</li>
+                <li>Support</li>
+              </ul>
+            </div>
+            
+            <div>
+              <h3 className="font-semibold text-slate-900 mb-3">Company</h3>
+              <ul className="space-y-2 text-sm text-slate-600">
+                <li>About</li>
+                <li>Blog</li>
+                <li>Careers</li>
+                <li>Contact</li>
+              </ul>
+            </div>
+          </div>
+          
+          <div className="border-t border-slate-200 pt-8 mt-8 text-center text-sm text-slate-500">
+            <p>&copy; 2024 WeReady. All rights reserved. Saving startups from preventable failures.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+  );
+}

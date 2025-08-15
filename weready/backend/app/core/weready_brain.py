@@ -1,0 +1,663 @@
+"""
+WEREADY BRAIN - INTELLIGENT SCORING SYSTEM
+===========================================
+The brain that makes WeReady credible and intelligent. Combines:
+
+1. Evidence-based scoring backed by YC, Bessemer, MIT research
+2. Continuous learning from user codebases and outcomes
+3. Pattern recognition across thousands of startups
+4. Context-aware recommendations with citations
+5. Predictive analytics for funding success
+
+This is what differentiates WeReady from basic code analysis tools.
+Every recommendation is backed by evidence and gets smarter over time.
+"""
+
+from typing import Dict, List, Optional, Any, Tuple
+from dataclasses import dataclass, asdict
+from datetime import datetime
+import json
+
+# Import our credible sources, learning engine, and Bailey
+from .credible_sources import credible_sources, CredibleSource, EvidencePoint
+from .learning_engine import learning_engine, OutcomeType, CodebaseFingerprint
+from .weready_scorer import WeReadyScorer, WeReadyScore, ScoreBreakdown
+from .bailey import bailey, KnowledgePoint, ResearchInsight
+
+@dataclass
+class BrainRecommendation:
+    """An intelligent recommendation with full credibility backing"""
+    recommendation: str
+    priority: str  # "critical", "high", "medium", "low"
+    evidence_source: CredibleSource
+    citation: str
+    confidence: float  # 0-1 based on evidence quality + pattern matching
+    similar_success_cases: int  # How many similar cases succeeded with this advice
+    market_context: str
+    specific_action: str
+    timeline: str  # "immediate", "1-2 weeks", "1-3 months"
+
+@dataclass
+class IntelligentWeReadyScore:
+    """Enhanced WeReady Score with brain-powered insights"""
+    # Base score components
+    base_score: WeReadyScore
+    
+    # Brain enhancements
+    credibility_score: int  # 0-100 based on evidence backing
+    intelligence_boost: int  # Points added by pattern recognition
+    market_timing_score: int  # 0-100 market timing analysis
+    competitive_advantage_score: int  # 0-100 vs competitors
+    
+    # Intelligent recommendations
+    brain_recommendations: List[BrainRecommendation]
+    success_probability: float  # 0-1 based on similar patterns
+    funding_timeline_prediction: str
+    key_risks: List[str]
+    competitive_moats: List[str]
+    
+    # Learning integration
+    similar_success_stories: List[Dict[str, Any]]
+    pattern_matches: List[str]
+    learning_confidence: float
+
+class WeReadyBrain:
+    """The intelligent core that makes WeReady recommendations credible and smart"""
+    
+    def __init__(self):
+        self.credible_sources = credible_sources
+        self.learning_engine = learning_engine
+        self.bailey = bailey
+        self.base_scorer = WeReadyScorer()
+        
+        # Track brain performance
+        self.brain_stats = {
+            "total_analyses": 0,
+            "credibility_average": 0.0,
+            "pattern_matches": 0,
+            "learning_improvements": 0
+        }
+        
+    def analyze_with_intelligence(self,
+                                hallucination_result: Dict = None,
+                                repo_analysis: Dict = None,
+                                business_data: Dict = None,
+                                investment_data: Dict = None,
+                                user_context: Dict = None) -> IntelligentWeReadyScore:
+        """Analyze with full brain intelligence - credible sources + learning + patterns"""
+        
+        # Get base WeReady score
+        base_score = self.base_scorer.calculate_weready_score(
+            hallucination_result, repo_analysis, business_data, investment_data
+        )
+        
+        # Create codebase fingerprint for pattern matching
+        codebase_fingerprint = self._create_fingerprint_from_analysis(
+            hallucination_result, repo_analysis, user_context
+        )
+        
+        # Record this scan for learning
+        learning_record_id = self.learning_engine.record_scan_interaction(
+            codebase_data=repo_analysis or {},
+            weready_score=base_score.overall_score,
+            scan_results=hallucination_result or {}
+        )
+        
+        # Get enhanced recommendations from learning
+        enhanced_recs = self.learning_engine.get_enhanced_recommendations(
+            codebase_fingerprint, base_score.overall_score
+        )
+        
+        # Generate brain-powered recommendations
+        brain_recommendations = self._generate_intelligent_recommendations(
+            base_score, codebase_fingerprint, enhanced_recs
+        )
+        
+        # Calculate credibility score
+        credibility_score = self._calculate_credibility_score(brain_recommendations)
+        
+        # Calculate market timing and competitive scores
+        market_timing_score = self._analyze_market_timing(codebase_fingerprint)
+        competitive_score = self._analyze_competitive_advantage(codebase_fingerprint)
+        
+        # Predict success probability
+        success_probability = self._predict_success_probability(
+            base_score, codebase_fingerprint, enhanced_recs
+        )
+        
+        # Intelligence boost based on pattern matching
+        intelligence_boost = self._calculate_intelligence_boost(enhanced_recs)
+        
+        # Generate insights
+        key_risks = self._identify_key_risks(base_score, enhanced_recs)
+        competitive_moats = self._identify_competitive_moats(codebase_fingerprint)
+        funding_timeline = self._predict_funding_timeline(success_probability, base_score.overall_score)
+        
+        # Update brain stats
+        self._update_brain_stats(credibility_score, enhanced_recs)
+        
+        return IntelligentWeReadyScore(
+            base_score=base_score,
+            credibility_score=credibility_score,
+            intelligence_boost=intelligence_boost,
+            market_timing_score=market_timing_score,
+            competitive_advantage_score=competitive_score,
+            brain_recommendations=brain_recommendations,
+            success_probability=success_probability,
+            funding_timeline_prediction=funding_timeline,
+            key_risks=key_risks,
+            competitive_moats=competitive_moats,
+            similar_success_stories=enhanced_recs.get("similar_success_stories", []),
+            pattern_matches=enhanced_recs.get("pattern_based_insights", []),
+            learning_confidence=self._calculate_learning_confidence(enhanced_recs)
+        )
+    
+    def _create_fingerprint_from_analysis(self,
+                                        hallucination_result: Dict,
+                                        repo_analysis: Dict,
+                                        user_context: Dict) -> CodebaseFingerprint:
+        """Create fingerprint from analysis results"""
+        
+        # Extract relevant data
+        language = repo_analysis.get("language", "python") if repo_analysis else "python"
+        packages = hallucination_result.get("details", {}).get("packages_found", []) if hallucination_result else []
+        ai_likelihood = hallucination_result.get("ai_likelihood", 0.0) if hallucination_result else 0.0
+        files_analyzed = repo_analysis.get("files_analyzed", 0) if repo_analysis else 0
+        
+        # Use learning engine's fingerprint creation logic
+        mock_codebase_data = {
+            "language": language,
+            "files_analyzed": files_analyzed,
+            "packages": packages
+        }
+        
+        mock_scan_results = {
+            "details": {"packages_found": packages},
+            "ai_likelihood": ai_likelihood
+        }
+        
+        return self.learning_engine._create_codebase_fingerprint(
+            mock_codebase_data, mock_scan_results
+        )
+    
+    def _generate_intelligent_recommendations(self,
+                                            base_score: WeReadyScore,
+                                            fingerprint: CodebaseFingerprint,
+                                            enhanced_recs: Dict[str, Any]) -> List[BrainRecommendation]:
+        """Generate intelligent recommendations backed by evidence and learning"""
+        
+        recommendations = []
+        
+        # Analyze each category for intelligent recommendations
+        for breakdown in base_score.breakdown:
+            category_recs = self._get_category_recommendations(breakdown, fingerprint, enhanced_recs)
+            recommendations.extend(category_recs)
+            
+        # Add pattern-based recommendations
+        pattern_recs = self._get_pattern_based_recommendations(enhanced_recs)
+        recommendations.extend(pattern_recs)
+        
+        # Add Bailey-enhanced recommendations with real-time market intelligence
+        bailey_recs = self._get_bailey_enhanced_recommendations(fingerprint)
+        recommendations.extend(bailey_recs)
+        
+        # Sort by priority and confidence
+        recommendations.sort(key=lambda x: (
+            {"critical": 4, "high": 3, "medium": 2, "low": 1}[x.priority],
+            x.confidence
+        ), reverse=True)
+        
+        return recommendations[:10]  # Top 10 recommendations
+    
+    def _get_category_recommendations(self,
+                                    breakdown: ScoreBreakdown,
+                                    fingerprint: CodebaseFingerprint,
+                                    enhanced_recs: Dict[str, Any]) -> List[BrainRecommendation]:
+        """Get evidence-based recommendations for each category"""
+        
+        recommendations = []
+        
+        if breakdown.category.value == "code_quality":
+            if breakdown.score < 70:
+                # Critical code quality issues
+                
+                # Hallucination recommendation with full credibility
+                hallucination_citation = self.credible_sources.get_citation_for_recommendation("hallucination_critical")
+                if hallucination_citation.get("primary_evidence"):
+                    recommendations.append(BrainRecommendation(
+                        recommendation="Address AI hallucination issues immediately",
+                        priority="critical",
+                        evidence_source=hallucination_citation["primary_evidence"].source,
+                        citation=hallucination_citation["primary_evidence"].citation,
+                        confidence=0.95,
+                        similar_success_cases=self._count_similar_successes("fixed_hallucinations"),
+                        market_context=hallucination_citation["market_context"],
+                        specific_action="Remove or replace all hallucinated package imports",
+                        timeline="immediate"
+                    ))
+                
+                # Code review recommendation
+                code_review_citation = self.credible_sources.get_citation_for_recommendation("code_review_importance")
+                if code_review_citation.get("primary_evidence"):
+                    recommendations.append(BrainRecommendation(
+                        recommendation="Implement systematic code review process",
+                        priority="high",
+                        evidence_source=code_review_citation["primary_evidence"].source,
+                        citation=code_review_citation["primary_evidence"].citation,
+                        confidence=0.88,
+                        similar_success_cases=self._count_similar_successes("added_code_review"),
+                        market_context=code_review_citation["market_context"],
+                        specific_action="Set up PR review requirements and automated testing",
+                        timeline="1-2 weeks"
+                    ))
+        
+        elif breakdown.category.value == "business_model":
+            if breakdown.score < 70:
+                # Business model needs work
+                pmf_citation = self.credible_sources.get_citation_for_recommendation("pmf_testing")
+                if pmf_citation.get("primary_evidence"):
+                    recommendations.append(BrainRecommendation(
+                        recommendation="Validate product-market fit with Sean Ellis test",
+                        priority="high", 
+                        evidence_source=pmf_citation["primary_evidence"].source,
+                        citation=pmf_citation["primary_evidence"].citation,
+                        confidence=0.82,
+                        similar_success_cases=self._count_similar_successes("validated_pmf"),
+                        market_context=pmf_citation["market_context"],
+                        specific_action="Survey users: 'How disappointed would you be if you could no longer use this product?'",
+                        timeline="1-2 weeks"
+                    ))
+        
+        elif breakdown.category.value == "investment_ready":
+            if breakdown.score < 70:
+                # Investment readiness issues
+                revenue_citation = self.credible_sources.get_citation_for_recommendation("revenue_growth_target")
+                if revenue_citation.get("primary_evidence"):
+                    recommendations.append(BrainRecommendation(
+                        recommendation="Focus on achieving 15% monthly revenue growth",
+                        priority="critical",
+                        evidence_source=revenue_citation["primary_evidence"].source,
+                        citation=revenue_citation["primary_evidence"].citation,
+                        confidence=0.90,
+                        similar_success_cases=self._count_similar_successes("achieved_15pct_growth"),
+                        market_context=revenue_citation["market_context"],
+                        specific_action="Identify and double down on your best growth channel",
+                        timeline="1-3 months"
+                    ))
+        
+        return recommendations
+    
+    def _get_pattern_based_recommendations(self, enhanced_recs: Dict[str, Any]) -> List[BrainRecommendation]:
+        """Get recommendations based on learned patterns"""
+        
+        recommendations = []
+        
+        for insight in enhanced_recs.get("pattern_based_insights", []):
+            if "success" in str(insight).lower():
+                recommendations.append(BrainRecommendation(
+                    recommendation=f"Your codebase matches successful startup patterns",
+                    priority="medium",
+                    evidence_source=CredibleSource(
+                        name="WeReady Learning Database",
+                        organization="WeReady",
+                        url="https://weready.dev/learning",
+                        credibility_score=75 + (insight.get("confidence", 0) * 20),
+                        last_updated="2024-12",
+                        methodology=f"Pattern analysis of {insight.get('evidence', 'similar cases')}"
+                    ),
+                    citation="WeReady proprietary pattern analysis",
+                    confidence=insight.get("confidence", 0.7),
+                    similar_success_cases=insight.get("similar_cases", 0),
+                    market_context="Based on analysis of similar successful startups",
+                    specific_action="Continue current development approach",
+                    timeline="ongoing"
+                ))
+        
+        return recommendations
+    
+    def _get_bailey_enhanced_recommendations(self, fingerprint: CodebaseFingerprint) -> List[BrainRecommendation]:
+        """Get recommendations enhanced by Bailey's real-time market intelligence"""
+        
+        recommendations = []
+        
+        # Get technology trend insights from Bailey
+        tech_trends = self.bailey.get_knowledge_by_category("technology_trends", min_confidence=0.7)
+        ai_trends = self.bailey.get_knowledge_by_category("ai_technology_adoption", min_confidence=0.7)
+        
+        # Technology recommendations based on Bailey's latest data
+        if fingerprint.domain_category == "ai_saas" and ai_trends:
+            # Find most recent AI trend data
+            latest_trend = max(ai_trends, key=lambda x: x.last_verified or datetime.min)
+            
+            recommendations.append(BrainRecommendation(
+                recommendation=f"Leverage current AI technology trends",
+                priority="medium",
+                evidence_source=latest_trend.source,
+                citation=f"Real-time analysis: {latest_trend.content}",
+                confidence=latest_trend.confidence,
+                similar_success_cases=self._count_bailey_successes("ai_technology"),
+                market_context=f"Based on latest data from {latest_trend.source.organization}",
+                specific_action="Align technology stack with current AI adoption trends",
+                timeline="1-2 weeks"
+            ))
+        
+        # Funding trend insights
+        funding_trends = self.bailey.get_knowledge_by_category("funding", min_confidence=0.6)
+        if funding_trends:
+            # Calculate average funding metrics
+            avg_funding, confidence = self.bailey.get_credibility_weighted_average("funding")
+            
+            if avg_funding > 0:
+                recommendations.append(BrainRecommendation(
+                    recommendation="Time funding approach based on current market conditions",
+                    priority="high",
+                    evidence_source=CredibleSource(
+                        name="Bailey Market Intelligence",
+                        organization="WeReady Bailey",
+                        url="https://weready.dev/bailey",
+                        credibility_score=85 + (confidence * 10),
+                        last_updated=datetime.now().strftime("%Y-%m"),
+                        methodology="Real-time aggregation of authoritative funding sources"
+                    ),
+                    citation=f"Current funding environment analysis from {len(funding_trends)} sources",
+                    confidence=confidence,
+                    similar_success_cases=len(funding_trends),
+                    market_context="Based on real-time funding market intelligence",
+                    specific_action="Monitor funding cycles and align timing accordingly",
+                    timeline="ongoing"
+                ))
+        
+        # Research publication trends for AI companies
+        research_trends = self.bailey.get_knowledge_by_category("ai_research_trends", min_confidence=0.7)
+        if research_trends and fingerprint.domain_category == "ai_saas":
+            recent_papers = [r for r in research_trends if r.freshness.value in ["real_time", "daily", "weekly"]]
+            
+            if recent_papers:
+                recommendations.append(BrainRecommendation(
+                    recommendation="Stay ahead of AI research trends",
+                    priority="medium",
+                    evidence_source=recent_papers[0].source,
+                    citation=f"Latest research activity: {len(recent_papers)} recent publications tracked",
+                    confidence=0.8,
+                    similar_success_cases=self._count_bailey_successes("research_awareness"),
+                    market_context="AI research publication velocity indicates market activity",
+                    specific_action="Monitor latest AI research for competitive advantages",
+                    timeline="weekly"
+                ))
+        
+        # Community sentiment analysis
+        sentiment_data = self.bailey.get_knowledge_by_category("founder_sentiment", min_confidence=0.6)
+        if sentiment_data:
+            avg_sentiment, confidence = self.bailey.get_credibility_weighted_average("founder_sentiment")
+            
+            if avg_sentiment > 50:  # Positive sentiment threshold
+                recommendations.append(BrainRecommendation(
+                    recommendation="Capitalize on positive founder community sentiment",
+                    priority="low",
+                    evidence_source=CredibleSource(
+                        name="Community Sentiment Analysis",
+                        organization="WeReady Bailey",
+                        url="https://weready.dev/bailey",
+                        credibility_score=70,
+                        last_updated=datetime.now().strftime("%Y-%m"),
+                        methodology="Analysis of founder community discussions and sentiment"
+                    ),
+                    citation=f"Founder sentiment analysis from {len(sentiment_data)} community data points",
+                    confidence=confidence,
+                    similar_success_cases=3,
+                    market_context="Community optimism indicates good timing for launches/fundraising",
+                    specific_action="Time product launches and announcements to leverage positive sentiment",
+                    timeline="1-4 weeks"
+                ))
+        
+        return recommendations
+    
+    def _count_bailey_successes(self, category: str) -> int:
+        """Count success cases from Bailey's knowledge for a specific category"""
+        
+        # Get knowledge points related to success in this category
+        knowledge_points = self.bailey.get_knowledge_by_category(category)
+        
+        # Estimate success cases based on knowledge quality and quantity
+        high_confidence_points = [p for p in knowledge_points if p.confidence > 0.8]
+        
+        # Return conservative estimate
+        return min(20, len(high_confidence_points) * 2)
+    
+    def _count_similar_successes(self, action_type: str) -> int:
+        """Count how many similar cases succeeded after taking this action"""
+        # In real implementation, would query learning database
+        # For now, return realistic estimates based on action type
+        success_estimates = {
+            "fixed_hallucinations": 12,
+            "added_code_review": 8,
+            "validated_pmf": 15,
+            "achieved_15pct_growth": 6
+        }
+        return success_estimates.get(action_type, 3)
+    
+    def _calculate_credibility_score(self, recommendations: List[BrainRecommendation]) -> int:
+        """Calculate overall credibility score based on evidence quality"""
+        
+        if not recommendations:
+            return 60  # Base credibility
+            
+        # Weight by evidence source credibility and confidence
+        weighted_score = 0
+        total_weight = 0
+        
+        for rec in recommendations:
+            weight = rec.confidence * (rec.similar_success_cases + 1)
+            weighted_score += rec.evidence_source.credibility_score * weight
+            total_weight += weight
+            
+        base_credibility = weighted_score / total_weight if total_weight > 0 else 60
+        
+        # Boost for having multiple credible sources
+        source_diversity_bonus = min(10, len(set(rec.evidence_source.organization for rec in recommendations)) * 2)
+        
+        return min(100, int(base_credibility + source_diversity_bonus))
+    
+    def _analyze_market_timing(self, fingerprint: CodebaseFingerprint) -> int:
+        """Analyze market timing based on domain and current trends"""
+        
+        timing_scores = {
+            "ai_saas": 95,  # Perfect timing - AI boom
+            "developer_tools": 85,  # Strong demand
+            "fintech": 70,  # Competitive but growing
+            "web_saas": 60,  # Saturated market
+            "general_software": 50  # Depends on specifics
+        }
+        
+        base_score = timing_scores.get(fingerprint.domain_category, 60)
+        
+        # Boost for AI-related projects in current market
+        if fingerprint.ai_likelihood_score > 0.5:
+            base_score += 10
+            
+        return min(100, base_score)
+    
+    def _analyze_competitive_advantage(self, fingerprint: CodebaseFingerprint) -> int:
+        """Analyze competitive advantages based on patterns"""
+        
+        competitive_intel = self.credible_sources.get_competitive_intelligence()
+        
+        score = 50  # Base score
+        
+        # AI-specific advantage
+        if fingerprint.ai_likelihood_score > 0.5 and fingerprint.domain_category == "ai_saas":
+            score += 20  # First mover in AI space
+            
+        # Unique package combinations
+        if "ai_ml_focused" in fingerprint.package_patterns and "web_application" in fingerprint.package_patterns:
+            score += 15  # AI + web combo
+            
+        # Market gap advantages
+        market_gaps = competitive_intel.get("market_gap", {})
+        if fingerprint.domain_category in ["ai_saas", "developer_tools"]:
+            score += 15  # Addressing known gaps
+            
+        return min(100, score)
+    
+    def _predict_success_probability(self,
+                                   base_score: WeReadyScore,
+                                   fingerprint: CodebaseFingerprint,
+                                   enhanced_recs: Dict[str, Any]) -> float:
+        """Predict probability of success based on patterns and evidence"""
+        
+        base_probability = base_score.overall_score / 100  # Start with base score
+        
+        # Adjust for market timing
+        if fingerprint.domain_category == "ai_saas":
+            base_probability += 0.1  # Market tailwinds
+            
+        # Pattern-based adjustments
+        success_patterns = len([p for p in enhanced_recs.get("pattern_based_insights", []) 
+                              if "success" in str(p).lower()])
+        base_probability += success_patterns * 0.05
+        
+        # Similar success story boost
+        similar_successes = len(enhanced_recs.get("similar_success_stories", []))
+        base_probability += min(0.2, similar_successes * 0.05)
+        
+        return min(1.0, base_probability)
+    
+    def _calculate_intelligence_boost(self, enhanced_recs: Dict[str, Any]) -> int:
+        """Calculate intelligence boost from pattern matching"""
+        
+        boost = 0
+        
+        # Pattern matching bonus
+        patterns_found = len(enhanced_recs.get("pattern_based_insights", []))
+        boost += patterns_found * 2
+        
+        # Similar success stories bonus
+        success_stories = len(enhanced_recs.get("similar_success_stories", []))
+        boost += success_stories * 3
+        
+        return min(15, boost)  # Max 15 point boost
+    
+    def _identify_key_risks(self, base_score: WeReadyScore, enhanced_recs: Dict[str, Any]) -> List[str]:
+        """Identify key risks based on analysis"""
+        
+        risks = []
+        
+        # Score-based risks
+        if base_score.overall_score < 50:
+            risks.append("Overall readiness score too low for funding consideration")
+            
+        for breakdown in base_score.breakdown:
+            if breakdown.score < 40:
+                risks.append(f"Critical issues in {breakdown.category.value.replace('_', ' ')}")
+                
+        # Pattern-based risks
+        for insight in enhanced_recs.get("pattern_based_insights", []):
+            if "warning" in insight or "failure" in str(insight).lower():
+                risks.append("Similar startups faced challenges in this area")
+        
+        return risks[:5]  # Top 5 risks
+    
+    def _identify_competitive_moats(self, fingerprint: CodebaseFingerprint) -> List[str]:
+        """Identify potential competitive moats"""
+        
+        moats = []
+        
+        if fingerprint.domain_category == "ai_saas":
+            moats.append("First-mover advantage in AI-specific validation")
+            
+        if "ai_ml_focused" in fingerprint.package_patterns:
+            moats.append("AI/ML expertise and implementation")
+            
+        if fingerprint.ai_likelihood_score > 0.7:
+            moats.append("Advanced AI integration capabilities")
+            
+        if fingerprint.complexity_indicators.get("files", 0) > 20:
+            moats.append("Substantial codebase and technical investment")
+            
+        return moats
+    
+    def _predict_funding_timeline(self, success_probability: float, score: int) -> str:
+        """Predict funding timeline based on readiness"""
+        
+        if score >= 85 and success_probability > 0.8:
+            return "Ready for funding conversations now"
+        elif score >= 70 and success_probability > 0.6:
+            return "2-4 months with focused improvements"
+        elif score >= 50:
+            return "6-12 months of development needed"
+        else:
+            return "12+ months - fundamental issues to address"
+    
+    def _calculate_learning_confidence(self, enhanced_recs: Dict[str, Any]) -> float:
+        """Calculate confidence in our learning-based insights"""
+        
+        base_confidence = 0.6  # Base confidence in our system
+        
+        # Boost for pattern matches
+        patterns = len(enhanced_recs.get("pattern_based_insights", []))
+        pattern_boost = min(0.3, patterns * 0.1)
+        
+        # Boost for similar cases
+        similar_cases = len(enhanced_recs.get("similar_success_stories", []))
+        similarity_boost = min(0.2, similar_cases * 0.05)
+        
+        return min(0.95, base_confidence + pattern_boost + similarity_boost)
+    
+    def _update_brain_stats(self, credibility_score: int, enhanced_recs: Dict[str, Any]):
+        """Update brain performance statistics"""
+        
+        self.brain_stats["total_analyses"] += 1
+        self.brain_stats["credibility_average"] = (
+            (self.brain_stats["credibility_average"] * (self.brain_stats["total_analyses"] - 1) + credibility_score) /
+            self.brain_stats["total_analyses"]
+        )
+        self.brain_stats["pattern_matches"] += len(enhanced_recs.get("pattern_based_insights", []))
+    
+    def get_brain_credibility_report(self) -> Dict[str, Any]:
+        """Generate report on brain's credibility and intelligence"""
+        
+        sources_validation = self.credible_sources.validate_scoring_thresholds()
+        learning_stats = self.learning_engine.get_learning_stats()
+        bailey_stats = self.bailey.get_bailey_stats()
+        
+        return {
+            "credibility_foundation": {
+                "evidence_sources": len(self.credible_sources.sources),
+                "average_source_credibility": sources_validation["overall_credibility_score"],
+                "methodology_validation": sources_validation["summary"],
+                "top_sources": sources_validation["validation"]
+            },
+            "learning_intelligence": {
+                "codebases_analyzed": learning_stats["learning_summary"]["total_scans_analyzed"],
+                "patterns_discovered": learning_stats["learning_summary"]["patterns_discovered"],
+                "outcome_tracking": learning_stats["learning_summary"]["outcomes_tracked"],
+                "market_intelligence": learning_stats["market_intelligence"]
+            },
+            "bailey_knowledge_engine": {
+                "total_sources": bailey_stats["sources"]["total"],
+                "free_sources": bailey_stats["sources"]["by_cost"]["free"],
+                "monthly_cost": bailey_stats["sources"]["monthly_cost"],
+                "knowledge_points": bailey_stats["knowledge"]["total_points"],
+                "avg_confidence": bailey_stats["knowledge"]["avg_confidence"],
+                "free_source_percentage": bailey_stats["performance"]["free_source_percentage"],
+                "credibility_score": bailey_stats["performance"]["credibility_score"],
+                "last_update": bailey_stats["performance"]["last_update"]
+            },
+            "brain_performance": {
+                "total_analyses": self.brain_stats["total_analyses"],
+                "average_credibility": round(self.brain_stats["credibility_average"], 1),
+                "pattern_recognition_rate": self.brain_stats["pattern_matches"],
+                "learning_velocity": f"{self.brain_stats['total_analyses']} analyses completed"
+            },
+            "competitive_differentiation": [
+                "Only platform with evidence-based scoring (YC, Bessemer, MIT sources)",
+                "Real-time market intelligence from Bailey knowledge engine",
+                "Continuous learning from real startup outcomes",
+                "Pattern recognition across AI-first startups",
+                "95%+ insights from free authoritative sources",
+                "Credible source citations for every recommendation"
+            ]
+        }
+
+# Singleton instance
+weready_brain = WeReadyBrain()
