@@ -85,38 +85,75 @@ class GitHubConnector(BaileyConnector):
         knowledge_ids = []
         
         try:
-            # Search for recently popular repositories
-            url = "https://api.github.com/search/repositories"
-            params = {
-                "q": "created:>2024-01-01 stars:>100",
-                "sort": "stars",
-                "order": "desc",
-                "per_page": 50
-            }
+            # Get repositories trending in the last 7 days
+            week_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
             
-            response = await self.client.get(url, params=params)
-            self._respect_rate_limit()
+            # Search for AI/ML repositories with recent activity
+            ai_queries = [
+                f"created:>{week_ago} AI OR machine learning OR LLM",
+                f"created:>{week_ago} artificial intelligence OR deep learning",
+                f"created:>{week_ago} neural network OR transformer",
+                f"pushed:>{week_ago} openai OR anthropic OR claude OR gpt"
+            ]
             
-            if response.status_code == 200:
-                data = response.json()
+            for query in ai_queries:
+                url = "https://api.github.com/search/repositories"
+                params = {
+                    "q": query,
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": 25
+                }
+            
+                response = await self.client.get(url, params=params)
+                self._respect_rate_limit()
                 
-                # Analyze language trends
-                languages = {}
-                for repo in data.get("items", []):
-                    lang = repo.get("language")
-                    if lang:
-                        languages[lang] = languages.get(lang, 0) + repo.get("stargazers_count", 0)
+                if response.status_code == 200:
+                    data = response.json()
+                    
+                    # Analyze trending repositories for velocity
+                    hot_repos = []
+                    for repo in data.get("items", [])[:10]:  # Top 10 from each query
+                        created_at = datetime.fromisoformat(repo.get("created_at", "").replace("Z", "+00:00"))
+                        stars = repo.get("stargazers_count", 0)
+                        age_days = (datetime.now(created_at.tzinfo) - created_at).days
                         
-                # Store top language trends
-                for lang, stars in sorted(languages.items(), key=lambda x: x[1], reverse=True)[:10]:
-                    point_id = await bailey.ingest_knowledge_point(
-                        content=f"{lang} has {stars} total stars in trending repositories created in 2024",
-                        source_id=self.source_id,
-                        category="technology_trends",
-                        numerical_value=float(stars),
-                        confidence=0.8
-                    )
-                    knowledge_ids.append(point_id)
+                        # Calculate star velocity (stars per day)
+                        velocity = stars / max(age_days, 1) if age_days > 0 else stars
+                        
+                        hot_repos.append({
+                            "name": repo.get("full_name", ""),
+                            "stars": stars,
+                            "velocity": velocity,
+                            "language": repo.get("language", ""),
+                            "description": repo.get("description", "")[:100]
+                        })
+                    
+                    # Find hottest repositories by velocity
+                    hot_repos.sort(key=lambda x: x["velocity"], reverse=True)
+                    
+                    if hot_repos:
+                        hottest = hot_repos[0]
+                        point_id = await bailey.ingest_knowledge_point(
+                            content=f"TRENDING NOW: {hottest['name']} gaining {hottest['velocity']:.1f} stars/day ({hottest['stars']} total stars) - {hottest['description']}",
+                            source_id=self.source_id,
+                            category="ai_trending_now",
+                            numerical_value=float(hottest['velocity']),
+                            confidence=0.9
+                        )
+                        knowledge_ids.append(point_id)
+                        
+                        # Store velocity data for trend analysis
+                        for i, repo in enumerate(hot_repos[:5]):
+                            if repo['velocity'] > 1:  # Only repos gaining at least 1 star/day
+                                point_id = await bailey.ingest_knowledge_point(
+                                    content=f"Hot repo #{i+1}: {repo['name']} ({repo['language']}) - {repo['velocity']:.1f} stars/day momentum",
+                                    source_id=self.source_id,
+                                    category="github_velocity_trends",
+                                    numerical_value=float(repo['velocity']),
+                                    confidence=0.8
+                                )
+                                knowledge_ids.append(point_id)
                     
         except Exception as e:
             logging.error(f"GitHub trending repositories error: {e}")
@@ -124,35 +161,75 @@ class GitHubConnector(BaileyConnector):
         return knowledge_ids
         
     async def _get_language_trends(self) -> List[str]:
-        """Get programming language adoption trends"""
+        """Get programming language adoption trends with AI package tracking"""
         
         knowledge_ids = []
         
         try:
-            # Search for AI/ML related repositories
-            ai_languages = ["python", "javascript", "typescript", "rust", "go"]
+            # Track AI-specific packages by language
+            ai_package_queries = {
+                "python": ["openai", "anthropic", "langchain", "transformers", "torch", "tensorflow"],
+                "javascript": ["@openai/openai", "@anthropic/anthropic-sdk", "langchain", "tensorflow"],
+                "typescript": ["openai", "anthropic", "@langchain/core", "@tensorflow/tfjs"],
+                "rust": ["candle", "tch", "ort", "llm-chain"],
+                "go": ["go-openai", "langchaingo", "ollama"]
+            }
             
-            for lang in ai_languages:
-                url = "https://api.github.com/search/repositories"
-                params = {
-                    "q": f"language:{lang} AI OR machine learning OR LLM created:>2024-01-01",
-                    "sort": "stars",
-                    "per_page": 10
-                }
+            # Get package momentum for each language
+            for lang, packages in ai_package_queries.items():
+                lang_velocity = 0
+                trending_packages = []
                 
-                response = await self.client.get(url, params=params)
-                self._respect_rate_limit()
-                
-                if response.status_code == 200:
-                    data = response.json()
-                    total_count = data.get("total_count", 0)
+                for package in packages:
+                    url = "https://api.github.com/search/repositories"
+                    params = {
+                        "q": f'"{package}" language:{lang} pushed:>2024-12-01',
+                        "sort": "updated",
+                        "per_page": 5
+                    }
                     
+                    response = await self.client.get(url, params=params)
+                    self._respect_rate_limit()
+                    
+                    if response.status_code == 200:
+                        data = response.json()
+                        for repo in data.get("items", []):
+                            stars = repo.get("stargazers_count", 0)
+                            updated_at = datetime.fromisoformat(repo.get("updated_at", "").replace("Z", "+00:00"))
+                            days_since_update = (datetime.now(updated_at.tzinfo) - updated_at).days
+                            
+                            # Calculate package momentum (activity score)
+                            if days_since_update < 7:  # Updated in last week
+                                momentum = stars / max(days_since_update, 1)
+                                lang_velocity += momentum
+                                
+                                if momentum > 10:  # High momentum packages
+                                    trending_packages.append({
+                                        "name": repo.get("name", ""),
+                                        "stars": stars,
+                                        "momentum": momentum,
+                                        "description": repo.get("description", "")[:80]
+                                    })
+                
+                # Store language momentum data
+                if lang_velocity > 0:
                     point_id = await bailey.ingest_knowledge_point(
-                        content=f"{total_count} AI/ML repositories created in 2024 using {lang}",
+                        content=f"REAL-TIME: {lang} AI ecosystem has {lang_velocity:.1f} momentum score (stars × recent activity)",
                         source_id=self.source_id,
-                        category="ai_technology_adoption",
-                        numerical_value=float(total_count),
-                        confidence=0.75
+                        category="ai_language_momentum",
+                        numerical_value=float(lang_velocity),
+                        confidence=0.85
+                    )
+                    knowledge_ids.append(point_id)
+                
+                # Store trending packages
+                for pkg in sorted(trending_packages, key=lambda x: x["momentum"], reverse=True)[:3]:
+                    point_id = await bailey.ingest_knowledge_point(
+                        content=f"HOT PACKAGE: {pkg['name']} ({lang}) - {pkg['momentum']:.1f} momentum, {pkg['stars']} stars - {pkg['description']}",
+                        source_id=self.source_id,
+                        category="trending_ai_packages",
+                        numerical_value=float(pkg['momentum']),
+                        confidence=0.8
                     )
                     knowledge_ids.append(point_id)
                     

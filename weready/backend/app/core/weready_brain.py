@@ -23,6 +23,7 @@ from .credible_sources import credible_sources, CredibleSource, EvidencePoint
 from .learning_engine import learning_engine, OutcomeType, CodebaseFingerprint
 from .weready_scorer import WeReadyScorer, WeReadyScore, ScoreBreakdown
 from .bailey import bailey, KnowledgePoint, ResearchInsight
+from .hallucination_trends import hallucination_trends
 
 @dataclass
 class BrainRecommendation:
@@ -60,6 +61,11 @@ class IntelligentWeReadyScore:
     similar_success_stories: List[Dict[str, Any]]
     pattern_matches: List[str]
     learning_confidence: float
+    
+    # Evidence and credibility
+    score_evidence: List[Dict[str, Any]] = None
+    credibility_methodology: Dict[str, Any] = None
+    evidence_count: int = 0
 
 class WeReadyBrain:
     """The intelligent core that makes WeReady recommendations credible and smart"""
@@ -78,7 +84,7 @@ class WeReadyBrain:
             "learning_improvements": 0
         }
         
-    def analyze_with_intelligence(self,
+    async def analyze_with_intelligence(self,
                                 hallucination_result: Dict = None,
                                 repo_analysis: Dict = None,
                                 business_data: Dict = None,
@@ -91,9 +97,20 @@ class WeReadyBrain:
             hallucination_result, repo_analysis, business_data, investment_data
         )
         
+        # Analyze hallucinated packages against real-time trends
+        hallucination_insights = []
+        if hallucination_result and hallucination_result.get("hallucinated_packages"):
+            try:
+                hallucination_insights = await hallucination_trends.analyze_hallucinated_packages(
+                    hallucination_result["hallucinated_packages"]
+                )
+            except Exception as e:
+                print(f"Error analyzing hallucination trends: {e}")
+                hallucination_insights = []
+        
         # Create codebase fingerprint for pattern matching
         codebase_fingerprint = self._create_fingerprint_from_analysis(
-            hallucination_result, repo_analysis, user_context
+            hallucination_result, repo_analysis, user_context, hallucination_insights
         )
         
         # Record this scan for learning
@@ -136,6 +153,12 @@ class WeReadyBrain:
         # Update brain stats
         self._update_brain_stats(credibility_score, enhanced_recs)
         
+        # Generate evidence for each score component
+        score_evidence = self._generate_score_evidence(base_score, brain_recommendations)
+        
+        # Generate credibility methodology explanation
+        credibility_methodology = self._generate_credibility_methodology()
+
         return IntelligentWeReadyScore(
             base_score=base_score,
             credibility_score=credibility_score,
@@ -149,13 +172,17 @@ class WeReadyBrain:
             competitive_moats=competitive_moats,
             similar_success_stories=enhanced_recs.get("similar_success_stories", []),
             pattern_matches=enhanced_recs.get("pattern_based_insights", []),
-            learning_confidence=self._calculate_learning_confidence(enhanced_recs)
+            learning_confidence=self._calculate_learning_confidence(enhanced_recs),
+            score_evidence=score_evidence,
+            credibility_methodology=credibility_methodology,
+            evidence_count=len(score_evidence)
         )
     
     def _create_fingerprint_from_analysis(self,
                                         hallucination_result: Dict,
                                         repo_analysis: Dict,
-                                        user_context: Dict) -> CodebaseFingerprint:
+                                        user_context: Dict,
+                                        hallucination_insights: List = None) -> CodebaseFingerprint:
         """Create fingerprint from analysis results"""
         
         # Extract relevant data
@@ -602,6 +629,94 @@ class WeReadyBrain:
         similarity_boost = min(0.2, similar_cases * 0.05)
         
         return min(0.95, base_confidence + pattern_boost + similarity_boost)
+    
+    def _generate_score_evidence(self, base_score: WeReadyScore, brain_recommendations: List[BrainRecommendation]) -> List[Dict[str, Any]]:
+        """Generate detailed evidence for each score component"""
+        
+        score_evidence = []
+        
+        # Evidence for hallucination scoring
+        hallucination_evidence = self.credible_sources.get_detailed_evidence("hallucination_rate")
+        if hallucination_evidence:
+            score_evidence.append({
+                "score_component": "hallucination_detection",
+                "threshold_used": 0.2,  # 20% threshold from OpenAI research
+                "evidence_points": hallucination_evidence,
+                "explanation": f"WeReady penalizes AI-generated code because 20% contains fake package imports, creating deployment risks that founders often miss.",
+                "chatgpt_comparison": self.credible_sources.get_chatgpt_comparison("hallucination_rate")
+            })
+        
+        # Evidence for code quality scoring
+        code_review_evidence = self.credible_sources.get_detailed_evidence("code_review_impact")
+        if code_review_evidence:
+            score_evidence.append({
+                "score_component": "code_quality_standards",
+                "threshold_used": 2.5,  # 2.5x impact from MIT study
+                "evidence_points": code_review_evidence,
+                "explanation": f"Systematic code review increases Series A probability by 2.5x according to MIT's 10-year startup study of 2000+ companies.",
+                "chatgpt_comparison": self.credible_sources.get_chatgpt_comparison("code_review_impact")
+            })
+        
+        # Evidence for business model scoring
+        growth_evidence = self.credible_sources.get_detailed_evidence("revenue_growth_threshold")
+        if growth_evidence:
+            score_evidence.append({
+                "score_component": "revenue_growth_rate",
+                "threshold_used": 0.15,  # 15% monthly growth
+                "evidence_points": growth_evidence,
+                "explanation": f"15% monthly revenue growth is the minimum threshold VCs use for Series A consideration, based on Bessemer's analysis of 300+ cloud companies.",
+                "chatgpt_comparison": self.credible_sources.get_chatgpt_comparison("revenue_growth_threshold")
+            })
+        
+        # Evidence for product-market fit
+        pmf_evidence = self.credible_sources.get_detailed_evidence("product_market_fit_indicator")
+        if pmf_evidence:
+            score_evidence.append({
+                "score_component": "product_market_fit",
+                "threshold_used": 0.40,  # 40% disappointment threshold
+                "evidence_points": pmf_evidence,
+                "explanation": f"The Sean Ellis PMF test requires 40% of users to be 'very disappointed' without your product. This threshold is used by top VCs for investment decisions.",
+                "chatgpt_comparison": self.credible_sources.get_chatgpt_comparison("product_market_fit_indicator")
+            })
+        
+        return score_evidence
+    
+    def _generate_credibility_methodology(self) -> Dict[str, Any]:
+        """Generate explanation of WeReady's credibility methodology"""
+        
+        validation = self.credible_sources.validate_scoring_thresholds()
+        bailey_stats = self.bailey.get_bailey_stats()
+        
+        return {
+            "evidence_based_scoring": {
+                "total_sources": len(self.credible_sources.sources),
+                "average_credibility": validation["overall_credibility_score"],
+                "government_sources": len([s for s in self.credible_sources.sources.values() if "gov" in s.url.lower()]),
+                "academic_sources": len([s for s in self.credible_sources.sources.values() if any(org in s.organization.lower() for org in ["mit", "stanford", "university"])]),
+                "vc_sources": len([s for s in self.credible_sources.sources.values() if any(org in s.organization.lower() for org in ["bessemer", "first round", "y combinator"])])
+            },
+            "real_time_intelligence": {
+                "bailey_sources": bailey_stats["sources"]["total"],
+                "knowledge_points": bailey_stats["knowledge"]["total_points"],
+                "free_sources_percentage": bailey_stats["performance"]["free_source_percentage"],
+                "last_update": bailey_stats["performance"]["last_update"],
+                "avg_confidence": bailey_stats["knowledge"]["avg_confidence"]
+            },
+            "competitive_advantage": [
+                "Every threshold backed by authoritative research (not generic advice)",
+                "Real-time market data (not stale training data)",
+                "Pattern recognition from actual startup codebases",
+                "Cross-validated sources with contradiction detection",
+                "Outcome tracking that improves predictions over time"
+            ],
+            "chatgpt_cannot_provide": [
+                "Specific numerical thresholds with citations",
+                "Real-time funding cycle data",
+                "Pattern matching from proprietary codebase analysis",
+                "Cross-referenced authoritative sources",
+                "Market timing based on current data"
+            ]
+        }
     
     def _update_brain_stats(self, credibility_score: int, enhanced_recs: Dict[str, Any]):
         """Update brain performance statistics"""

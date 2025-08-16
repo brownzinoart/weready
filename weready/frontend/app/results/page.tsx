@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign } from 'lucide-react';
+import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign, FileText, Eye, Shield } from 'lucide-react';
 
 export default function ResultsPage() {
   const [result, setResult] = useState<any>(null);
   const [isMockData, setIsMockData] = useState(false);
   const [expandedRecommendations, setExpandedRecommendations] = useState<{[key: string]: boolean}>({});
+  const [showEvidence, setShowEvidence] = useState<{[key: string]: boolean}>({});
+  const [evidenceData, setEvidenceData] = useState<{[key: string]: any}>({});
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -71,6 +73,36 @@ export default function ResultsPage() {
       ...prev,
       [recId]: !prev[recId]
     }));
+  };
+
+  const toggleEvidence = async (component: string) => {
+    if (showEvidence[component]) {
+      setShowEvidence(prev => ({
+        ...prev,
+        [component]: false
+      }));
+    } else {
+      // Load evidence if not already loaded
+      if (!evidenceData[component]) {
+        try {
+          const response = await fetch(`http://localhost:8000/evidence/${component}`);
+          if (response.ok) {
+            const data = await response.json();
+            setEvidenceData(prev => ({
+              ...prev,
+              [component]: data
+            }));
+          }
+        } catch (error) {
+          console.error('Failed to load evidence:', error);
+        }
+      }
+      
+      setShowEvidence(prev => ({
+        ...prev,
+        [component]: true
+      }));
+    }
   };
 
   const getPriorityColor = (priority: string) => {
@@ -216,6 +248,127 @@ export default function ResultsPage() {
             </div>
           </div>
 
+          {/* Credibility & Methodology Section */}
+          {result.credibility_methodology && (
+            <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
+              <h3 className="text-2xl font-bold text-slate-900 mb-6 flex items-center space-x-2">
+                <Shield className="w-6 h-6 text-violet-600" />
+                <span>Why WeReady is Different</span>
+                <div className="bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+                  ChatGPT Can't Do This
+                </div>
+              </h3>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Evidence-Based Scoring */}
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+                  <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                    <FileText className="w-5 h-5 text-blue-600" />
+                    <span>Evidence-Based Scoring</span>
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Total Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.evidence_based_scoring.total_sources}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Government Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.evidence_based_scoring.government_sources}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Academic Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.evidence_based_scoring.academic_sources}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">VC Firm Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.evidence_based_scoring.vc_sources}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-blue-200">
+                      <span className="text-slate-600">Average Credibility:</span>
+                      <span className="font-bold text-blue-600">
+                        {result.credibility_methodology.evidence_based_scoring.average_credibility.toFixed(1)}/100
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Real-Time Intelligence */}
+                <div className="bg-gradient-to-br from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-6">
+                  <h4 className="text-lg font-bold text-slate-900 mb-4 flex items-center space-x-2">
+                    <TrendingUp className="w-5 h-5 text-green-600" />
+                    <span>Real-Time Intelligence</span>
+                  </h4>
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Bailey Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.real_time_intelligence.bailey_sources}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Knowledge Points:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.real_time_intelligence.knowledge_points}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Free Sources:</span>
+                      <span className="font-medium text-slate-900">
+                        {result.credibility_methodology.real_time_intelligence.free_sources_percentage}%
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-green-200">
+                      <span className="text-slate-600">Last Update:</span>
+                      <span className="font-medium text-green-600 text-xs">
+                        {result.credibility_methodology.real_time_intelligence.last_update ? 
+                          new Date(result.credibility_methodology.real_time_intelligence.last_update).toLocaleDateString() : 
+                          'Real-time'
+                        }
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Competitive Advantages */}
+              <div className="mt-6 bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 rounded-xl p-6">
+                <h4 className="text-lg font-bold text-slate-900 mb-4">What ChatGPT Cannot Provide</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h5 className="font-medium text-slate-900 mb-2">Our Advantages:</h5>
+                    <ul className="space-y-1 text-sm">
+                      {result.credibility_methodology.competitive_advantage.map((advantage: string, idx: number) => (
+                        <li key={idx} className="flex items-center space-x-2">
+                          <CheckCircle className="w-4 h-4 text-green-500 flex-shrink-0" />
+                          <span className="text-slate-700">{advantage}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <h5 className="font-medium text-slate-900 mb-2">ChatGPT Limitations:</h5>
+                    <ul className="space-y-1 text-sm">
+                      {result.credibility_methodology.chatgpt_cannot_provide.map((limitation: string, idx: number) => (
+                        <li key={idx} className="flex items-center space-x-2">
+                          <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                          <span className="text-slate-700">{limitation}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Category Breakdown Section */}
           {result.breakdown && (
             <div className="bg-white rounded-2xl shadow-xl border border-slate-200 p-8">
@@ -246,8 +399,17 @@ export default function ResultsPage() {
                             <p className="text-sm text-slate-600">{data.weight}% of overall score</p>
                           </div>
                         </div>
-                        <div className={`text-3xl font-bold ${getScoreColor(data.score)}`}>
-                          {data.score}/100
+                        <div className="flex items-center space-x-4">
+                          <button
+                            onClick={() => toggleEvidence(category)}
+                            className="flex items-center space-x-2 px-3 py-2 bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors text-sm font-medium"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>View Evidence</span>
+                          </button>
+                          <div className={`text-3xl font-bold ${getScoreColor(data.score)}`}>
+                            {data.score}/100
+                          </div>
                         </div>
                       </div>
                       
@@ -266,6 +428,66 @@ export default function ResultsPage() {
                           ></div>
                         </div>
                       </div>
+                      
+                      {/* Evidence Section */}
+                      {showEvidence[category] && evidenceData[category] && (
+                        <div className="mt-4 bg-gradient-to-r from-violet-50 to-purple-50 border-2 border-violet-200 rounded-xl p-6">
+                          <div className="flex items-center space-x-2 mb-4">
+                            <Shield className="w-5 h-5 text-violet-600" />
+                            <h5 className="text-lg font-bold text-slate-900">Evidence & Sources</h5>
+                            <div className="bg-violet-100 text-violet-700 px-2 py-1 rounded-full text-xs font-medium">
+                              WeReady Advantage
+                            </div>
+                          </div>
+                          
+                          {/* ChatGPT Comparison */}
+                          <div className="mb-4 p-4 bg-white rounded-lg border-2 border-amber-200">
+                            <div className="text-sm font-medium text-amber-800 mb-2">ChatGPT vs WeReady</div>
+                            <div className="text-sm text-slate-700">
+                              {evidenceData[category].chatgpt_comparison}
+                            </div>
+                          </div>
+                          
+                          {/* Evidence Points */}
+                          <div className="space-y-3">
+                            {evidenceData[category].evidence_points?.map((evidence: any, idx: number) => (
+                              <div key={idx} className="bg-white rounded-lg p-4 border border-slate-200">
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
+                                    <div className="font-medium text-slate-900">{evidence.source_name}</div>
+                                    <div className="text-sm text-slate-600">{evidence.organization}</div>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-sm font-medium text-violet-600">
+                                      {evidence.credibility_score}/100 credibility
+                                    </div>
+                                    <div className="text-xs text-slate-500">{evidence.last_updated}</div>
+                                  </div>
+                                </div>
+                                <div className="text-sm text-slate-700 mb-2">{evidence.context}</div>
+                                <div className="text-xs text-slate-500">
+                                  <strong>Methodology:</strong> {evidence.methodology}
+                                </div>
+                                <a 
+                                  href={evidence.evidence_url} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center space-x-1 text-xs text-violet-600 hover:text-violet-800 mt-2"
+                                >
+                                  <ExternalLink className="w-3 h-3" />
+                                  <span>View Source</span>
+                                </a>
+                              </div>
+                            ))}
+                          </div>
+                          
+                          <div className="mt-4 p-3 bg-violet-100 rounded-lg">
+                            <div className="text-sm font-medium text-violet-800">
+                              {evidenceData[category].weready_advantage}
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       
                       {/* Category Issues */}
                       {data.issues && data.issues.length > 0 && (

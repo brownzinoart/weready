@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight } from "lucide-react";
+import Navigation from "./components/Navigation";
 import HowItWorks from "./components/HowItWorks";
 import Footer from "./components/Footer";
 
@@ -387,31 +388,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
-      {/* Navigation */}
-      <nav className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
-                  <Award className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-xl font-bold bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">
-                  WeReady v2.0
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
-                Login
-              </button>
-              <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium px-6 py-2 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg">
-                Sign Up
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
+      <Navigation />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
@@ -429,6 +406,16 @@ export default function Home() {
           <p className="text-xl md:text-2xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
             Don't let technical hiccups kill your startup. Get actionable guidance to ship confidently.
           </p>
+          
+          <div className="flex justify-center mb-8">
+            <div 
+              onClick={() => router.push('/bailey-intelligence')}
+              className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-3 rounded-lg cursor-pointer hover:shadow-lg transition-all duration-200 flex items-center space-x-2"
+            >
+              <span className="font-semibold">🧠 NEW: Bailey Intelligence Dashboard</span>
+              <span className="text-blue-100">→</span>
+            </div>
+          </div>
         </div>
 
         {/* Input Section */}
