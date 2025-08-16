@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home } from "lucide-react";
 import Navigation from "../components/Navigation";
+import MeetingMode from "../components/MeetingMode";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -31,6 +32,7 @@ export default function BaileyIntelligence() {
   const [repoAnalysis, setRepoAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  const [meetingModeOpen, setMeetingModeOpen] = useState(false);
 
   // Load Bailey intelligence overview
   useEffect(() => {
@@ -94,15 +96,15 @@ export default function BaileyIntelligence() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation />
+      <Navigation onMeetingMode={() => setMeetingModeOpen(true)} />
 
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white">
-        <div className="container mx-auto px-4 py-12">
+        <div className="container mx-auto px-4 py-8 md:py-12">
           <div className="text-center">
-            <Brain className="w-16 h-16 mx-auto mb-4" />
-            <h1 className="text-4xl font-bold mb-4">Bailey Intelligence Dashboard</h1>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+            <Brain className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-4" />
+            <h1 className="text-2xl md:text-4xl font-bold mb-3 md:mb-4 leading-tight">Bailey Intelligence Dashboard</h1>
+            <p className="text-base md:text-xl text-blue-100 max-w-3xl mx-auto leading-relaxed px-4">
               Real-time startup intelligence powered by government data, academic research, and GitHub analysis.
               The credibility advantage ChatGPT cannot match.
             </p>
@@ -111,47 +113,47 @@ export default function BaileyIntelligence() {
       </div>
 
       {/* Intelligence Metrics Overview */}
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-green-200">
+      <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-green-200">
             <div className="flex items-center">
-              <Shield className="w-8 h-8 text-green-600 mr-3" />
+              <Shield className="w-6 h-6 md:w-8 md:h-8 text-green-600 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Government Sources</p>
-                <p className="text-2xl font-bold text-green-600">{healthData.intelligence?.government_sources || 0}</p>
+                <p className="text-xs md:text-sm text-gray-600">Government Sources</p>
+                <p className="text-xl md:text-2xl font-bold text-green-600">{healthData.intelligence?.government_sources || 0}</p>
                 <p className="text-xs text-green-600">98% Credibility</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-blue-200">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-blue-200">
             <div className="flex items-center">
-              <BookOpen className="w-8 h-8 text-blue-600 mr-3" />
+              <BookOpen className="w-6 h-6 md:w-8 md:h-8 text-blue-600 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Academic Papers</p>
-                <p className="text-2xl font-bold text-blue-600">{healthData.intelligence?.academic_papers_analyzed || 0}</p>
+                <p className="text-xs md:text-sm text-gray-600">Academic Papers</p>
+                <p className="text-xl md:text-2xl font-bold text-blue-600">{healthData.intelligence?.academic_papers_analyzed || 0}</p>
                 <p className="text-xs text-blue-600">Research Insights</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-purple-200">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-purple-200">
             <div className="flex items-center">
-              <GitBranch className="w-8 h-8 text-purple-600 mr-3" />
+              <GitBranch className="w-6 h-6 md:w-8 md:h-8 text-purple-600 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">GitHub Repos</p>
-                <p className="text-2xl font-bold text-purple-600">{healthData.intelligence?.github_repositories_analyzed || 0}</p>
+                <p className="text-xs md:text-sm text-gray-600">GitHub Repos</p>
+                <p className="text-xl md:text-2xl font-bold text-purple-600">{healthData.intelligence?.github_repositories_analyzed || 0}</p>
                 <p className="text-xs text-purple-600">Live Analysis</p>
               </div>
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-lg shadow-lg border border-orange-200">
+          <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-orange-200">
             <div className="flex items-center">
-              <Zap className="w-8 h-8 text-orange-600 mr-3" />
+              <Zap className="w-6 h-6 md:w-8 md:h-8 text-orange-600 mr-3" />
               <div>
-                <p className="text-sm text-gray-600">Credible Sources</p>
-                <p className="text-2xl font-bold text-orange-600">{healthData.intelligence?.credible_sources || 0}</p>
+                <p className="text-xs md:text-sm text-gray-600">Credible Sources</p>
+                <p className="text-xl md:text-2xl font-bold text-orange-600">{healthData.intelligence?.credible_sources || 0}</p>
                 <p className="text-xs text-orange-600">Evidence-Based</p>
               </div>
             </div>
@@ -197,7 +199,7 @@ export default function BaileyIntelligence() {
                         <span className={`px-2 py-1 rounded text-xs font-medium ${
                           status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                         }`}>
-                          {status}
+                          {String(status)}
                         </span>
                       </div>
                     ))}
@@ -468,6 +470,21 @@ export default function BaileyIntelligence() {
             )}
           </div>
         </div>
+
+        {/* Meeting Mode */}
+        <MeetingMode 
+          isOpen={meetingModeOpen}
+          onClose={() => setMeetingModeOpen(false)}
+          data={{
+            overall_score: 87,
+            credibility_score: 98,
+            market_percentile: 95,
+            success_probability: 0.85,
+            government_sources: healthData?.intelligence?.government_sources || 15,
+            academic_papers: healthData?.intelligence?.academic_papers_analyzed || 127,
+            github_repos: healthData?.intelligence?.github_repositories_analyzed || 89
+          }}
+        />
       </div>
     </div>
   );

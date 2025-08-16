@@ -13,14 +13,16 @@ import {
   ChevronDown,
   Home,
   Zap,
-  Shield
+  Shield,
+  Presentation
 } from "lucide-react";
 
 interface NavigationProps {
   transparent?: boolean;
+  onMeetingMode?: () => void;
 }
 
-export default function Navigation({ transparent = false }: NavigationProps) {
+export default function Navigation({ transparent = false, onMeetingMode }: NavigationProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -167,6 +169,15 @@ export default function Navigation({ transparent = false }: NavigationProps) {
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
+            {onMeetingMode && (
+              <button 
+                onClick={onMeetingMode}
+                className="flex items-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 font-medium rounded-lg hover:bg-orange-200 transition-colors"
+              >
+                <Presentation className="w-4 h-4" />
+                <span>Meeting Mode</span>
+              </button>
+            )}
             <button className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
               Login
             </button>
@@ -181,94 +192,134 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           {/* Mobile Menu Button */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-lg text-slate-600 hover:bg-slate-100 transition-colors"
+            className="md:hidden p-3 rounded-xl text-slate-600 hover:bg-slate-100 transition-all active:scale-95"
           >
-            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            {mobileMenuOpen ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
           </button>
         </div>
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white">
-            <div className="py-4 space-y-4">
-              {/* WeReady Analysis */}
-              <button
-                onClick={() => {
-                  router.push('/');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                  isActive('/') 
-                    ? 'bg-violet-50 text-violet-600' 
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Home className="w-4 h-4" />
-                <span>WeReady Analysis</span>
-              </button>
-
-              {/* Bailey Intelligence */}
-              <button
-                onClick={() => {
-                  router.push('/bailey-intelligence');
-                  setMobileMenuOpen(false);
-                }}
-                className={`w-full text-left px-4 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 ${
-                  isActive('/bailey-intelligence') 
-                    ? 'bg-blue-50 text-blue-600' 
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                <Brain className="w-4 h-4" />
-                <span>Bailey Intelligence</span>
-                {!isActive('/bailey-intelligence') && (
-                  <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full">NEW</span>
-                )}
-              </button>
-
-              {/* Tools Section */}
-              <div className="pl-4 border-l-2 border-slate-200">
-                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
-                  Intelligence Tools
-                </p>
-                {tools.map((tool) => (
-                  <button
-                    key={tool.href}
-                    onClick={() => {
-                      router.push(tool.href);
-                      setMobileMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-lg font-medium transition-colors flex items-center space-x-2 mb-1 ${
-                      isActive(tool.href) 
-                        ? 'bg-violet-50 text-violet-600' 
-                        : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    <tool.icon className="w-4 h-4" />
-                    <span>{tool.name}</span>
-                    {tool.badge && (
-                      <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full">
-                        {tool.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
+          <div className="fixed inset-0 bg-slate-900 z-50 md:hidden h-screen w-screen overflow-y-auto">
+            <div className="min-h-screen w-full">
+              {/* Menu Header */}
+              <div className="flex items-center justify-between p-6 border-b border-slate-700">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                    <Award className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                    WeReady v2.0
+                  </span>
+                </div>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+                >
+                  <X className="w-7 h-7" />
+                </button>
               </div>
 
-              {/* Mobile Actions */}
-              <div className="border-t border-slate-200 pt-4 space-y-3">
-                <button className="w-full text-left px-4 py-2 text-slate-600 font-medium">
-                  Login
-                </button>
-                <button 
+              {/* Menu Content */}
+              <div className="py-8 px-6 space-y-6">
+                {/* WeReady Analysis */}
+                <button
                   onClick={() => {
                     router.push('/');
                     setMobileMenuOpen(false);
                   }}
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-medium px-6 py-3 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
+                  className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
+                    isActive('/') 
+                      ? 'bg-violet-600 text-white border-2 border-violet-500' 
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
+                  }`}
                 >
-                  Get WeReady Score
+                  <Home className="w-5 h-5" />
+                  <span className="text-lg">WeReady Analysis</span>
                 </button>
+
+                {/* Bailey Intelligence */}
+                <button
+                  onClick={() => {
+                    router.push('/bailey-intelligence');
+                    setMobileMenuOpen(false);
+                  }}
+                  className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
+                    isActive('/bailey-intelligence') 
+                      ? 'bg-blue-600 text-white border-2 border-blue-500' 
+                      : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
+                  }`}
+                >
+                  <Brain className="w-5 h-5" />
+                  <div className="flex-1 flex items-center justify-between">
+                    <span className="text-lg">Bailey Intelligence</span>
+                    {!isActive('/bailey-intelligence') && (
+                      <span className="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">NEW</span>
+                    )}
+                  </div>
+                </button>
+
+                {/* Tools Section */}
+                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                  <p className="text-sm font-bold text-slate-200 mb-4 flex items-center space-x-2">
+                    <Zap className="w-4 h-4 text-violet-400" />
+                    <span>Intelligence Tools</span>
+                  </p>
+                  <div className="space-y-3">
+                    {tools.map((tool) => (
+                      <button
+                        key={tool.href}
+                        onClick={() => {
+                          router.push(tool.href);
+                          setMobileMenuOpen(false);
+                        }}
+                        className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all flex items-center space-x-3 ${
+                          isActive(tool.href) 
+                            ? 'bg-violet-600 text-white border border-violet-500' 
+                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white border border-slate-600'
+                        }`}
+                      >
+                        <tool.icon className="w-5 h-5" />
+                        <div className="flex-1 flex items-center justify-between">
+                          <span className="text-base">{tool.name}</span>
+                          {tool.badge && (
+                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
+                              {tool.badge}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mobile Actions */}
+                <div className="border-t border-slate-700 pt-6 space-y-4">
+                  {onMeetingMode && (
+                    <button 
+                      onClick={() => {
+                        onMeetingMode();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all"
+                    >
+                      <Presentation className="w-5 h-5" />
+                      <span className="text-lg">Meeting Mode</span>
+                    </button>
+                  )}
+                  <button className="w-full text-left px-6 py-3 text-slate-400 font-medium hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                    Login
+                  </button>
+                  <button 
+                    onClick={() => {
+                      router.push('/');
+                      setMobileMenuOpen(false);
+                    }}
+                    className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-4 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg text-center text-lg"
+                  >
+                    Get WeReady Score
+                  </button>
+                </div>
               </div>
             </div>
           </div>

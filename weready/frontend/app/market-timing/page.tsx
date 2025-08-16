@@ -106,9 +106,9 @@ export default function MarketTimingDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Hero Section */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center space-x-4 mb-4">
-            <h1 className="text-4xl font-bold text-slate-900">
+        <div className="text-center mb-6 md:mb-8">
+          <div className="flex flex-col md:flex-row items-center justify-center space-y-4 md:space-y-0 md:space-x-4 mb-4">
+            <h1 className="text-2xl md:text-4xl font-bold text-slate-900 leading-tight">
               Strategic <span className="bg-gradient-to-r from-violet-600 to-purple-600 bg-clip-text text-transparent">Market Timing</span>
             </h1>
             <button
@@ -116,10 +116,10 @@ export default function MarketTimingDashboard() {
               className="flex items-center space-x-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors"
             >
               <RefreshCw className="w-4 h-4" />
-              <span>Refresh</span>
+              <span className="text-sm md:text-base">Refresh</span>
             </button>
           </div>
-          <p className="text-xl text-slate-600 max-w-3xl mx-auto">
+          <p className="text-base md:text-xl text-slate-600 max-w-3xl mx-auto px-4 leading-relaxed">
             Real-time intelligence combining funding cycles, GitHub trends, and sector momentum for strategic decision making.
           </p>
           {lastUpdate && (
