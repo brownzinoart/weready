@@ -7,22 +7,19 @@ import {
   Brain, 
   TrendingUp, 
   Target, 
-  FileText, 
   Menu, 
   X, 
   ChevronDown,
   Home,
   Zap,
-  Shield,
-  Presentation
+  Shield
 } from "lucide-react";
 
 interface NavigationProps {
   transparent?: boolean;
-  onMeetingMode?: () => void;
 }
 
-export default function Navigation({ transparent = false, onMeetingMode }: NavigationProps) {
+export default function Navigation({ transparent = false }: NavigationProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -44,13 +41,6 @@ export default function Navigation({ transparent = false, onMeetingMode }: Navig
       icon: Target,
       description: "Strategic timing advisor",
       badge: "REAL-TIME"
-    },
-    {
-      name: "Evidence Demo",
-      href: "/evidence-demo", 
-      icon: FileText,
-      description: "Credibility showcase",
-      badge: null
     }
   ];
 
@@ -169,15 +159,6 @@ export default function Navigation({ transparent = false, onMeetingMode }: Navig
 
           {/* Desktop Actions */}
           <div className="hidden md:flex items-center space-x-4">
-            {onMeetingMode && (
-              <button 
-                onClick={onMeetingMode}
-                className="flex items-center space-x-2 px-4 py-2 bg-orange-100 text-orange-700 font-medium rounded-lg hover:bg-orange-200 transition-colors"
-              >
-                <Presentation className="w-4 h-4" />
-                <span>Meeting Mode</span>
-              </button>
-            )}
             <button className="text-slate-600 hover:text-slate-900 font-medium transition-colors">
               Login
             </button>
@@ -295,18 +276,6 @@ export default function Navigation({ transparent = false, onMeetingMode }: Navig
 
                 {/* Mobile Actions */}
                 <div className="border-t border-slate-700 pt-6 space-y-4">
-                  {onMeetingMode && (
-                    <button 
-                      onClick={() => {
-                        onMeetingMode();
-                        setMobileMenuOpen(false);
-                      }}
-                      className="w-full flex items-center justify-center space-x-3 px-6 py-4 bg-orange-600 text-white font-bold rounded-xl hover:bg-orange-700 transition-all"
-                    >
-                      <Presentation className="w-5 h-5" />
-                      <span className="text-lg">Meeting Mode</span>
-                    </button>
-                  )}
                   <button className="w-full text-left px-6 py-3 text-slate-400 font-medium hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
                     Login
                   </button>

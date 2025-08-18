@@ -66,6 +66,9 @@ class IntelligentWeReadyScore:
     score_evidence: List[Dict[str, Any]] = None
     credibility_methodology: Dict[str, Any] = None
     evidence_count: int = 0
+    
+    # Intelligent roadmap
+    intelligent_roadmap: Dict[str, List[Dict[str, Any]]] = None
 
 class WeReadyBrain:
     """The intelligent core that makes WeReady recommendations credible and smart"""
@@ -158,6 +161,15 @@ class WeReadyBrain:
         
         # Generate credibility methodology explanation
         credibility_methodology = self._generate_credibility_methodology()
+        
+        # Generate intelligent roadmap using brain recommendations and base score
+        intelligent_roadmap = self.base_scorer.generate_intelligent_roadmap(
+            brain_recommendations=[asdict(rec) for rec in brain_recommendations],
+            breakdowns=base_score.breakdown,
+            overall_score=base_score.overall_score,
+            key_risks=key_risks,
+            competitive_moats=competitive_moats
+        )
 
         return IntelligentWeReadyScore(
             base_score=base_score,
@@ -175,7 +187,8 @@ class WeReadyBrain:
             learning_confidence=self._calculate_learning_confidence(enhanced_recs),
             score_evidence=score_evidence,
             credibility_methodology=credibility_methodology,
-            evidence_count=len(score_evidence)
+            evidence_count=len(score_evidence),
+            intelligent_roadmap=intelligent_roadmap
         )
     
     def _create_fingerprint_from_analysis(self,

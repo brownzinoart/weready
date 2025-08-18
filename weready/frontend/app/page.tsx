@@ -336,29 +336,55 @@ export default function Home() {
     console.log("Mock trigger check:", { isMockTrigger, inputMode, code, repoUrl });
     
     if (isMockTrigger) {
-      console.log("Mock path triggered - starting timeout");
-      // Simulate scanning delay
-      setTimeout(() => {
-        console.log("Mock timeout completed - generating data");
-        const mockData = generateMockData();
-        console.log("Mock data generated:", mockData);
+      console.log("Mock path triggered - using API for real free analysis");
+      // Use the real API instead of mock data to test the full flow
+      try {
+        const response = await fetch("http://localhost:8000/api/analyze/free", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code_snippet: "mock test for demo", language: "python" }),
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Analysis failed: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Real API data received:", data);
         setScanning(false);
-        navigateToResults(mockData, true);
-        console.log("Navigated to results page");
-      }, 2000);
-      return;
+        navigateToResults(data, false); // Use real API data, not mock
+        console.log("Navigated to results page with real API data");
+        return;
+      } catch (error) {
+        console.error("Mock API call failed, falling back to frontend mock:", error);
+        // Fallback to frontend mock if API fails
+        setTimeout(() => {
+          console.log("Mock timeout completed - generating data");
+          const mockData = generateMockData();
+          console.log("Mock data generated:", mockData);
+          setScanning(false);
+          navigateToResults(mockData, true);
+          console.log("Navigated to results page");
+        }, 2000);
+        return;
+      }
     }
     
     try {
       const requestBody = inputMode === "code" 
-        ? { code, language: "python" }
-        : { repo_url: repoUrl, language: "python" };
+        ? { code_snippet: code, language: "python" }
+        : { repository_url: repoUrl, language: "python" };
         
-      const response = await fetch("http://localhost:3001/scan/brain", {
+      const response = await fetch("http://localhost:8000/api/analyze/free", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Analysis failed: ${response.status}`);
+      }
+      
       const data = await response.json();
       setScanning(false);
       navigateToResults(data, false);
@@ -499,11 +525,15 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <span className="text-lg">🚀 WeReady Analysis</span>
+                  <span className="text-lg">🚀 FREE WeReady Analysis</span>
                   <ArrowRight className="w-6 h-6" />
                 </>
               )}
             </button>
+            
+            <p className="text-center text-slate-600 text-sm mt-4">
+              🎁 Your first analysis is completely free - no signup required
+            </p>
           </div>
         </div>
 

@@ -5,3 +5,11 @@ python-multipart
 tree-sitter
 tree-sitter-python
 tree-sitter-javascript
+python-jose[cryptography]
+authlib
+sqlalchemy
+alembic
+redis
+passlib[bcrypt]
+python-dotenv
+itsdangerous
