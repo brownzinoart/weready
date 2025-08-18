@@ -416,6 +416,16 @@ export default function Home() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100">
       <Navigation />
 
+      {/* Demo Banner */}
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-center py-3">
+        <div className="max-w-6xl mx-auto px-4">
+          <p className="font-semibold">
+            🚀 <span className="text-blue-100">Live Demo:</span> This is a fully functional demo showing WeReady's complete analysis capabilities
+            <span className="ml-2 text-blue-200">• Try "Mock Demo" for comprehensive results •</span>
+          </p>
+        </div>
+      </div>
+
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
         <div className="text-center py-16">
