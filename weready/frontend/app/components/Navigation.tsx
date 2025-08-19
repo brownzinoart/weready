@@ -63,9 +63,10 @@ export default function Navigation({ transparent = false }: NavigationProps) {
     : "bg-white/80 backdrop-blur-sm border-b border-slate-200";
 
   return (
-    <nav className={`sticky top-0 z-50 ${navBgClass}`}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
+    <>
+      <nav className={`sticky top-0 z-50 ${navBgClass}`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
           {/* Logo and Brand */}
           <div className="flex items-center space-x-4">
             <button 
@@ -193,129 +194,131 @@ export default function Navigation({ transparent = false }: NavigationProps) {
           </button>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="fixed inset-0 top-0 left-0 h-screen w-screen bg-slate-900 z-[100] md:hidden overflow-y-auto">
-            <div className="min-h-full w-full">
-              {/* Menu Header */}
-              <div className="flex items-center justify-between p-6 border-b border-slate-700">
-                <div className="flex items-center space-x-3">
-                  <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
-                    <Award className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
-                    WeReady v2.0
-                  </span>
+        </div>
+
+        {/* Click outside to close dropdown */}
+        {toolsDropdownOpen && (
+          <div 
+            className="fixed inset-0 z-40" 
+            onClick={() => setToolsDropdownOpen(false)}
+          />
+        )}
+      </nav>
+
+      {/* Mobile Menu - Outside nav container for full viewport coverage */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 top-0 left-0 h-screen w-screen bg-slate-900 z-[100] md:hidden overflow-y-auto">
+          <div className="min-h-full w-full">
+            {/* Menu Header */}
+            <div className="flex items-center justify-between p-6 border-b border-slate-700">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Award className="w-5 h-5 text-white" />
                 </div>
-                <button
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
-                >
-                  <X className="w-7 h-7" />
-                </button>
+                <span className="text-xl font-bold bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">
+                  WeReady v2.0
+                </span>
+              </div>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+              >
+                <X className="w-7 h-7" />
+              </button>
+            </div>
+
+            {/* Menu Content */}
+            <div className="py-8 px-6 space-y-6">
+              {/* WeReady Analysis */}
+              <button
+                onClick={() => {
+                  router.push('/');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
+                  isActive('/') 
+                    ? 'bg-violet-600 text-white border-2 border-violet-500' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
+                }`}
+              >
+                <Home className="w-5 h-5" />
+                <span className="text-lg">WeReady Analysis</span>
+              </button>
+
+              {/* Bailey Intelligence */}
+              <button
+                onClick={() => {
+                  router.push('/bailey-intelligence');
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
+                  isActive('/bailey-intelligence') 
+                    ? 'bg-blue-600 text-white border-2 border-blue-500' 
+                    : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
+                }`}
+              >
+                <Brain className="w-5 h-5" />
+                <div className="flex-1 flex items-center justify-between">
+                  <span className="text-lg">Bailey Intelligence</span>
+                  {!isActive('/bailey-intelligence') && (
+                    <span className="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">NEW</span>
+                  )}
+                </div>
+              </button>
+
+              {/* Tools Section */}
+              <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
+                <p className="text-sm font-bold text-slate-200 mb-4 flex items-center space-x-2">
+                  <Zap className="w-4 h-4 text-violet-400" />
+                  <span>Intelligence Tools</span>
+                </p>
+                <div className="space-y-3">
+                  {tools.map((tool) => (
+                    <button
+                      key={tool.href}
+                      onClick={() => {
+                        router.push(tool.href);
+                        setMobileMenuOpen(false);
+                      }}
+                      className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all flex items-center space-x-3 ${
+                        isActive(tool.href) 
+                          ? 'bg-violet-600 text-white border border-violet-500' 
+                          : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white border border-slate-600'
+                      }`}
+                    >
+                      <tool.icon className="w-5 h-5" />
+                      <div className="flex-1 flex items-center justify-between">
+                        <span className="text-base">{tool.name}</span>
+                        {tool.badge && (
+                          <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
+                            {tool.badge}
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              {/* Menu Content */}
-              <div className="py-8 px-6 space-y-6">
-                {/* WeReady Analysis */}
-                <button
+              {/* Mobile Actions */}
+              <div className="border-t border-slate-700 pt-6 space-y-4">
+                <button className="w-full text-left px-6 py-3 text-slate-400 font-medium hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
+                  Login
+                </button>
+                <button 
                   onClick={() => {
                     router.push('/');
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
-                    isActive('/') 
-                      ? 'bg-violet-600 text-white border-2 border-violet-500' 
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
-                  }`}
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-4 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg text-center text-lg"
                 >
-                  <Home className="w-5 h-5" />
-                  <span className="text-lg">WeReady Analysis</span>
+                  Get WeReady Score
                 </button>
-
-                {/* Bailey Intelligence */}
-                <button
-                  onClick={() => {
-                    router.push('/bailey-intelligence');
-                    setMobileMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-6 py-4 rounded-xl font-medium transition-all flex items-center space-x-3 ${
-                    isActive('/bailey-intelligence') 
-                      ? 'bg-blue-600 text-white border-2 border-blue-500' 
-                      : 'text-slate-300 hover:bg-slate-800 hover:text-white border-2 border-transparent'
-                  }`}
-                >
-                  <Brain className="w-5 h-5" />
-                  <div className="flex-1 flex items-center justify-between">
-                    <span className="text-lg">Bailey Intelligence</span>
-                    {!isActive('/bailey-intelligence') && (
-                      <span className="px-3 py-1 bg-blue-500 text-white text-xs font-medium rounded-full">NEW</span>
-                    )}
-                  </div>
-                </button>
-
-                {/* Tools Section */}
-                <div className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                  <p className="text-sm font-bold text-slate-200 mb-4 flex items-center space-x-2">
-                    <Zap className="w-4 h-4 text-violet-400" />
-                    <span>Intelligence Tools</span>
-                  </p>
-                  <div className="space-y-3">
-                    {tools.map((tool) => (
-                      <button
-                        key={tool.href}
-                        onClick={() => {
-                          router.push(tool.href);
-                          setMobileMenuOpen(false);
-                        }}
-                        className={`w-full text-left px-4 py-3 rounded-lg font-medium transition-all flex items-center space-x-3 ${
-                          isActive(tool.href) 
-                            ? 'bg-violet-600 text-white border border-violet-500' 
-                            : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-white border border-slate-600'
-                        }`}
-                      >
-                        <tool.icon className="w-5 h-5" />
-                        <div className="flex-1 flex items-center justify-between">
-                          <span className="text-base">{tool.name}</span>
-                          {tool.badge && (
-                            <span className="px-2 py-1 bg-green-500 text-white text-xs font-medium rounded-full">
-                              {tool.badge}
-                            </span>
-                          )}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Mobile Actions */}
-                <div className="border-t border-slate-700 pt-6 space-y-4">
-                  <button className="w-full text-left px-6 py-3 text-slate-400 font-medium hover:bg-slate-800 hover:text-white rounded-lg transition-colors">
-                    Login
-                  </button>
-                  <button 
-                    onClick={() => {
-                      router.push('/');
-                      setMobileMenuOpen(false);
-                    }}
-                    className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-6 py-4 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg text-center text-lg"
-                  >
-                    Get WeReady Score
-                  </button>
-                </div>
               </div>
             </div>
           </div>
-        )}
-      </div>
-
-      {/* Click outside to close dropdown */}
-      {toolsDropdownOpen && (
-        <div 
-          className="fixed inset-0 z-40" 
-          onClick={() => setToolsDropdownOpen(false)}
-        />
+        </div>
       )}
-    </nav>
+    </>
   );
 }
