@@ -195,7 +195,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 bg-slate-900 z-50 md:hidden overflow-y-auto">
+          <div className="fixed inset-0 top-0 left-0 h-screen w-screen bg-slate-900 z-[100] md:hidden overflow-y-auto">
             <div className="min-h-full w-full">
               {/* Menu Header */}
               <div className="flex items-center justify-between p-6 border-b border-slate-700">
