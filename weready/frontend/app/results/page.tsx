@@ -56,8 +56,10 @@ function ResultsContent() {
     
     if (resultData) {
       setResult(resultData);
-      setIsMockData(isMockStored);
-      console.log("Result data set successfully");
+      // Better mock detection: check both sessionStorage flag AND data properties
+      const isMockDetected = isMockStored || resultData.isPremiumUser === true || resultData.weready_stamp_eligible !== undefined;
+      setIsMockData(isMockDetected);
+      console.log("Result data set successfully", { isMockDetected, isMockStored, isPremiumUser: resultData.isPremiumUser });
     } else {
       console.log("No result data found, redirecting to home");
       router.push('/');
@@ -141,7 +143,7 @@ function ResultsContent() {
 
         <div className="space-y-8">
           {/* Mock Data Indicator */}
-          {isMockData && (
+          {(isMockData || result?.isPremiumUser) && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-4 text-center">
               <div className="flex items-center justify-center space-x-2">
                 <Star className="w-5 h-5 text-blue-600" />

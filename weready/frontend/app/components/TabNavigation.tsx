@@ -56,12 +56,12 @@ export default function TabNavigation({ result, isFreeTier = true }: TabNavigati
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
       <Tab.Group>
-        <Tab.List className="flex overflow-x-auto scrollbar-hide border-b border-slate-200 bg-slate-50">
+        <Tab.List className="flex overflow-x-auto scrollbar-hide border-b border-slate-200 bg-slate-50 scroll-smooth">
           {tabs.map((tab, index) => (
             <Tab
               key={tab.name}
               className={({ selected }) =>
-                `relative flex-1 px-3 sm:px-4 py-4 text-xs sm:text-sm font-medium focus:outline-none transition-all whitespace-nowrap ${
+                `relative flex-1 min-w-[120px] px-3 sm:px-4 py-4 text-xs sm:text-sm font-medium focus:outline-none transition-all whitespace-nowrap ${
                   selected
                     ? 'text-violet-600 bg-white border-b-2 border-violet-600'
                     : 'text-slate-600 hover:text-slate-900'

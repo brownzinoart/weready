@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { 
   Award, 
@@ -26,6 +26,20 @@ export default function Navigation({ transparent = false }: NavigationProps) {
   const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
 
   const isActive = (path: string) => pathname === path;
+
+  // Handle body scroll lock when mobile menu is open
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [mobileMenuOpen]);
 
   const tools = [
     {
@@ -181,8 +195,8 @@ export default function Navigation({ transparent = false }: NavigationProps) {
 
         {/* Mobile Menu */}
         {mobileMenuOpen && (
-          <div className="fixed inset-0 bg-slate-900 z-50 md:hidden h-screen w-screen overflow-y-auto">
-            <div className="min-h-screen w-full">
+          <div className="fixed inset-0 bg-slate-900 z-50 md:hidden overflow-y-auto">
+            <div className="min-h-full w-full">
               {/* Menu Header */}
               <div className="flex items-center justify-between p-6 border-b border-slate-700">
                 <div className="flex items-center space-x-3">
