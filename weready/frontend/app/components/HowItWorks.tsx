@@ -9,7 +9,8 @@ import {
   DollarSign,
   Target,
   Globe,
-  ExternalLink
+  ExternalLink,
+  Palette
 } from "lucide-react";
 
 export default function HowItWorks() {
@@ -46,7 +47,7 @@ export default function HowItWorks() {
   const scoringCriteria = [
     {
       title: "Code Quality",
-      percentage: 40,
+      percentage: 25,
       icon: GitBranch,
       description: "Technical architecture, security, performance, and maintainability",
       details: [
@@ -59,7 +60,7 @@ export default function HowItWorks() {
     },
     {
       title: "Business Model",
-      percentage: 30,
+      percentage: 25,
       icon: Target,
       description: "Market fit, monetization strategy, growth potential, and competitive positioning",
       details: [
@@ -72,7 +73,7 @@ export default function HowItWorks() {
     },
     {
       title: "Investment Readiness",
-      percentage: 30,
+      percentage: 25,
       icon: DollarSign,
       description: "Funding potential, team strength, traction metrics, and investor appeal",
       details: [
@@ -82,6 +83,19 @@ export default function HowItWorks() {
         "Investor appeal and pitch quality"
       ],
       color: "from-purple-500 to-violet-500"
+    },
+    {
+      title: "Design & Experience",
+      percentage: 25,
+      icon: Palette,
+      description: "User experience design, accessibility, conversion optimization, and brand design",
+      details: [
+        "UI/UX design quality and usability",
+        "Accessibility compliance (WCAG standards)",
+        "Mobile optimization and responsiveness",
+        "Conversion rate optimization potential"
+      ],
+      color: "from-pink-500 to-rose-500"
     }
   ];
 
@@ -109,7 +123,7 @@ export default function HowItWorks() {
               Meet <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Bailey</span>
             </h2>
             <p className="text-lg sm:text-xl md:text-2xl text-slate-300 mb-8 max-w-4xl mx-auto leading-relaxed px-4">
-              Your all-encompassing startup intelligence system. Bailey analyzes your code, evaluates your business idea, and guides your investor readiness. 
+              Your all-encompassing startup intelligence system. Bailey analyzes your code, evaluates your business idea, guides your investor readiness, and optimizes your user experience. 
               <span className="text-white font-semibold"> Starting with proven principles, evolving into sophisticated ML—you're helping us build the future </span>
               of comprehensive startup analysis.
             </p>
@@ -119,17 +133,17 @@ export default function HowItWorks() {
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
               <Globe className="w-12 h-12 text-violet-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Complete Startup Analysis</h3>
-              <p className="text-slate-300">Code quality, business model validation, and investor readiness in one comprehensive assessment</p>
+              <p className="text-slate-300">Code quality, business model validation, investor readiness, and design experience in one comprehensive assessment</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
               <Shield className="w-12 h-12 text-green-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Multi-Dimensional Intelligence</h3>
-              <p className="text-slate-300">Technical execution meets business strategy meets funding readiness—all analyzed together</p>
+              <p className="text-slate-300">Technical execution meets business strategy meets funding readiness meets design excellence—all analyzed together</p>
             </div>
             <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
               <Zap className="w-12 h-12 text-yellow-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold mb-2">Evolving ML System</h3>
-              <p className="text-slate-300">Bailey learns from each founder's journey across technical, business, and investment dimensions</p>
+              <p className="text-slate-300">Bailey learns from each founder's journey across technical, business, investment, and design dimensions</p>
             </div>
           </div>
         </div>
@@ -141,11 +155,11 @@ export default function HowItWorks() {
           How We Score Your Startup
         </h3>
         <p className="text-xl text-slate-600 text-center mb-12 max-w-3xl mx-auto">
-          Bailey provides comprehensive startup intelligence across three critical dimensions: technical execution, 
-          business model strength, and investment readiness—evolving with each founder's journey.
+          Bailey provides comprehensive startup intelligence across four critical pillars: technical execution, 
+          business model strength, investment readiness, and design experience—evolving with each founder's journey.
         </p>
         
-        <div className="grid md:grid-cols-3 gap-8 mb-12">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {scoringCriteria.map((criteria, index) => {
             const Icon = criteria.icon;
             return (
@@ -186,12 +200,11 @@ export default function HowItWorks() {
         
         {/* Why These Percentages */}
         <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl border-2 border-violet-200 p-8 text-center">
-          <h4 className="text-2xl font-bold text-slate-900 mb-4">Why These Percentages?</h4>
+          <h4 className="text-2xl font-bold text-slate-900 mb-4">Why Equal Weightings?</h4>
           <p className="text-lg text-slate-600 max-w-4xl mx-auto mb-6">
-            These weightings are based on established startup research and Y Combinator insights. 
-            Technical execution gets the highest weight because 
-            <span className="font-semibold text-violet-600"> 90% of startups fail due to poor execution, not lack of ideas.</span>
-            Bailey refines these weightings as we learn from real outcomes.
+            Each pillar receives equal weight (25%) because startup success requires excellence across all dimensions. 
+            <span className="font-semibold text-violet-600">Great code with poor business models, strong ideas with weak execution, or excellent products with terrible user experiences all lead to failure.</span>
+            Bailey learns how these pillars interact and evolve together for comprehensive startup intelligence.
           </p>
           <div className="flex items-center justify-center space-x-1 text-slate-500">
             <ExternalLink className="w-4 h-4" />
@@ -247,13 +260,24 @@ export default function HowItWorks() {
                 <div className="text-xs text-slate-500 mt-1">Sources: VC Criteria, Funding Data, Investor Feedback</div>
               </div>
               
+              <div className="border-b border-slate-200 pb-4">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-lg font-bold text-pink-600">Design Intelligence</div>
+                  <div className="text-sm font-medium text-slate-900">UX + Conversion Analysis</div>
+                </div>
+                <p className="text-sm text-slate-600">
+                  Bailey evaluates user experience design, accessibility compliance, mobile optimization, and conversion potential. 70% of users abandon poorly designed experiences.
+                </p>
+                <div className="text-xs text-slate-500 mt-1">Sources: WCAG Standards, Google UX Research, Conversion Studies</div>
+              </div>
+              
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <div className="text-lg font-bold text-orange-600">Holistic Learning</div>
                   <div className="text-sm font-medium text-slate-900">Cross-Dimensional Insights</div>
                 </div>
                 <p className="text-sm text-slate-600">
-                  Bailey learns how technical, business, and investment factors interact. Understanding that great code with weak business models, or strong ideas with poor execution, both lead to failure.
+                  Bailey learns how technical, business, investment, and design factors interact. Understanding that great code with weak business models, strong ideas with poor execution, or excellent products with terrible user experiences all lead to failure.
                 </p>
                 <div className="text-xs text-slate-500 mt-1">Methodology: Multi-dimensional pattern recognition</div>
               </div>

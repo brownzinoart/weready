@@ -1001,7 +1001,7 @@ export default function Home() {
               Analyze Your Startup
             </h2>
             <p className="text-lg text-slate-600 max-w-lg mx-auto">
-              Get your comprehensive readiness score across code quality, business model, and investment potential
+              Get your comprehensive readiness score across our four pillars: code quality, business model, investment readiness, and design experience
             </p>
           </div>
 
