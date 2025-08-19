@@ -876,6 +876,13 @@ export default function Home() {
     console.log("=== END NAVIGATION DEBUG ===");
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey && isValidInput && !scanning) {
+      e.preventDefault();
+      scanCode();
+    }
+  };
+
   const scanCode = async () => {
     console.log("scanCode called", { inputMode, code, repoUrl });
     if (inputMode === "code" && !code) return;
@@ -1037,6 +1044,7 @@ export default function Home() {
                   placeholder="https://github.com/username/repository (or include 'mock' to see demo)"
                   value={repoUrl}
                   onChange={(e) => setRepoUrl(e.target.value)}
+                  onKeyDown={handleKeyDown}
                 />
                 <Github className="absolute right-6 top-5 w-6 h-6 text-violet-400" />
               </div>
@@ -1051,6 +1059,7 @@ export default function Home() {
                 placeholder="Paste your AI-generated code here...\n\nTip: Type 'mock' to see a comprehensive demo report!"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
+                onKeyDown={handleKeyDown}
               />
             </div>
           )}
