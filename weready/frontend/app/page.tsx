@@ -1128,7 +1128,7 @@ export default function Home() {
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-700 to-blue-700 bg-clip-text text-transparent mb-4">
-                Trusted by Founders, Backed by Evidence
+                Evidence-Based Startup Intelligence
               </h2>
               <p className="text-lg text-slate-600 max-w-2xl mx-auto">
                 Every recommendation comes from authoritative sources - not opinions or guesswork
