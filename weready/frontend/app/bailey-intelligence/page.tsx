@@ -263,7 +263,7 @@ export default function BaileyIntelligence() {
         {/* Navigation Tabs */}
         <div className="bg-white rounded-lg shadow-lg mb-8">
           <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-6">
+            <nav className="flex overflow-x-auto space-x-2 sm:space-x-4 lg:space-x-8 px-4 sm:px-6 scrollbar-hide">
               {[
                 { id: "overview", label: "Overview", icon: BarChart3 },
                 { id: "sources", label: "Live Sources", icon: Database },
@@ -278,7 +278,7 @@ export default function BaileyIntelligence() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`py-4 px-2 border-b-2 font-medium text-sm flex items-center space-x-2 ${
+                  className={`py-4 px-3 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1 sm:space-x-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"

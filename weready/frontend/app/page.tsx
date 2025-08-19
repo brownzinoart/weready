@@ -20,10 +20,168 @@ export default function Home() {
       overall_score: 87,
       verdict: "ready_to_ship",
       weready_stamp_eligible: true,
+      isPremiumUser: true,
       breakdown: {
-        code_quality: { score: 92, status: "excellent", weight: 40, issues: [], recommendations: ["Continue excellent practices"] },
-        business_model: { score: 85, status: "good", weight: 30, issues: ["Consider adding more detailed cohort analysis"], recommendations: ["Strengthen unit economics documentation"] },
-        investment_ready: { score: 83, status: "good", weight: 30, issues: ["Prepare for due diligence documentation"], recommendations: ["Prepare Series A pitch deck"] }
+        code_quality: { 
+          score: 92, 
+          status: "excellent", 
+          weight: 25, 
+          issues: [], 
+          recommendations: ["Continue excellent practices"],
+          detailed_analysis: {
+            ai_detection: {
+              likelihood: 0.15,
+              confidence: 0.94,
+              risk_level: "low",
+              patterns_detected: ["Consistent coding style", "Domain-specific logic patterns"]
+            },
+            security_assessment: {
+              security_score: 91,
+              vulnerability_count: 0,
+              severity_distribution: { critical: 0, high: 0, medium: 1, low: 2 }
+            },
+            architecture_quality: {
+              structure_score: 88,
+              maintainability: 92,
+              scalability: 89,
+              code_organization: "excellent"
+            },
+            testing_coverage: {
+              estimated_coverage: 87,
+              test_quality: "high",
+              missing_tests: ["Edge case validation"]
+            }
+          },
+          insights: [
+            "Code demonstrates strong architectural patterns and maintainability",
+            "Security practices align with industry standards",
+            "Test coverage is comprehensive with room for edge case improvement"
+          ],
+          quick_wins: ["Add edge case tests", "Implement additional logging"],
+          long_term_improvements: ["Microservices architecture consideration", "Performance optimization"]
+        },
+        business_model: { 
+          score: 85, 
+          status: "good", 
+          weight: 25, 
+          issues: ["Consider adding more detailed cohort analysis"], 
+          recommendations: ["Strengthen unit economics documentation"],
+          detailed_analysis: {
+            revenue_model: {
+              clarity_score: 88,
+              revenue_streams: ["SaaS subscriptions", "Enterprise licensing", "Professional services"],
+              pricing_strategy: "value-based"
+            },
+            market_validation: {
+              validation_score: 82,
+              customer_interviews: 47,
+              validation_stage: "strong"
+            },
+            unit_economics: {
+              economics_score: 89,
+              cac_ltv_ratio: "1:4.2",
+              gross_margins: "78%"
+            },
+            competitive_positioning: {
+              differentiation_score: 81,
+              unique_value_prop: "AI-powered analysis with evidence-based recommendations",
+              market_position: "emerging leader"
+            }
+          },
+          insights: [
+            "Strong unit economics with healthy LTV:CAC ratio",
+            "Multiple revenue streams provide diversification",
+            "Market validation shows strong product-market fit signals"
+          ]
+        },
+        investment_ready: { 
+          score: 83, 
+          status: "good", 
+          weight: 25, 
+          issues: ["Prepare for due diligence documentation"], 
+          recommendations: ["Prepare Series A pitch deck"],
+          detailed_analysis: {
+            traction_metrics: {
+              traction_score: 86,
+              revenue_growth: "40% MoM",
+              user_growth: "65% MoM",
+              key_metrics: { mrr: "$47K", cac: "$180", ltv: "$760" }
+            },
+            team_assessment: {
+              team_score: 88,
+              team_completeness: 85,
+              domain_expertise: 92,
+              execution_track_record: "strong"
+            },
+            market_opportunity: {
+              market_score: 81,
+              addressable_market: "$2.4B TAM",
+              market_timing: "excellent",
+              competitive_landscape: "fragmented"
+            },
+            scalability_factors: {
+              scalability_score: 79,
+              technology_scalability: "high",
+              business_model_scalability: "high",
+              operational_scalability: "developing"
+            }
+          },
+          insights: [
+            "Strong growth metrics indicate healthy traction",
+            "Team has proven domain expertise and execution ability",
+            "Market timing is optimal for Series A fundraising"
+          ],
+          valuation_estimate: "5-8M"
+        },
+        design_experience: { 
+          score: 89, 
+          status: "excellent", 
+          weight: 25, 
+          issues: [], 
+          recommendations: ["Optimize conversion elements for revenue growth"],
+          detailed_analysis: {
+            design_system_maturity: {
+              maturity_score: 92,
+              consistency_score: 88,
+              documentation_quality: "excellent",
+              component_library: "comprehensive"
+            },
+            accessibility_compliance: {
+              wcag_score: 91,
+              compliance_level: "AA",
+              violations: 2,
+              severity_distribution: { critical: 0, high: 0, medium: 1, low: 1 }
+            },
+            ux_quality_metrics: {
+              usability_score: 87,
+              user_satisfaction: 4.6,
+              task_completion_rate: 94,
+              time_to_completion: "efficient"
+            },
+            conversion_optimization: {
+              cro_score: 84,
+              conversion_rate: "3.4%",
+              trust_signals: "strong",
+              cta_effectiveness: "high"
+            },
+            mobile_optimization: {
+              mobile_score: 91,
+              responsive_design: "excellent",
+              touch_targets: "optimized",
+              loading_performance: "fast"
+            }
+          },
+          insights: [
+            "Design system demonstrates enterprise-level maturity",
+            "Accessibility compliance exceeds industry standards",
+            "Mobile experience is optimized for high conversion"
+          ],
+          business_impact: {
+            revenue_opportunity: "$125K annually from CRO improvements",
+            efficiency_gains: "40% reduction in design iteration time",
+            risk_mitigation: "Accessibility compliance prevents legal risk"
+          }
+        }
       },
       success_probability: 0.85,
       funding_timeline: "3-6 months ready",
@@ -99,12 +257,27 @@ export default function Home() {
           confidence: 82,
           similar_cases: 174,
           impact: "Enhanced investor reporting"
+        },
+        {
+          id: "rec6",
+          priority: "low",
+          category: "design_experience",
+          title: "Optimize conversion funnel design",
+          description: "Your design quality is excellent, but minor CRO improvements could boost revenue",
+          action: "A/B test trust signals and CTA button designs for conversion optimization",
+          timeline: "2-3 weeks",
+          evidence_source: "Baymard Institute - Conversion Research",
+          organization: "Baymard Institute",
+          confidence: 86,
+          similar_cases: 145,
+          impact: "Could increase conversion rates by 8-12%"
         }
       ],
       category_issues: {
         code_quality: [],
         business_model: ["Consider adding more detailed cohort analysis"],
-        investment_readiness: ["Prepare for due diligence documentation"]
+        investment_readiness: ["Prepare for due diligence documentation"],
+        design_experience: ["Minor conversion optimization opportunities"]
       },
       moats: ["Network effects", "Proprietary data", "Strong team expertise"],
       improvement_roadmap: {
@@ -125,10 +298,169 @@ export default function Home() {
       overall_score: 68,
       verdict: "needs_work",
       weready_stamp_eligible: false,
+      isPremiumUser: true,
       breakdown: {
-        code_quality: { score: 75, status: "good", weight: 40, issues: ["Test coverage could be improved"], recommendations: ["Add unit tests for core modules"] },
-        business_model: { score: 62, status: "needs_work", weight: 30, issues: ["Weak product-market fit signals", "Unclear revenue scaling"], recommendations: ["Validate product-market fit", "Refine pricing strategy"] },
-        investment_ready: { score: 65, status: "needs_work", weight: 30, issues: ["Limited traction metrics", "No clear growth strategy"], recommendations: ["Implement key metrics tracking", "Develop scalable growth plan"] }
+        code_quality: { 
+          score: 75, 
+          status: "good", 
+          weight: 25, 
+          issues: ["Test coverage could be improved"], 
+          recommendations: ["Add unit tests for core modules"],
+          detailed_analysis: {
+            ai_detection: {
+              likelihood: 0.35,
+              confidence: 0.82,
+              risk_level: "medium",
+              patterns_detected: ["Generic variable names", "Repetitive code structures", "Basic error handling"]
+            },
+            security_assessment: {
+              security_score: 68,
+              vulnerability_count: 3,
+              severity_distribution: { critical: 0, high: 1, medium: 2, low: 3 }
+            },
+            architecture_quality: {
+              structure_score: 72,
+              maintainability: 70,
+              scalability: 75,
+              code_organization: "moderate"
+            },
+            testing_coverage: {
+              estimated_coverage: 45,
+              test_quality: "moderate",
+              missing_tests: ["Integration tests", "Error handling tests", "API endpoint tests"]
+            }
+          },
+          insights: [
+            "Code structure is functional but could benefit from refactoring",
+            "Security vulnerabilities need immediate attention",
+            "Testing coverage is below recommended thresholds"
+          ],
+          critical_issues: ["SQL injection vulnerability in user input", "Unhandled exceptions in payment flow"],
+          quick_wins: ["Add input validation", "Implement error logging", "Basic unit tests"],
+          long_term_improvements: ["Code refactoring", "Comprehensive test suite", "Security audit"]
+        },
+        business_model: { 
+          score: 62, 
+          status: "needs_work", 
+          weight: 25, 
+          issues: ["Weak product-market fit signals", "Unclear revenue scaling"], 
+          recommendations: ["Validate product-market fit", "Refine pricing strategy"],
+          detailed_analysis: {
+            revenue_model: {
+              clarity_score: 58,
+              revenue_streams: ["Freemium subscriptions", "One-time purchases"],
+              pricing_strategy: "experimental"
+            },
+            market_validation: {
+              validation_score: 45,
+              customer_interviews: 12,
+              validation_stage: "early"
+            },
+            unit_economics: {
+              economics_score: 52,
+              cac_ltv_ratio: "1:2.1",
+              gross_margins: "65%"
+            },
+            competitive_positioning: {
+              differentiation_score: 71,
+              unique_value_prop: "User-friendly interface with automation",
+              market_position: "challenger"
+            }
+          },
+          insights: [
+            "Revenue model needs clarification and optimization",
+            "Limited customer validation suggests PMF risk",
+            "Unit economics are below optimal thresholds"
+          ]
+        },
+        investment_ready: { 
+          score: 65, 
+          status: "needs_work", 
+          weight: 25, 
+          issues: ["Limited traction metrics", "No clear growth strategy"], 
+          recommendations: ["Implement key metrics tracking", "Develop scalable growth plan"],
+          detailed_analysis: {
+            traction_metrics: {
+              traction_score: 58,
+              revenue_growth: "12% MoM",
+              user_growth: "18% MoM",
+              key_metrics: { mrr: "$8.5K", cac: "$320", ltv: "$680" }
+            },
+            team_assessment: {
+              team_score: 68,
+              team_completeness: 60,
+              domain_expertise: 72,
+              execution_track_record: "developing"
+            },
+            market_opportunity: {
+              market_score: 74,
+              addressable_market: "$850M TAM",
+              market_timing: "good",
+              competitive_landscape: "competitive"
+            },
+            scalability_factors: {
+              scalability_score: 61,
+              technology_scalability: "moderate",
+              business_model_scalability: "moderate",
+              operational_scalability: "limited"
+            }
+          },
+          insights: [
+            "Growth metrics show promise but need acceleration",
+            "Team gaps in key areas require attention",
+            "Market opportunity exists but execution is critical"
+          ],
+          valuation_estimate: "1.5-3M"
+        },
+        design_experience: { 
+          score: 71, 
+          status: "good", 
+          weight: 25, 
+          issues: ["Accessibility compliance needs work", "Mobile experience could be improved"], 
+          recommendations: ["Implement WCAG 2.1 AA compliance", "Add mobile-first responsive design"],
+          detailed_analysis: {
+            design_system_maturity: {
+              maturity_score: 68,
+              consistency_score: 72,
+              documentation_quality: "basic",
+              component_library: "partial"
+            },
+            accessibility_compliance: {
+              wcag_score: 58,
+              compliance_level: "partial A",
+              violations: 12,
+              severity_distribution: { critical: 1, high: 3, medium: 5, low: 3 }
+            },
+            ux_quality_metrics: {
+              usability_score: 74,
+              user_satisfaction: 3.8,
+              task_completion_rate: 78,
+              time_to_completion: "moderate"
+            },
+            conversion_optimization: {
+              cro_score: 66,
+              conversion_rate: "2.1%",
+              trust_signals: "moderate",
+              cta_effectiveness: "needs improvement"
+            },
+            mobile_optimization: {
+              mobile_score: 62,
+              responsive_design: "basic",
+              touch_targets: "some issues",
+              loading_performance: "slow"
+            }
+          },
+          insights: [
+            "Design system needs standardization and documentation",
+            "Accessibility issues create legal and market reach risks",
+            "Mobile optimization critical for user acquisition"
+          ],
+          business_impact: {
+            revenue_opportunity: "$85K annually from mobile optimization",
+            efficiency_gains: "25% design process improvement potential",
+            risk_mitigation: "Accessibility fixes prevent $50-500K lawsuit risk"
+          }
+        }
       },
       success_probability: 0.72,
       funding_timeline: "6-12 months of development needed",
@@ -176,12 +508,41 @@ export default function Home() {
           confidence: 87,
           similar_cases: 178,
           impact: "Could increase ARPU by 40-60%"
+        },
+        {
+          id: "rec4",
+          priority: "high",
+          category: "design_experience",
+          title: "Implement mobile-first responsive design",
+          description: "68% of web traffic is mobile, but your site isn't optimized for mobile users",
+          action: "Redesign using mobile-first approach with proper touch targets and responsive layouts",
+          timeline: "4-6 weeks",
+          evidence_source: "Google Mobile-First Design Guidelines",
+          organization: "Google",
+          confidence: 91,
+          similar_cases: 256,
+          impact: "Could increase mobile conversions by 34%"
+        },
+        {
+          id: "rec5",
+          priority: "medium",
+          category: "design_experience",
+          title: "Fix accessibility compliance issues",
+          description: "Current WCAG compliance issues create legal risk and limit market reach",
+          action: "Implement proper labels, alt text, and keyboard navigation for WCAG 2.1 AA compliance",
+          timeline: "3-4 weeks",
+          evidence_source: "WebAIM Accessibility Guidelines",
+          organization: "WebAIM",
+          confidence: 94,
+          similar_cases: 189,
+          impact: "Prevents $50K-500K lawsuit risk, expands market by 15%"
         }
       ],
       category_issues: {
         code_quality: ["Inconsistent error handling", "Limited monitoring"],
         business_model: ["Unclear value proposition", "Mixed customer feedback", "Pricing strategy needs work"],
-        investment_readiness: ["Financial projections need validation", "Market size assumptions unclear"]
+        investment_readiness: ["Financial projections need validation", "Market size assumptions unclear"],
+        design_experience: ["Accessibility compliance gaps", "Mobile optimization needed", "Trust signals missing"]
       },
       moats: ["First-mover advantage", "Growing user base"],
       improvement_roadmap: {
@@ -202,10 +563,174 @@ export default function Home() {
       overall_score: 43,
       verdict: "critical_issues",
       weready_stamp_eligible: false,
+      isPremiumUser: true,
       breakdown: {
-        code_quality: { score: 35, status: "critical", weight: 40, issues: ["Critical security vulnerabilities", "Poor code structure", "No testing"], recommendations: ["Address security vulnerabilities", "Implement proper testing framework", "Refactor core architecture"] },
-        business_model: { score: 45, status: "needs_work", weight: 30, issues: ["No clear value proposition", "Unclear target market", "No revenue model"], recommendations: ["Define clear value proposition", "Identify target customer segments", "Develop sustainable revenue model"] },
-        investment_ready: { score: 55, status: "needs_work", weight: 30, issues: ["No metrics tracking", "Weak team", "No traction"], recommendations: ["Establish key performance metrics", "Build credible team", "Focus on user acquisition"] }
+        code_quality: { 
+          score: 35, 
+          status: "critical", 
+          weight: 25, 
+          issues: ["Critical security vulnerabilities", "Poor code structure", "No testing"], 
+          recommendations: ["Address security vulnerabilities", "Implement proper testing framework", "Refactor core architecture"],
+          detailed_analysis: {
+            ai_detection: {
+              likelihood: 0.78,
+              confidence: 0.91,
+              risk_level: "high",
+              patterns_detected: ["Generic function names", "Copy-paste code blocks", "Template-like structures", "Minimal comments"]
+            },
+            security_assessment: {
+              security_score: 22,
+              vulnerability_count: 12,
+              severity_distribution: { critical: 3, high: 4, medium: 3, low: 2 }
+            },
+            architecture_quality: {
+              structure_score: 28,
+              maintainability: 25,
+              scalability: 30,
+              code_organization: "poor"
+            },
+            testing_coverage: {
+              estimated_coverage: 5,
+              test_quality: "minimal",
+              missing_tests: ["All unit tests", "Integration tests", "Security tests", "Performance tests"]
+            }
+          },
+          insights: [
+            "Code shows strong indicators of AI generation with security risks",
+            "Architecture lacks proper separation of concerns",
+            "Critical security vulnerabilities require immediate attention"
+          ],
+          critical_issues: [
+            "SQL injection in multiple endpoints", 
+            "Hardcoded credentials in source code", 
+            "No input sanitization",
+            "Exposed API keys"
+          ],
+          quick_wins: ["Remove hardcoded secrets", "Add basic input validation"],
+          long_term_improvements: ["Complete architecture redesign", "Comprehensive security audit", "Full test suite implementation"]
+        },
+        business_model: { 
+          score: 45, 
+          status: "needs_work", 
+          weight: 25, 
+          issues: ["No clear value proposition", "Unclear target market", "No revenue model"], 
+          recommendations: ["Define clear value proposition", "Identify target customer segments", "Develop sustainable revenue model"],
+          detailed_analysis: {
+            revenue_model: {
+              clarity_score: 28,
+              revenue_streams: ["TBD"],
+              pricing_strategy: "undefined"
+            },
+            market_validation: {
+              validation_score: 22,
+              customer_interviews: 3,
+              validation_stage: "minimal"
+            },
+            unit_economics: {
+              economics_score: 15,
+              cac_ltv_ratio: "unknown",
+              gross_margins: "estimated 40%"
+            },
+            competitive_positioning: {
+              differentiation_score: 55,
+              unique_value_prop: "unclear",
+              market_position: "undefined"
+            }
+          },
+          insights: [
+            "Business model requires fundamental restructuring",
+            "Market validation is critically lacking",
+            "Revenue strategy needs complete development"
+          ]
+        },
+        investment_ready: { 
+          score: 55, 
+          status: "needs_work", 
+          weight: 25, 
+          issues: ["No metrics tracking", "Weak team", "No traction"], 
+          recommendations: ["Establish key performance metrics", "Build credible team", "Focus on user acquisition"],
+          detailed_analysis: {
+            traction_metrics: {
+              traction_score: 32,
+              revenue_growth: "2% MoM",
+              user_growth: "5% MoM",
+              key_metrics: { mrr: "$1.2K", cac: "$450", ltv: "$380" }
+            },
+            team_assessment: {
+              team_score: 45,
+              team_completeness: 40,
+              domain_expertise: 48,
+              execution_track_record: "limited"
+            },
+            market_opportunity: {
+              market_score: 65,
+              addressable_market: "$400M TAM",
+              market_timing: "uncertain",
+              competitive_landscape: "crowded"
+            },
+            scalability_factors: {
+              scalability_score: 38,
+              technology_scalability: "limited",
+              business_model_scalability: "unclear",
+              operational_scalability: "poor"
+            }
+          },
+          insights: [
+            "Critical traction issues prevent investment readiness",
+            "Team requires significant strengthening across key roles",
+            "Business fundamentals need major improvement"
+          ],
+          valuation_estimate: "200K-500K"
+        },
+        design_experience: { 
+          score: 38, 
+          status: "critical", 
+          weight: 25, 
+          issues: ["No accessibility compliance", "Poor mobile experience", "No design system"], 
+          recommendations: ["Implement basic accessibility features", "Add responsive design patterns", "Create design system foundation"],
+          detailed_analysis: {
+            design_system_maturity: {
+              maturity_score: 22,
+              consistency_score: 25,
+              documentation_quality: "none",
+              component_library: "missing"
+            },
+            accessibility_compliance: {
+              wcag_score: 18,
+              compliance_level: "non-compliant",
+              violations: 47,
+              severity_distribution: { critical: 8, high: 12, medium: 15, low: 12 }
+            },
+            ux_quality_metrics: {
+              usability_score: 42,
+              user_satisfaction: 2.1,
+              task_completion_rate: 52,
+              time_to_completion: "poor"
+            },
+            conversion_optimization: {
+              cro_score: 28,
+              conversion_rate: "0.8%",
+              trust_signals: "lacking",
+              cta_effectiveness: "poor"
+            },
+            mobile_optimization: {
+              mobile_score: 31,
+              responsive_design: "broken",
+              touch_targets: "unusable",
+              loading_performance: "very slow"
+            }
+          },
+          insights: [
+            "Design quality severely impacts user acquisition and retention",
+            "Critical accessibility violations expose significant legal risk",
+            "Mobile experience failure limits market reach by 70%"
+          ],
+          business_impact: {
+            revenue_opportunity: "$200K+ annually from basic UX improvements",
+            efficiency_gains: "Design system could improve development speed 3x",
+            risk_mitigation: "Immediate accessibility fixes prevent lawsuit risk"
+          }
+        }
       },
       success_probability: 0.45,
       funding_timeline: "12+ months significant work needed",
@@ -253,12 +778,41 @@ export default function Home() {
           confidence: 95,
           similar_cases: 312,
           impact: "Enables safe feature development"
+        },
+        {
+          id: "rec4",
+          priority: "critical",
+          category: "design_experience",
+          title: "Address critical accessibility violations",
+          description: "Current design has severe accessibility issues that expose you to legal liability",
+          action: "Immediately implement basic accessibility features: proper labels, alt text, color contrast",
+          timeline: "2-3 weeks",
+          evidence_source: "WCAG 2.1 AA Guidelines",
+          organization: "W3C",
+          confidence: 98,
+          similar_cases: 345,
+          impact: "Prevents immediate legal risk, opens market to 15% more users"
+        },
+        {
+          id: "rec5",
+          priority: "high",
+          category: "design_experience",
+          title: "Create responsive mobile design",
+          description: "No mobile optimization detected despite 68% mobile traffic",
+          action: "Build mobile-first responsive design with proper touch targets",
+          timeline: "6-8 weeks",
+          evidence_source: "Google Mobile Usability Guidelines",
+          organization: "Google",
+          confidence: 92,
+          similar_cases: 298,
+          impact: "Essential for user acquisition and retention"
         }
       ],
       category_issues: {
         code_quality: ["Critical security vulnerabilities", "No automated testing", "Poor code organization", "Performance issues"],
         business_model: ["Weak unit economics", "Unclear target market", "Limited customer validation", "No clear monetization strategy"],
-        investment_readiness: ["Insufficient traction metrics", "Weak financial projections", "Team gaps in key areas"]
+        investment_readiness: ["Insufficient traction metrics", "Weak financial projections", "Team gaps in key areas"],
+        design_experience: ["Critical accessibility violations", "No mobile optimization", "Poor user experience", "No design system"]
       },
       moats: [],
       improvement_roadmap: {
@@ -336,38 +890,17 @@ export default function Home() {
     console.log("Mock trigger check:", { isMockTrigger, inputMode, code, repoUrl });
     
     if (isMockTrigger) {
-      console.log("Mock path triggered - using API for real free analysis");
-      // Use the real API instead of mock data to test the full flow
-      try {
-        const response = await fetch("http://localhost:8000/api/analyze/free", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ code_snippet: "mock test for demo", language: "python" }),
-        });
-        
-        if (!response.ok) {
-          throw new Error(`Analysis failed: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Real API data received:", data);
+      console.log("Mock path triggered - using frontend mock data");
+      // Use frontend mock data directly for demo
+      setTimeout(() => {
+        console.log("Mock timeout completed - generating data");
+        const mockData = generateMockData();
+        console.log("Mock data generated:", mockData);
         setScanning(false);
-        navigateToResults(data, false); // Use real API data, not mock
-        console.log("Navigated to results page with real API data");
-        return;
-      } catch (error) {
-        console.error("Mock API call failed, falling back to frontend mock:", error);
-        // Fallback to frontend mock if API fails
-        setTimeout(() => {
-          console.log("Mock timeout completed - generating data");
-          const mockData = generateMockData();
-          console.log("Mock data generated:", mockData);
-          setScanning(false);
-          navigateToResults(mockData, true);
-          console.log("Navigated to results page");
-        }, 2000);
-        return;
-      }
+        navigateToResults(mockData, true);
+        console.log("Navigated to results page");
+      }, 2000);
+      return;
     }
     
     try {
@@ -428,8 +961,8 @@ export default function Home() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Hero Section */}
-        <div className="text-center py-16">
-          <h1 className="text-5xl md:text-7xl font-bold mb-6">
+        <div className="text-center py-8 md:py-16">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold mb-6">
             <span className="bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">
               Get Your
             </span>
@@ -439,7 +972,7 @@ export default function Home() {
             </span>
           </h1>
           
-          <p className="text-xl md:text-2xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-lg sm:text-xl md:text-2xl text-slate-600 mb-4 max-w-3xl mx-auto leading-relaxed px-4">
             Don't let technical hiccups kill your startup. Get actionable guidance to ship confidently.
           </p>
           

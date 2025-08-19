@@ -110,7 +110,7 @@ export default function Navigation({ transparent = false }: NavigationProps) {
               </button>
 
               {toolsDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50">
+                <div className="absolute top-full left-0 mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-lg shadow-xl border border-slate-200 py-2 z-50">
                   {tools.map((tool) => (
                     <button
                       key={tool.href}

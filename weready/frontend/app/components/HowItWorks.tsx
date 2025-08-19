@@ -105,10 +105,10 @@ export default function HowItWorks() {
             <div className="w-20 h-20 bg-gradient-to-r from-violet-500 to-purple-500 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-2xl">
               <Brain className="w-10 h-10 text-white" />
             </div>
-            <h2 className="text-5xl md:text-6xl font-bold mb-6">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-6">
               Meet <span className="bg-gradient-to-r from-violet-400 to-purple-400 bg-clip-text text-transparent">Bailey</span>
             </h2>
-            <p className="text-2xl text-slate-300 mb-8 max-w-4xl mx-auto leading-relaxed">
+            <p className="text-lg sm:text-xl md:text-2xl text-slate-300 mb-8 max-w-4xl mx-auto leading-relaxed px-4">
               Your all-encompassing startup intelligence system. Bailey analyzes your code, evaluates your business idea, and guides your investor readiness. 
               <span className="text-white font-semibold"> Starting with proven principles, evolving into sophisticated ML—you're helping us build the future </span>
               of comprehensive startup analysis.
