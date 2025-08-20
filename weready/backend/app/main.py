@@ -5,6 +5,10 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 from app.core.hallucination_detector import HallucinationDetector
 from app.core.weready_scorer import WeReadyScorer
 from app.core.weready_brain import weready_brain, IntelligentWeReadyScore, BrainRecommendation
@@ -19,6 +23,7 @@ from app.core.academic_research_integrator import academic_integrator
 from app.core.github_intelligence import github_intelligence
 from app.api.analysis import router as analysis_router
 from app.auth.oauth import router as oauth_router
+from app.api.user import router as user_router
 
 app = FastAPI(title="WeReady API", version="0.1.0")
 
@@ -44,6 +49,7 @@ brain = weready_brain
 # Include API routers
 app.include_router(analysis_router, prefix="/api", tags=["analysis"])
 app.include_router(oauth_router, prefix="/api", tags=["authentication"])
+app.include_router(user_router, prefix="/api", tags=["user"])
 
 class CodeScanRequest(BaseModel):
     code: Optional[str] = None

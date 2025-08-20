@@ -1,14 +1,14 @@
 """
 OAuth Authentication Routes
 ===========================
-Handle GitHub and other OAuth provider authentication.
+Handle GitHub and other OAuth provider authentication, plus email/password auth.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, Request, status
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from authlib.integrations.starlette_client import OAuth
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 import os
 import uuid
@@ -16,7 +16,8 @@ from datetime import datetime, timedelta
 
 from app.database.connection import get_db
 from app.models.user import User, SubscriptionTier
-from app.auth.jwt_handler import create_access_token, create_refresh_token
+from app.auth.jwt_handler import create_access_token, create_refresh_token, create_token_pair
+from app.auth.password_utils import password_validator, validate_email, sanitize_username
 
 router = APIRouter()
 
@@ -64,6 +65,24 @@ class OAuthResponse(BaseModel):
     user: dict
     is_new_user: bool
     trial_days_remaining: int
+
+class SignupRequest(BaseModel):
+    email: EmailStr
+    password: str
+    full_name: Optional[str] = None
+
+class LoginRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+class AuthResponse(BaseModel):
+    access_token: str
+    refresh_token: str
+    token_type: str
+    expires_in: int
+    user: dict
+    is_new_user: bool = False
+    trial_days_remaining: int = 0
 
 @router.get("/auth/{provider}")
 async def oauth_login(provider: str, request: Request):
@@ -115,20 +134,27 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
             # Create new user
             is_new_user = True
             user = User(
-                id=str(uuid.uuid4()),
                 email=user_info['email'],
-                name=user_info['name'],
+                full_name=user_info['name'],
                 avatar_url=user_info.get('avatar_url'),
-                oauth_provider=provider,
-                oauth_id=str(user_info['id']),
+                username=user_info.get('username'),
                 subscription_tier=SubscriptionTier.FREE,
-                trial_started_at=datetime.utcnow(),
-                trial_ends_at=datetime.utcnow() + timedelta(days=7),
-                created_at=datetime.utcnow()
+                trial_started=datetime.utcnow(),
+                trial_ends=datetime.utcnow() + timedelta(days=7)
             )
             db.add(user)
             db.commit()
             db.refresh(user)
+            
+            # Add OAuth provider information
+            from app.models.user import OAuthProvider
+            provider_enum = getattr(OAuthProvider, provider.upper())
+            user.add_oauth_provider(provider_enum, {
+                'id': str(user_info['id']),
+                'username': user_info.get('username'),
+                'avatar_url': user_info.get('avatar_url')
+            })
+            db.commit()
             
             # Link any pending free analysis to this user
             analysis_id = request.session.get('analysis_id')
@@ -155,7 +181,7 @@ async def oauth_callback(provider: str, request: Request, db: Session = Depends(
         # Calculate trial days remaining
         trial_days_remaining = 0
         if user.is_trial_active():
-            trial_days_remaining = (user.trial_ends_at - datetime.utcnow()).days
+            trial_days_remaining = (user.trial_ends - datetime.utcnow()).days
         
         # Redirect to frontend with tokens
         frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
@@ -307,7 +333,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
         
         trial_days_remaining = 0
         if user.is_trial_active():
-            trial_days_remaining = (user.trial_ends_at - datetime.utcnow()).days
+            trial_days_remaining = (user.trial_ends - datetime.utcnow()).days
         
         return {
             "id": user.id,
@@ -327,3 +353,170 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
 async def logout():
     """Logout user (client should discard tokens)"""
     return {"message": "Logged out successfully"}
+
+@router.post("/auth/signup", response_model=AuthResponse)
+async def signup(signup_data: SignupRequest, db: Session = Depends(get_db)):
+    """Create new user account with email and password"""
+    
+    # Validate email format
+    if not validate_email(signup_data.email):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid email format"
+        )
+    
+    # Validate password strength
+    is_valid, issues = password_validator.validate_password(signup_data.password)
+    if not is_valid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Password validation failed: {', '.join(issues)}"
+        )
+    
+    # Check if user already exists
+    existing_user = db.query(User).filter(User.email == signup_data.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Account with this email already exists"
+        )
+    
+    try:
+        # Create new user
+        user = User.create_from_email_password(
+            email=signup_data.email,
+            password=signup_data.password,
+            full_name=signup_data.full_name
+        )
+        
+        # Generate username from email
+        user.username = sanitize_username(signup_data.email)
+        
+        # Save to database
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+        
+        # Create JWT tokens
+        token_data = {
+            "user_id": user.id,
+            "email": user.email,
+            "subscription_tier": user.subscription_tier.value,
+            "username": user.username,
+            "full_name": user.full_name
+        }
+        
+        tokens = create_token_pair(token_data)
+        
+        # Calculate trial days remaining
+        trial_days_remaining = 0
+        if user.is_trial_active():
+            trial_days_remaining = (user.trial_ends - datetime.now()).days
+        
+        return AuthResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type=tokens["token_type"],
+            expires_in=tokens["expires_in"],
+            user={
+                "id": user.id,
+                "email": user.email,
+                "name": user.full_name,
+                "username": user.username,
+                "avatar_url": user.avatar_url,
+                "subscription_tier": user.subscription_tier.value,
+                "is_trial_active": user.is_trial_active(),
+                "trial_days_remaining": trial_days_remaining,
+                "created_at": user.created_at.isoformat()
+            },
+            is_new_user=True,
+            trial_days_remaining=trial_days_remaining
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create account: {str(e)}"
+        )
+
+@router.post("/auth/login", response_model=AuthResponse)
+async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
+    """Login user with email and password"""
+    
+    # Find user by email
+    user = db.query(User).filter(User.email == login_data.email).first()
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    
+    # Check if user has a password (not OAuth-only)
+    if not user.has_password():
+        raise HTTPException(
+            status_code=400,
+            detail="This account was created with social login. Please use the 'Sign in with...' button."
+        )
+    
+    # Verify password
+    if not user.verify_password(login_data.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+    
+    # Check if account is active
+    if not user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Account is deactivated. Please contact support."
+        )
+    
+    try:
+        # Update last login time
+        user.last_login = datetime.now()
+        db.commit()
+        
+        # Create JWT tokens
+        token_data = {
+            "user_id": user.id,
+            "email": user.email,
+            "subscription_tier": user.subscription_tier.value,
+            "username": user.username,
+            "full_name": user.full_name
+        }
+        
+        tokens = create_token_pair(token_data)
+        
+        # Calculate trial days remaining
+        trial_days_remaining = 0
+        if user.is_trial_active():
+            trial_days_remaining = (user.trial_ends - datetime.now()).days
+        
+        return AuthResponse(
+            access_token=tokens["access_token"],
+            refresh_token=tokens["refresh_token"],
+            token_type=tokens["token_type"],
+            expires_in=tokens["expires_in"],
+            user={
+                "id": user.id,
+                "email": user.email,
+                "name": user.full_name,
+                "username": user.username,
+                "avatar_url": user.avatar_url,
+                "subscription_tier": user.subscription_tier.value,
+                "is_trial_active": user.is_trial_active(),
+                "trial_days_remaining": trial_days_remaining,
+                "last_login": user.last_login.isoformat() if user.last_login else None
+            },
+            is_new_user=False,
+            trial_days_remaining=trial_days_remaining
+        )
+        
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Login failed: {str(e)}"
+        )

@@ -1,10 +1,12 @@
 "use client";
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Building, GraduationCap, Briefcase, ShieldCheck, Database, BarChart3, Brain, Globe, Zap, Shield } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Building, GraduationCap, Briefcase, ShieldCheck, Database, BarChart3, Brain, Globe, Zap, Shield, Save, Clock } from "lucide-react";
 import Navigation from "./components/Navigation";
 import HowItWorks from "./components/HowItWorks";
 import Footer from "./components/Footer";
+import LoginModal from "./components/LoginModal";
+import { useAuth } from './contexts/AuthContext';
 
 // Authoritative Sources Component
 const AuthoritativeSourcesSection = ({ sourceStats, setSourceStats }: {
@@ -131,10 +133,14 @@ const AuthoritativeSourcesSection = ({ sourceStats, setSourceStats }: {
 
 export default function Home() {
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [inputMode, setInputMode] = useState<"code" | "repo">("repo");
   const [code, setCode] = useState("");
   const [repoUrl, setRepoUrl] = useState("");
   const [scanning, setScanning] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
+  const [pendingAnalysisData, setPendingAnalysisData] = useState<any>(null);
   const [sourceStats, setSourceStats] = useState({
     government: 0,
     academic: 0,
@@ -966,8 +972,14 @@ export default function Home() {
 
   const navigateToResults = (resultData: any, isMock: boolean = false) => {
     console.log("=== NAVIGATION DEBUG ===");
-    console.log("navigateToResults called with:", { resultData: !!resultData, isMock });
+    console.log("navigateToResults called with:", { resultData: !!resultData, isMock, isAuthenticated });
     
+    // Always proceed to results - guest users get their free analysis
+    // Save prompt will be shown on the results page instead
+    proceedToResults(resultData, isMock);
+  };
+
+  const proceedToResults = (resultData: any, isMock: boolean = false) => {
     try {
       // Store data in sessionStorage to avoid URL length limits
       const dataId = `weready_result_${Date.now()}`;
@@ -1003,6 +1015,18 @@ export default function Home() {
     }
     
     console.log("=== END NAVIGATION DEBUG ===");
+  };
+
+  const handleSaveAnalysis = () => {
+    setLoginModalOpen(true);
+    setShowSavePrompt(false);
+  };
+
+  const handleViewWithoutSaving = () => {
+    setShowSavePrompt(false);
+    if (pendingAnalysisData) {
+      proceedToResults(pendingAnalysisData, true);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -1283,7 +1307,7 @@ export default function Home() {
             </button>
             
             <p className="text-center text-slate-600 text-sm mt-4">
-              🎁 Your first analysis is completely free - no signup required
+              🎁 Try your first WeReady analysis completely free - no signup required
             </p>
           </div>
         </div>
@@ -1295,6 +1319,64 @@ export default function Home() {
       
       {/* Footer */}
       <Footer />
+
+      {/* Save Analysis Prompt Modal */}
+      {showSavePrompt && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full">
+            <div className="p-8 text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Save className="w-8 h-8 text-white" />
+              </div>
+              
+              <h3 className="text-2xl font-bold text-slate-900 mb-4">
+                Save Your Analysis?
+              </h3>
+              
+              <p className="text-slate-600 mb-6">
+                Your WeReady analysis is complete! Sign up for a free account to save your results, 
+                track progress over time, and get access to detailed recommendations.
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  onClick={handleSaveAnalysis}
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all flex items-center justify-center space-x-2"
+                >
+                  <Save className="w-5 h-5" />
+                  <span>Save & Get Free Trial</span>
+                </button>
+                
+                <button
+                  onClick={handleViewWithoutSaving}
+                  className="w-full text-slate-600 hover:text-slate-900 font-medium py-3 px-6 rounded-xl border border-slate-300 hover:bg-slate-50 transition-colors flex items-center justify-center space-x-2"
+                >
+                  <Clock className="w-5 h-5" />
+                  <span>View Results (No Save)</span>
+                </button>
+              </div>
+
+              <p className="text-xs text-slate-500 mt-4">
+                💡 Free trial includes unlimited analyses for 7 days
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      <LoginModal
+        isOpen={loginModalOpen}
+        onClose={() => {
+          setLoginModalOpen(false);
+          // If they close the modal without signing up, show the save prompt again
+          if (pendingAnalysisData && !isAuthenticated) {
+            setShowSavePrompt(true);
+          }
+        }}
+        defaultTab="signup"
+        // TODO: Add analysis linking after signup
+      />
     </div>
   );
 }

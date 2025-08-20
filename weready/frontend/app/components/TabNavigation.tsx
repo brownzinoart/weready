@@ -147,125 +147,6 @@ function LockedContent({ tabName, description }: { tabName: string; description:
   );
 }
 
-function TabContent({ tabComponent, result }: { tabComponent: string; result: any }) {
-  switch (tabComponent) {
-    case 'OverviewTab':
-      return <OverviewTab result={result} />;
-    case 'CodeTab':
-      return <CodeTab result={result} />;
-    case 'BusinessTab':
-      return <BusinessTab result={result} />;
-    case 'InvestmentTab':
-      return <InvestmentTab result={result} />;
-    case 'DesignTab':
-      return <DesignTab result={result} />;
-    default:
-      return (
-        <div className="text-center py-8">
-          <p className="text-slate-600">Loading {tabComponent}...</p>
-        </div>
-      );
-  }
-}
-
-// Helper functions for roadmap context
-function getImmediateActionContext(item: string): string {
-  const contexts: {[key: string]: string} = {
-    'Finalize test coverage': 'Critical for deployment safety. Current gaps expose you to production failures.',
-    'Update pitch deck': 'Essential for upcoming investor meetings. Market timing is crucial.',
-    'Customer interview program': 'Validate product-market fit before scaling. Prevents costly pivots.',
-    'Error monitoring setup': 'Immediate visibility into production issues. Reduces customer churn.',
-    'Security vulnerability fixes': 'Address critical security issues to prevent data breaches.',
-    'Basic testing setup': 'Establish foundation for safe code deployment and iteration.',
-    'Remove hardcoded secrets': 'Immediate security risk that could expose sensitive data.',
-    'Add basic input validation': 'Prevent injection attacks and data corruption issues.'
-  };
-  return contexts[item] || 'High-priority action item requiring immediate attention to reduce risk.';
-}
-
-function getImmediateActionEffort(item: string): string {
-  const efforts: {[key: string]: string} = {
-    'Finalize test coverage': '1-2 devs',
-    'Update pitch deck': 'Solo founder',
-    'Customer interview program': 'Solo founder',
-    'Error monitoring setup': '1 dev',
-    'Security vulnerability fixes': '1-2 devs',
-    'Basic testing setup': '1 dev',
-    'Remove hardcoded secrets': '1 dev',
-    'Add basic input validation': '1 dev'
-  };
-  return efforts[item] || '1 dev';
-}
-
-function getShortTermGoalContext(item: string): string {
-  const contexts: {[key: string]: string} = {
-    'Implement analytics dashboard': 'Data-driven decision making foundation. Essential for tracking KPIs.',
-    'Prepare due diligence room': 'Streamline investor process. Demonstrates professionalism and transparency.',
-    'Pricing optimization': 'Optimize revenue per customer. A/B test different pricing strategies.',
-    'Product-market fit validation': 'Comprehensive validation through customer feedback and usage analytics.',
-    'Implement comprehensive logging': 'Full observability stack for debugging and performance monitoring.',
-    'A/B test pricing strategies': 'Optimize revenue through systematic pricing experimentation.',
-    'Business model reassessment': 'Fundamental review of value proposition and revenue model.',
-    'Comprehensive security audit': 'Full security review to identify and fix all vulnerabilities.'
-  };
-  return contexts[item] || 'Foundation-building initiative that strengthens core business capabilities.';
-}
-
-function getShortTermGoalEffort(item: string): string {
-  const efforts: {[key: string]: string} = {
-    'Implement analytics dashboard': '2-3 devs',
-    'Prepare due diligence room': 'Small team',
-    'Pricing optimization': 'Product + eng',
-    'Product-market fit validation': 'Founder-led',
-    'Implement comprehensive logging': '1-2 devs',
-    'A/B test pricing strategies': 'Product + eng',
-    'Business model reassessment': 'Founder + advisor',
-    'Comprehensive security audit': 'Security expert'
-  };
-  return efforts[item] || 'Small team';
-}
-
-function getLongTermVisionContext(item: string): string {
-  const contexts: {[key: string]: string} = {
-    'Series A fundraising': 'Scale operations and accelerate growth with institutional funding.',
-    'International expansion planning': 'Strategic market expansion to capture global opportunities.',
-    'Microservices architecture consideration': 'Scalable technical architecture to support 10x growth.',
-    'Performance optimization': 'Advanced optimizations for enterprise-scale performance.',
-    'Feature expansion': 'Strategic product development based on validated customer needs.',
-    'Team strengthening': 'Build world-class team across key functions for scale.',
-    'Product pivot consideration': 'Strategic pivot based on market learnings and opportunity assessment.',
-    'Complete architecture redesign': 'Ground-up technical rebuild for scalability and maintainability.'
-  };
-  return contexts[item] || 'Strategic initiative that positions the company for long-term success and scale.';
-}
-
-function getLongTermVisionEffort(item: string): string {
-  const efforts: {[key: string]: string} = {
-    'Series A fundraising': 'Executive team',
-    'International expansion planning': 'Full company',
-    'Microservices architecture consideration': 'Engineering team',
-    'Performance optimization': 'Senior devs',
-    'Feature expansion': 'Product + eng',
-    'Team strengthening': 'Leadership',
-    'Product pivot consideration': 'All hands',
-    'Complete architecture redesign': 'Tech leadership'
-  };
-  return efforts[item] || 'Team effort';
-}
-
-function getRoadmapTimeframe(result: any): string {
-  if (result.overall_score >= 80) return '3-6 months';
-  if (result.overall_score >= 60) return '6-12 months';
-  return '12-18 months';
-}
-
-
-function getRoadmapROI(result: any): string {
-  if (result.overall_score >= 80) return '+8-15 points';
-  if (result.overall_score >= 60) return '+15-25 points';
-  return '+25-40 points';
-}
-
 function OverviewTab({ result }: { result: any }) {
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -661,4 +542,123 @@ function OverviewTab({ result }: { result: any }) {
       )}
     </div>
   );
+}
+
+function TabContent({ tabComponent, result }: { tabComponent: string; result: any }) {
+  switch (tabComponent) {
+    case 'OverviewTab':
+      return <OverviewTab result={result} />;
+    case 'CodeTab':
+      return <CodeTab result={result} />;
+    case 'BusinessTab':
+      return <BusinessTab result={result} />;
+    case 'InvestmentTab':
+      return <InvestmentTab result={result} />;
+    case 'DesignTab':
+      return <DesignTab result={result} />;
+    default:
+      return (
+        <div className="text-center py-8">
+          <p className="text-slate-600">Loading {tabComponent}...</p>
+        </div>
+      );
+  }
+}
+
+// Helper functions for roadmap context
+function getImmediateActionContext(item: string): string {
+  const contexts: {[key: string]: string} = {
+    'Finalize test coverage': 'Critical for deployment safety. Current gaps expose you to production failures.',
+    'Update pitch deck': 'Essential for upcoming investor meetings. Market timing is crucial.',
+    'Customer interview program': 'Validate product-market fit before scaling. Prevents costly pivots.',
+    'Error monitoring setup': 'Immediate visibility into production issues. Reduces customer churn.',
+    'Security vulnerability fixes': 'Address critical security issues to prevent data breaches.',
+    'Basic testing setup': 'Establish foundation for safe code deployment and iteration.',
+    'Remove hardcoded secrets': 'Immediate security risk that could expose sensitive data.',
+    'Add basic input validation': 'Prevent injection attacks and data corruption issues.'
+  };
+  return contexts[item] || 'High-priority action item requiring immediate attention to reduce risk.';
+}
+
+function getImmediateActionEffort(item: string): string {
+  const efforts: {[key: string]: string} = {
+    'Finalize test coverage': '1-2 devs',
+    'Update pitch deck': 'Solo founder',
+    'Customer interview program': 'Solo founder',
+    'Error monitoring setup': '1 dev',
+    'Security vulnerability fixes': '1-2 devs',
+    'Basic testing setup': '1 dev',
+    'Remove hardcoded secrets': '1 dev',
+    'Add basic input validation': '1 dev'
+  };
+  return efforts[item] || '1 dev';
+}
+
+function getShortTermGoalContext(item: string): string {
+  const contexts: {[key: string]: string} = {
+    'Implement analytics dashboard': 'Data-driven decision making foundation. Essential for tracking KPIs.',
+    'Prepare due diligence room': 'Streamline investor process. Demonstrates professionalism and transparency.',
+    'Pricing optimization': 'Optimize revenue per customer. A/B test different pricing strategies.',
+    'Product-market fit validation': 'Comprehensive validation through customer feedback and usage analytics.',
+    'Implement comprehensive logging': 'Full observability stack for debugging and performance monitoring.',
+    'A/B test pricing strategies': 'Optimize revenue through systematic pricing experimentation.',
+    'Business model reassessment': 'Fundamental review of value proposition and revenue model.',
+    'Comprehensive security audit': 'Full security review to identify and fix all vulnerabilities.'
+  };
+  return contexts[item] || 'Foundation-building initiative that strengthens core business capabilities.';
+}
+
+function getShortTermGoalEffort(item: string): string {
+  const efforts: {[key: string]: string} = {
+    'Implement analytics dashboard': '2-3 devs',
+    'Prepare due diligence room': 'Small team',
+    'Pricing optimization': 'Product + eng',
+    'Product-market fit validation': 'Founder-led',
+    'Implement comprehensive logging': '1-2 devs',
+    'A/B test pricing strategies': 'Product + eng',
+    'Business model reassessment': 'Founder + advisor',
+    'Comprehensive security audit': 'Security expert'
+  };
+  return efforts[item] || 'Small team';
+}
+
+function getLongTermVisionContext(item: string): string {
+  const contexts: {[key: string]: string} = {
+    'Series A fundraising': 'Scale operations and accelerate growth with institutional funding.',
+    'International expansion planning': 'Strategic market expansion to capture global opportunities.',
+    'Microservices architecture consideration': 'Scalable technical architecture to support 10x growth.',
+    'Performance optimization': 'Advanced optimizations for enterprise-scale performance.',
+    'Feature expansion': 'Strategic product development based on validated customer needs.',
+    'Team strengthening': 'Build world-class team across key functions for scale.',
+    'Product pivot consideration': 'Strategic pivot based on market learnings and opportunity assessment.',
+    'Complete architecture redesign': 'Ground-up technical rebuild for scalability and maintainability.'
+  };
+  return contexts[item] || 'Strategic initiative that positions the company for long-term success and scale.';
+}
+
+function getLongTermVisionEffort(item: string): string {
+  const efforts: {[key: string]: string} = {
+    'Series A fundraising': 'Executive team',
+    'International expansion planning': 'Full company',
+    'Microservices architecture consideration': 'Engineering team',
+    'Performance optimization': 'Senior devs',
+    'Feature expansion': 'Product + eng',
+    'Team strengthening': 'Leadership',
+    'Product pivot consideration': 'All hands',
+    'Complete architecture redesign': 'Tech leadership'
+  };
+  return efforts[item] || 'Team effort';
+}
+
+function getRoadmapTimeframe(result: any): string {
+  if (result.overall_score >= 80) return '3-6 months';
+  if (result.overall_score >= 60) return '6-12 months';
+  return '12-18 months';
+}
+
+
+function getRoadmapROI(result: any): string {
+  if (result.overall_score >= 80) return '+8-15 points';
+  if (result.overall_score >= 60) return '+15-25 points';
+  return '+25-40 points';
 }

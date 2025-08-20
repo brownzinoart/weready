@@ -1,0 +1,6 @@
+{
+  "/page": "app/page.js",
+  "/results/page": "app/results/page.js",
+  "/market-timing/page": "app/market-timing/page.js",
+  "/momentum/page": "app/momentum/page.js"
+}

@@ -11,6 +11,11 @@ from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from jose import JWTError
 import secrets
+from fastapi import HTTPException, Depends, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from sqlalchemy.orm import Session
+from app.database.connection import get_db
+from app.models.user import User
 
 load_dotenv()
 
@@ -244,3 +249,31 @@ def get_user_from_token(token: str) -> Optional[Dict[str, Any]]:
 def refresh_tokens(refresh_token: str, user_data: Dict[str, Any]) -> Optional[Dict[str, str]]:
     """Refresh token pair"""
     return jwt_handler.refresh_access_token(refresh_token, user_data)
+
+# Security
+security = HTTPBearer()
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> User:
+    """Get current user from JWT token"""
+    token = credentials.credentials
+    user_data = verify_access_token(token)
+    
+    if not user_data:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid authentication credentials"
+        )
+    
+    # Get user from database
+    user = db.query(User).filter(User.id == user_data["user_id"]).first()
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    return user

@@ -7,10 +7,14 @@ Comprehensive user model supporting OAuth providers and profile enrichment.
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, Enum, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import func
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from enum import Enum as PyEnum
 import json
+from passlib.context import CryptContext
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 Base = declarative_base()
 
@@ -46,6 +50,9 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     username = Column(String(100), unique=True, index=True, nullable=True)
+    
+    # Authentication
+    password_hash = Column(String(255), nullable=True)  # Nullable for OAuth-only users
     
     # Basic profile
     full_name = Column(String(255), nullable=True)
@@ -101,6 +108,9 @@ class User(Base):
     total_queries = Column(Integer, default=0)
     free_analyses_used = Column(Integer, default=0)  # Track free tier usage
     last_analysis_date = Column(DateTime(timezone=True), nullable=True)
+    
+    # Guest tracking
+    guest_session_id = Column(String(100), nullable=True, index=True)  # For pre-signup analysis tracking
     
     # Onboarding
     onboarding_completed = Column(Boolean, default=False)
@@ -258,6 +268,39 @@ class User(Base):
             "tier": self.subscription_tier.value,
             "analyses_remaining": max(0, 1 - self.free_analyses_used) if self.subscription_tier == SubscriptionTier.HACKER else 0
         }
+    
+    def set_password(self, password: str) -> None:
+        """Hash and set password for user"""
+        self.password_hash = pwd_context.hash(password)
+    
+    def verify_password(self, password: str) -> bool:
+        """Verify password against stored hash"""
+        if not self.password_hash:
+            return False
+        return pwd_context.verify(password, self.password_hash)
+    
+    def has_password(self) -> bool:
+        """Check if user has a password set (not OAuth-only)"""
+        return self.password_hash is not None
+    
+    @classmethod
+    def create_from_email_password(cls, email: str, password: str, full_name: str = None) -> 'User':
+        """Create user with email/password authentication"""
+        user = cls(
+            email=email,
+            full_name=full_name or email.split('@')[0],
+            subscription_tier=SubscriptionTier.FREE,
+            email_verified=False  # Will need email verification
+        )
+        user.set_password(password)
+        
+        # Start trial automatically
+        user.trial_started = datetime.now()
+        user.trial_ends = datetime.now() + timedelta(days=7)
+        user.trial_used = True
+        user.subscription_tier = SubscriptionTier.FOUNDER  # Full access during trial
+        
+        return user
 
 class UserSession(Base):
     """User session management for JWT tokens"""

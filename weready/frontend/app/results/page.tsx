@@ -2,14 +2,19 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign, FileText, Eye, Shield } from 'lucide-react';
+import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign, FileText, Eye, Shield, Save, User } from 'lucide-react';
 import TabNavigation from '../components/TabNavigation';
+import LoginModal from '../components/LoginModal';
+import { useAuth } from '../contexts/AuthContext';
 
 function ResultsContent() {
   const [result, setResult] = useState<any>(null);
   const [isMockData, setIsMockData] = useState(false);
+  const [showSavePrompt, setShowSavePrompt] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
     console.log("=== RESULTS PAGE DEBUG ===");
@@ -68,6 +73,26 @@ function ResultsContent() {
     console.log("=== END RESULTS PAGE DEBUG ===");
   }, [searchParams, router]);
 
+  // Show save prompt for non-authenticated users after viewing results
+  useEffect(() => {
+    if (result && !isAuthenticated) {
+      // Show save prompt after 3 seconds of viewing results
+      const timer = setTimeout(() => {
+        setShowSavePrompt(true);
+      }, 3000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [result, isAuthenticated]);
+
+  const handleSaveAnalysis = () => {
+    setLoginModalOpen(true);
+    setShowSavePrompt(false);
+  };
+
+  const handleDismissPrompt = () => {
+    setShowSavePrompt(false);
+  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -221,6 +246,45 @@ function ResultsContent() {
           </div>
         </div>
       </div>
+
+      {/* Save Analysis Prompt for Non-Authenticated Users */}
+      {showSavePrompt && !isAuthenticated && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Save className="w-8 h-8 text-white" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">
+                Save Your Analysis Results
+              </h3>
+              <p className="text-slate-600 mb-6">
+                Create a free account to save this analysis and track your progress over time.
+              </p>
+              <div className="space-y-3">
+                <button
+                  onClick={handleSaveAnalysis}
+                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
+                >
+                  Save & Create Account
+                </button>
+                <button
+                  onClick={handleDismissPrompt}
+                  className="w-full text-slate-600 hover:text-slate-900 font-medium py-2 px-6 rounded-xl transition-colors"
+                >
+                  Continue Without Saving
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Modal */}
+      <LoginModal 
+        isOpen={loginModalOpen} 
+        onClose={() => setLoginModalOpen(false)}
+      />
     </div>
   );
 }
