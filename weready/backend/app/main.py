@@ -24,6 +24,7 @@ from app.core.github_intelligence import github_intelligence
 from app.api.analysis import router as analysis_router
 from app.auth.oauth import router as oauth_router
 from app.api.user import router as user_router
+from app.api.demo import router as demo_router
 
 app = FastAPI(title="WeReady API", version="0.1.0")
 
@@ -50,6 +51,7 @@ brain = weready_brain
 app.include_router(analysis_router, prefix="/api", tags=["analysis"])
 app.include_router(oauth_router, prefix="/api", tags=["authentication"])
 app.include_router(user_router, prefix="/api", tags=["user"])
+app.include_router(demo_router, tags=["demo"])  # Demo router with its own prefix
 
 class CodeScanRequest(BaseModel):
     code: Optional[str] = None

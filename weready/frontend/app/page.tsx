@@ -142,13 +142,26 @@ export default function Home() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAnalysisData, setPendingAnalysisData] = useState<any>(null);
-  const [usageStats, setUsageStats] = useState(() => UsageTracker.getUsageStats());
+  const [usageStats, setUsageStats] = useState(() => ({
+    reportsUsed: 0,
+    reportsRemaining: 1,
+    currentMonth: '',
+    hasReachedLimit: false,
+    canUseFreeTrial: true
+  }));
+  const [isClientMounted, setIsClientMounted] = useState(false);
   const [sourceStats, setSourceStats] = useState({
     government: 0,
     academic: 0,
     vcFirms: 0,
     total: 0
   });
+
+  // Initialize usage stats on client side to prevent hydration mismatch
+  React.useEffect(() => {
+    setIsClientMounted(true);
+    setUsageStats(UsageTracker.getUsageStats());
+  }, []);
 
   // Mock data scenarios
   const mockScenarios = [
@@ -1322,13 +1335,20 @@ export default function Home() {
               )}
             </button>
             
-            {!isAuthenticated && (
+            {!isAuthenticated && isClientMounted && (
               <div className="mt-4 p-3 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
                 <p className="text-center text-slate-700 text-sm font-medium">
                   {usageStats.hasReachedLimit 
                     ? "🚫 You've used your free report. Choose a plan for unlimited access!"
                     : "✨ Get your free startup analysis report"
                   }
+                </p>
+              </div>
+            )}
+            {!isAuthenticated && !isClientMounted && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
+                <p className="text-center text-slate-700 text-sm font-medium">
+                  ✨ Get your free startup analysis report
                 </p>
               </div>
             )}
