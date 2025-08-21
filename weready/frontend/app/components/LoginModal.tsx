@@ -137,8 +137,8 @@ export default function LoginModal({ isOpen, onClose, defaultTab = 'login', anal
         // Close modal and redirect after success - let AuthContext update first
         setTimeout(() => {
           onClose();
-          // Force a full page refresh to ensure AuthContext loads properly
-          window.location.href = '/dashboard';
+          // Redirect new users to onboarding, existing users to dashboard
+          window.location.href = data.is_new_user ? '/onboarding' : '/dashboard';
         }, 1500);
 
       } else {

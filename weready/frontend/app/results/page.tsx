@@ -2,10 +2,12 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign, FileText, Eye, Shield, Save, User } from 'lucide-react';
+import { ArrowLeft, Award, Star, Brain, BarChart3, Calendar, Building, Zap, Clock, TrendingUp, CheckCircle, AlertTriangle, ExternalLink, Github, Target, DollarSign, FileText, Eye, Shield, Save, User, X } from 'lucide-react';
 import TabNavigation from '../components/TabNavigation';
 import LoginModal from '../components/LoginModal';
+import PricingTiers from '../components/PricingTiers';
 import { useAuth } from '../contexts/AuthContext';
+import UsageTracker from '../utils/usageTracking';
 
 function ResultsContent() {
   const [result, setResult] = useState<any>(null);
@@ -73,19 +75,25 @@ function ResultsContent() {
     console.log("=== END RESULTS PAGE DEBUG ===");
   }, [searchParams, router]);
 
-  // Show save prompt for non-authenticated users after viewing results
+  // Show pricing tiers for non-authenticated users after their free report
   useEffect(() => {
     if (result && !isAuthenticated) {
-      // Show save prompt after 3 seconds of viewing results
+      // Show pricing tiers immediately after viewing their free report results
       const timer = setTimeout(() => {
         setShowSavePrompt(true);
-      }, 3000);
-      
+      }, 2000);
       return () => clearTimeout(timer);
     }
   }, [result, isAuthenticated]);
 
   const handleSaveAnalysis = () => {
+    setLoginModalOpen(true);
+    setShowSavePrompt(false);
+  };
+
+  const handleSelectPlan = (plan: string) => {
+    // Store selected plan for signup process
+    sessionStorage.setItem('selected_plan', plan);
     setLoginModalOpen(true);
     setShowSavePrompt(false);
   };
@@ -166,6 +174,29 @@ function ResultsContent() {
           <span className="text-slate-900 font-medium">Analysis Results</span>
         </div>
 
+        {/* Free User Watermark Banner */}
+        {!isAuthenticated && (
+          <div className="bg-gradient-to-r from-violet-50 via-purple-50 to-violet-50 border-2 border-violet-200 rounded-xl p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-purple-600 rounded-lg flex items-center justify-center">
+                  <Star className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="font-semibold text-slate-900">Free Report - WeReady Analysis</div>
+                  <div className="text-sm text-slate-600">Sign up to save reports and unlock unlimited analysis</div>
+                </div>
+              </div>
+              <button
+                onClick={handleSaveAnalysis}
+                className="bg-gradient-to-r from-violet-600 to-purple-600 text-white px-4 py-2 rounded-lg hover:from-violet-700 hover:to-purple-700 transition-all font-medium"
+              >
+                Save & Upgrade
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-8">
           {/* Mock Data Indicator */}
           {(isMockData || result?.isPremiumUser) && (
@@ -228,7 +259,7 @@ function ResultsContent() {
           </div>
 
           {/* New Tabbed Interface */}
-          <TabNavigation result={result} isFreeTier={!result.isPremiumUser} />
+          <TabNavigation result={result} isFreeTier={!isAuthenticated} />
 
 
           {/* Call to Action */}
@@ -247,32 +278,43 @@ function ResultsContent() {
         </div>
       </div>
 
-      {/* Save Analysis Prompt for Non-Authenticated Users */}
+      {/* Pricing Tiers Modal for Non-Authenticated Users */}
       {showSavePrompt && !isAuthenticated && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 animate-scale-in">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Save className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">
-                Save Your Analysis Results
-              </h3>
-              <p className="text-slate-600 mb-6">
-                Create a free account to save this analysis and track your progress over time.
-              </p>
-              <div className="space-y-3">
-                <button
-                  onClick={handleSaveAnalysis}
-                  className="w-full bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold py-3 px-6 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg"
-                >
-                  Save & Create Account
-                </button>
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto">
+            {/* Header */}
+            <div className="sticky top-0 bg-white border-b border-slate-200 p-6 rounded-t-2xl">
+              <div className="flex items-center justify-between">
+                <div className="text-center flex-1">
+                  <h3 className="text-2xl font-bold text-slate-900 mb-2">
+                    🎉 Congratulations on Your Free Analysis!
+                  </h3>
+                  <p className="text-slate-600">
+                    Ready for unlimited reports and advanced insights? Choose your plan below.
+                  </p>
+                </div>
                 <button
                   onClick={handleDismissPrompt}
-                  className="w-full text-slate-600 hover:text-slate-900 font-medium py-2 px-6 rounded-xl transition-colors"
+                  className="text-slate-400 hover:text-slate-600 transition-colors ml-4"
                 >
-                  Continue Without Saving
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+            </div>
+            
+            {/* Pricing Tiers */}
+            <div className="p-6">
+              <PricingTiers onSelectPlan={handleSelectPlan} showTitle={false} />
+            </div>
+            
+            {/* Footer */}
+            <div className="border-t border-slate-200 p-6 bg-slate-50 rounded-b-2xl">
+              <div className="text-center">
+                <button
+                  onClick={handleDismissPrompt}
+                  className="text-slate-600 hover:text-slate-900 font-medium py-2 px-6 rounded-xl transition-colors"
+                >
+                  Maybe later, continue with free report
                 </button>
               </div>
             </div>
@@ -284,6 +326,7 @@ function ResultsContent() {
       <LoginModal 
         isOpen={loginModalOpen} 
         onClose={() => setLoginModalOpen(false)}
+        defaultTab="signup"
       />
     </div>
   );

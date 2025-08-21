@@ -7,6 +7,7 @@ import HowItWorks from "./components/HowItWorks";
 import Footer from "./components/Footer";
 import LoginModal from "./components/LoginModal";
 import { useAuth } from './contexts/AuthContext';
+import UsageTracker from './utils/usageTracking';
 
 // Authoritative Sources Component
 const AuthoritativeSourcesSection = ({ sourceStats, setSourceStats }: {
@@ -141,6 +142,7 @@ export default function Home() {
   const [showSavePrompt, setShowSavePrompt] = useState(false);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [pendingAnalysisData, setPendingAnalysisData] = useState<any>(null);
+  const [usageStats, setUsageStats] = useState(() => UsageTracker.getUsageStats());
   const [sourceStats, setSourceStats] = useState({
     government: 0,
     academic: 0,
@@ -974,6 +976,13 @@ export default function Home() {
     console.log("=== NAVIGATION DEBUG ===");
     console.log("navigateToResults called with:", { resultData: !!resultData, isMock, isAuthenticated });
     
+    // Record usage for non-authenticated users
+    if (!isAuthenticated) {
+      const newStats = UsageTracker.recordReportUsage();
+      setUsageStats(newStats);
+      console.log("Usage recorded:", newStats);
+    }
+    
     // Always proceed to results - guest users get their free analysis
     // Save prompt will be shown on the results page instead
     proceedToResults(resultData, isMock);
@@ -1040,6 +1049,13 @@ export default function Home() {
     console.log("scanCode called", { inputMode, code, repoUrl });
     if (inputMode === "code" && !code) return;
     if (inputMode === "repo" && !repoUrl) return;
+
+    // Check usage limits for non-authenticated users
+    if (!isAuthenticated && !UsageTracker.canGenerateReport()) {
+      alert("You've already used your free report. Choose a plan for unlimited access!");
+      setLoginModalOpen(true);
+      return;
+    }
 
     setScanning(true);
     
@@ -1221,10 +1237,10 @@ export default function Home() {
         <div className="relative bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-3xl shadow-2xl border-2 border-violet-200 p-10 mb-12">
           <div className="relative text-center mb-10">
             <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-violet-900 to-purple-900 bg-clip-text text-transparent mb-3">
-              Analyze Your Startup
+              Get Your Free Startup Analysis
             </h2>
             <p className="text-lg text-slate-600 max-w-lg mx-auto">
-              Get your comprehensive readiness score across our four pillars: code quality, business model, investment readiness, and design experience
+              Comprehensive readiness analysis across code quality, business model, investment readiness, and design experience. One free report to get started.
             </p>
           </div>
 
@@ -1300,14 +1316,25 @@ export default function Home() {
                 </>
               ) : (
                 <>
-                  <span className="text-lg">🚀 FREE WeReady Analysis</span>
+                  <span className="text-lg">🚀 Get Free Report</span>
                   <ArrowRight className="w-6 h-6" />
                 </>
               )}
             </button>
             
+            {!isAuthenticated && (
+              <div className="mt-4 p-3 bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg">
+                <p className="text-center text-slate-700 text-sm font-medium">
+                  {usageStats.hasReachedLimit 
+                    ? "🚫 You've used your free report. Choose a plan for unlimited access!"
+                    : "✨ Get your free startup analysis report"
+                  }
+                </p>
+              </div>
+            )}
+            
             <p className="text-center text-slate-600 text-sm mt-4">
-              🎁 Try your first WeReady analysis completely free - no signup required
+              🎁 Get your detailed startup readiness report - no signup required
             </p>
           </div>
         </div>

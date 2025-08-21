@@ -137,11 +137,11 @@ function LockedContent({ tabName, description }: { tabName: string; description:
       </div>
       
       <button className="bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold px-8 py-3 rounded-xl hover:from-violet-700 hover:to-purple-700 transition-all shadow-lg">
-        Upgrade for ${tabName === 'Code' ? '49' : tabName === 'Business' ? '99' : '149'}/month
+        Start Free 7-Day Trial
       </button>
       
       <p className="text-xs text-slate-500 mt-4">
-        7-day free trial • Cancel anytime • Money-back guarantee
+        No credit card required • Unlimited reports • Cancel anytime
       </p>
     </div>
   );

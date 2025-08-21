@@ -354,9 +354,76 @@ async def logout():
     """Logout user (client should discard tokens)"""
     return {"message": "Logged out successfully"}
 
+class PasswordStrengthRequest(BaseModel):
+    password: str
+
+class PasswordStrengthResponse(BaseModel):
+    score: int
+    strength: str
+    feedback: list[str]
+
+@router.post("/auth/password-strength", response_model=PasswordStrengthResponse)
+async def check_password_strength(request: PasswordStrengthRequest):
+    """Check password strength for signup validation"""
+    
+    password = request.password
+    score = 0
+    feedback = []
+    
+    # Length checks
+    if len(password) >= 8:
+        score += 1
+    else:
+        feedback.append("Password must be at least 8 characters long")
+    
+    if len(password) >= 12:
+        score += 1
+    else:
+        feedback.append("Consider using 12+ characters for better security")
+    
+    # Character type checks
+    if any(c.islower() for c in password):
+        score += 1
+    else:
+        feedback.append("Include lowercase letters")
+    
+    if any(c.isupper() for c in password):
+        score += 1
+    else:
+        feedback.append("Include uppercase letters")
+    
+    if any(c.isdigit() for c in password):
+        score += 1
+    else:
+        feedback.append("Include numbers")
+    
+    if any(c in "!@#$%^&*(),.?\":{}|<>" for c in password):
+        score += 1
+    else:
+        feedback.append("Include special characters (!@#$%^&* etc.)")
+    
+    # Determine strength
+    if score <= 3:
+        strength = "weak"
+    elif score <= 6:
+        strength = "medium"
+    else:
+        strength = "strong"
+        feedback = ["Strong password!"]
+    
+    return PasswordStrengthResponse(
+        score=score,
+        strength=strength,
+        feedback=feedback
+    )
+
 @router.post("/auth/signup", response_model=AuthResponse)
 async def signup(signup_data: SignupRequest, db: Session = Depends(get_db)):
     """Create new user account with email and password"""
+    
+    # Demo mode check - allow unlimited signups for demo emails
+    if signup_data.email.startswith('demo@') or signup_data.email.endswith('.demo'):
+        return await handle_demo_signup(signup_data)
     
     # Validate email format
     if not validate_email(signup_data.email):
@@ -444,6 +511,10 @@ async def signup(signup_data: SignupRequest, db: Session = Depends(get_db)):
 async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
     """Login user with email and password"""
     
+    # Demo mode check - allow unlimited logins for demo emails
+    if login_data.email.startswith('demo@') or login_data.email.endswith('.demo'):
+        return await handle_demo_login(login_data)
+    
     # Find user by email
     user = db.query(User).filter(User.email == login_data.email).first()
     if not user:
@@ -520,3 +591,197 @@ async def login(login_data: LoginRequest, db: Session = Depends(get_db)):
             status_code=500,
             detail=f"Login failed: {str(e)}"
         )
+
+async def handle_demo_signup(signup_data: SignupRequest) -> AuthResponse:
+    """Handle demo signup - always successful, no data storage"""
+    
+    # Generate demo tokens (not database-backed)
+    demo_user_data = {
+        "user_id": f"demo_{uuid.uuid4().hex[:8]}",
+        "email": signup_data.email,
+        "subscription_tier": "demo",
+        "username": signup_data.email.split('@')[0],
+        "full_name": signup_data.full_name or "Demo User"
+    }
+    
+    tokens = create_token_pair(demo_user_data)
+    
+    return AuthResponse(
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"],
+        token_type=tokens["token_type"],
+        expires_in=tokens["expires_in"],
+        user={
+            "id": demo_user_data["user_id"],
+            "email": demo_user_data["email"],
+            "name": demo_user_data["full_name"],
+            "username": demo_user_data["username"],
+            "avatar_url": None,
+            "subscription_tier": "demo",
+            "is_trial_active": True,
+            "trial_days_remaining": 999,
+            "created_at": datetime.now().isoformat()
+        },
+        is_new_user=True,
+        trial_days_remaining=999
+    )
+
+async def handle_demo_login(login_data: LoginRequest) -> AuthResponse:
+    """Handle demo login - always successful, no data storage"""
+    
+    # Generate demo tokens (not database-backed)
+    demo_user_data = {
+        "user_id": f"demo_{uuid.uuid4().hex[:8]}",
+        "email": login_data.email,
+        "subscription_tier": "demo",
+        "username": login_data.email.split('@')[0],
+        "full_name": "Demo User"
+    }
+    
+    tokens = create_token_pair(demo_user_data)
+    
+    return AuthResponse(
+        access_token=tokens["access_token"],
+        refresh_token=tokens["refresh_token"],
+        token_type=tokens["token_type"],
+        expires_in=tokens["expires_in"],
+        user={
+            "id": demo_user_data["user_id"],
+            "email": demo_user_data["email"],
+            "name": demo_user_data["full_name"],
+            "username": demo_user_data["username"],
+            "avatar_url": None,
+            "subscription_tier": "demo",
+            "is_trial_active": True,
+            "trial_days_remaining": 999,
+            "last_login": datetime.now().isoformat()
+        },
+        is_new_user=False,
+        trial_days_remaining=999
+    )
+
+@router.get("/auth/github/repos")
+async def get_github_repos(request: Request, db: Session = Depends(get_db)):
+    """Get user's GitHub repositories"""
+    
+    try:
+        from app.auth.jwt_handler import verify_access_token
+        
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="No valid authorization header")
+        
+        token = auth_header.split(" ")[1]
+        payload = verify_access_token(token)
+        
+        user_id = payload.get("user_id")
+        
+        # Handle demo users
+        if isinstance(user_id, str) and user_id.startswith('demo_'):
+            # Return mock repositories for demo users
+            pass
+        else:
+            user = db.query(User).filter(User.id == user_id).first()
+            
+            if not user:
+                raise HTTPException(status_code=401, detail="User not found")
+            
+            # Check if user has GitHub OAuth provider linked
+            github_provider = None
+            for provider in user.oauth_providers:
+                if provider.provider.value == 'GITHUB':
+                    github_provider = provider
+                    break
+            
+            if not github_provider:
+                raise HTTPException(status_code=400, detail="GitHub account not linked")
+        
+        # Get GitHub access token (this would need to be stored when linking)
+        # For now, we'll return mock data since we don't store the OAuth token
+        # In production, you'd need to store and refresh GitHub tokens
+        
+        return {
+            "repositories": [
+                {
+                    "id": 123456,
+                    "name": "my-startup-app",
+                    "full_name": "user/my-startup-app",
+                    "description": "My awesome startup application",
+                    "private": False,
+                    "language": "TypeScript",
+                    "stargazers_count": 42,
+                    "updated_at": "2024-12-20T12:00:00Z",
+                    "html_url": "https://github.com/user/my-startup-app"
+                },
+                {
+                    "id": 789012,
+                    "name": "backend-api",
+                    "full_name": "user/backend-api",
+                    "description": "Backend API for my startup",
+                    "private": True,
+                    "language": "Python",
+                    "stargazers_count": 15,
+                    "updated_at": "2024-12-19T15:30:00Z",
+                    "html_url": "https://github.com/user/backend-api"
+                },
+                {
+                    "id": 345678,
+                    "name": "mobile-app",
+                    "full_name": "user/mobile-app",
+                    "description": "React Native mobile app",
+                    "private": True,
+                    "language": "JavaScript",
+                    "stargazers_count": 8,
+                    "updated_at": "2024-12-18T09:15:00Z",
+                    "html_url": "https://github.com/user/mobile-app"
+                }
+            ]
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch repositories: {str(e)}")
+
+@router.post("/auth/github/link-repo")
+async def link_github_repo(request: Request, repo_data: dict, db: Session = Depends(get_db)):
+    """Link a GitHub repository to user's account for analysis"""
+    
+    try:
+        from app.auth.jwt_handler import verify_access_token
+        
+        # Get token from Authorization header
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            raise HTTPException(status_code=401, detail="No valid authorization header")
+        
+        token = auth_header.split(" ")[1]
+        payload = verify_access_token(token)
+        
+        user_id = payload.get("user_id")
+        
+        # Handle demo users
+        if isinstance(user_id, str) and user_id.startswith('demo_'):
+            # For demo users, just return success without database storage
+            return {
+                "success": True,
+                "message": f"Repository '{repo_data.get('name')}' linked successfully (demo mode)",
+                "repository": repo_data
+            }
+        
+        # Handle regular users
+        user = db.query(User).filter(User.id == user_id).first()
+        
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        
+        # Store linked repository info (you'd want to create a UserRepository model)
+        # For now, just return success
+        
+        return {
+            "success": True,
+            "message": f"Repository '{repo_data.get('name')}' linked successfully",
+            "repository": repo_data
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to link repository: {str(e)}")
