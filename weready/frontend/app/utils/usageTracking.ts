@@ -28,6 +28,18 @@ export class UsageTracker {
    */
   static getUsageStats(): UsageStats {
     const currentMonth = this.getCurrentMonth();
+    
+    // Check if we're on the client side
+    if (typeof window === 'undefined') {
+      return {
+        reportsUsed: 0,
+        reportsRemaining: this.MAX_FREE_REPORTS,
+        currentMonth,
+        hasReachedLimit: false,
+        canUseFreeTrial: true
+      };
+    }
+    
     const stored = localStorage.getItem(this.STORAGE_KEY);
     
     let data = {
@@ -115,13 +127,19 @@ export class UsageTracker {
    * Reset usage (for testing/admin purposes)
    */
   static resetUsage(): void {
-    localStorage.removeItem(this.STORAGE_KEY);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(this.STORAGE_KEY);
+    }
   }
 
   /**
    * Get stored trial usage status
    */
   private static getStoredTrialUsage(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+    
     const stored = localStorage.getItem(this.STORAGE_KEY);
     if (stored) {
       try {
@@ -138,6 +156,15 @@ export class UsageTracker {
    * Get stored data with defaults
    */
   private static getStoredData() {
+    if (typeof window === 'undefined') {
+      const currentMonth = this.getCurrentMonth();
+      return {
+        reportsUsed: 0,
+        currentMonth,
+        trialUsed: false
+      };
+    }
+    
     const stored = localStorage.getItem(this.STORAGE_KEY);
     const currentMonth = this.getCurrentMonth();
     
@@ -173,6 +200,10 @@ export class UsageTracker {
    * Save usage data to localStorage
    */
   private static saveUsageData(data: any): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    
     try {
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
