@@ -8,6 +8,9 @@ interface InvestmentTabProps {
 
 export default function InvestmentTab({ result }: InvestmentTabProps) {
   const investmentData = result.breakdown?.investment_ready || {};
+  const recommendations = (result.brain_recommendations || []).filter(
+    (rec: any) => rec.category === 'investment_ready'
+  );
   
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -240,6 +243,41 @@ export default function InvestmentTab({ result }: InvestmentTabProps) {
           </div>
         </div>
       </div>
+
+      {/* Recommendations specific to investment readiness */}
+      {recommendations.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-xl font-bold text-slate-900">Investment Readiness Recommendations</h4>
+          {recommendations.map((rec: any, idx: number) => (
+            <div key={idx} className="bg-white border-2 border-green-200 rounded-xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h5 className="text-lg font-bold text-slate-900 mb-2">{rec.title}</h5>
+                  <p className="text-slate-700 mb-3">{rec.description}</p>
+                  <div className="text-sm text-slate-600">
+                    <strong>Action:</strong> {rec.action}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-green-600 mb-1">
+                    {(rec.confidence * 100).toFixed(0)}% confidence
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {rec.similar_cases} similar cases
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-green-50 rounded-lg p-3">
+                <div className="text-sm">
+                  <strong className="text-green-800">Expected Impact:</strong>
+                  <span className="text-slate-700 ml-2">{rec.impact}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Placeholder for full premium content */}
       <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-xl p-6 text-center">

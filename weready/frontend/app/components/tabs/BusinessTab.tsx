@@ -8,6 +8,9 @@ interface BusinessTabProps {
 
 export default function BusinessTab({ result }: BusinessTabProps) {
   const businessData = result.breakdown?.business_model || {};
+  const recommendations = (result.brain_recommendations || []).filter(
+    (rec: any) => rec.category === 'business_model'
+  );
   
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -161,6 +164,41 @@ export default function BusinessTab({ result }: BusinessTabProps) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {/* Recommendations specific to business model */}
+      {recommendations.length > 0 && (
+        <div className="space-y-4">
+          <h4 className="text-xl font-bold text-slate-900">Business Model Recommendations</h4>
+          {recommendations.map((rec: any, idx: number) => (
+            <div key={idx} className="bg-white border-2 border-blue-200 rounded-xl p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div>
+                  <h5 className="text-lg font-bold text-slate-900 mb-2">{rec.title}</h5>
+                  <p className="text-slate-700 mb-3">{rec.description}</p>
+                  <div className="text-sm text-slate-600">
+                    <strong>Action:</strong> {rec.action}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium text-blue-600 mb-1">
+                    {(rec.confidence * 100).toFixed(0)}% confidence
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {rec.similar_cases} similar cases
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-blue-50 rounded-lg p-3">
+                <div className="text-sm">
+                  <strong className="text-blue-800">Expected Impact:</strong>
+                  <span className="text-slate-700 ml-2">{rec.impact}</span>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
