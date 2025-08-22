@@ -259,7 +259,7 @@ function ResultsContent() {
           </div>
 
           {/* New Tabbed Interface */}
-          <TabNavigation result={result} isFreeTier={!isAuthenticated} />
+          <TabNavigation result={result} isFreeTier={!isAuthenticated && !isMockData} />
 
 
           {/* Call to Action */}
