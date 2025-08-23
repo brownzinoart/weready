@@ -1,6 +1,6 @@
 'use client';
 
-import { Target, TrendingUp, Users, BarChart3, Building, Globe } from 'lucide-react';
+import { Target, TrendingUp, Users, BarChart3, Building, Globe, DollarSign, FileText, Calendar } from 'lucide-react';
 
 interface InvestmentTabProps {
   result: any;
@@ -279,17 +279,144 @@ export default function InvestmentTab({ result }: InvestmentTabProps) {
         </div>
       )}
 
-      {/* Placeholder for full premium content */}
-      <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border-2 border-emerald-200 rounded-xl p-6 text-center">
-        <h4 className="text-lg font-bold text-slate-900 mb-3">Premium Investment Analysis</h4>
-        <p className="text-slate-600 mb-4">
-          Access detailed investor readiness assessment, valuation modeling, 
-          due diligence preparation, and VC matching recommendations.
-        </p>
-        <button className="bg-gradient-to-r from-emerald-500 to-blue-500 text-white font-bold px-6 py-3 rounded-xl hover:from-emerald-600 hover:to-blue-600 transition-all">
-          Upgrade for $149/month
-        </button>
+      {/* Comprehensive Investment Recommendations */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-8">
+        <h4 className="text-xl font-bold text-slate-900 mb-6 flex items-center space-x-2">
+          <TrendingUp className="w-6 h-6 text-blue-600" />
+          <span>Strategic Investment Recommendations</span>
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Funding Strategy */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h5 className="font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <Target className="w-5 h-5 text-green-600" />
+              <span>Optimal Funding Strategy</span>
+            </h5>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Seed Round:</strong> Target $500K-$2M based on current traction and team strength</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Runway:</strong> Secure 18-24 months of operational funding</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Milestone-Based:</strong> Structure funding around key product and revenue milestones</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Investor Targeting */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h5 className="font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <Users className="w-5 h-5 text-purple-600" />
+              <span>Ideal Investor Profile</span>
+            </h5>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Angel Investors:</strong> Former founders in your industry vertical</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Micro VCs:</strong> $10M-$50M funds focusing on early-stage tech</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Strategic Value:</strong> Investors who bring relevant network and expertise</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Valuation Guidance */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h5 className="font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <DollarSign className="w-5 h-5 text-emerald-600" />
+              <span>Valuation Framework</span>
+            </h5>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Conservative:</strong> 15-25x monthly recurring revenue (if applicable)</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Market Comp:</strong> Benchmark against similar-stage companies in your sector</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-red-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Growth Potential:</strong> Factor in addressable market size and scalability</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Due Diligence Preparation */}
+          <div className="bg-white rounded-lg p-6 shadow-sm">
+            <h5 className="font-bold text-slate-900 mb-4 flex items-center space-x-2">
+              <FileText className="w-5 h-5 text-orange-600" />
+              <span>Due Diligence Readiness</span>
+            </h5>
+            <ul className="space-y-3 text-sm">
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Financial Records:</strong> Clean bookkeeping and projections ready</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Legal Structure:</strong> Cap table, IP assignments, compliance documentation</span>
+              </li>
+              <li className="flex items-start space-x-2">
+                <div className="w-2 h-2 bg-pink-500 rounded-full mt-2 flex-shrink-0"></div>
+                <span><strong>Data Room:</strong> Organized repository of all key business documents</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Action Timeline */}
+        <div className="mt-8 bg-white rounded-lg p-6">
+          <h5 className="font-bold text-slate-900 mb-4 flex items-center space-x-2">
+            <Calendar className="w-5 h-5 text-blue-600" />
+            <span>90-Day Investment Preparation Roadmap</span>
+          </h5>
+          
+          <div className="space-y-4">
+            <div className="flex items-start space-x-4">
+              <div className="bg-red-100 text-red-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                30
+              </div>
+              <div className="flex-1">
+                <h6 className="font-semibold text-slate-900">Days 1-30: Foundation</h6>
+                <p className="text-sm text-slate-600">Finalize financial projections, prepare pitch deck, organize legal documents</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-4">
+              <div className="bg-yellow-100 text-yellow-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                60
+              </div>
+              <div className="flex-1">
+                <h6 className="font-semibold text-slate-900">Days 31-60: Outreach</h6>
+                <p className="text-sm text-slate-600">Research and approach target investors, schedule initial meetings</p>
+              </div>
+            </div>
+            
+            <div className="flex items-start space-x-4">
+              <div className="bg-green-100 text-green-800 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                90
+              </div>
+              <div className="flex-1">
+                <h6 className="font-semibold text-slate-900">Days 61-90: Execution</h6>
+                <p className="text-sm text-slate-600">Follow-up meetings, due diligence process, negotiate terms</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
+
     </div>
   );
 }

@@ -20,8 +20,6 @@ export default function DemoLanding() {
           } else {
             router.push("/demo/report/1");
           }
-        } else if (input?.toLowerCase().includes("dash")) {
-          router.push("/demo/dashboard");
         }
       }
     };
@@ -77,13 +75,6 @@ export default function DemoLanding() {
           {/* Quick Actions */}
           <div className="flex justify-center gap-4 mb-8">
             <button
-              onClick={() => router.push("/demo/dashboard")}
-              className="flex items-center gap-2 px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition"
-            >
-              <User className="w-5 h-5" />
-              Startup Dashboard
-            </button>
-            <button
               onClick={() => router.push("/demo/portfolio")}
               className="flex items-center gap-2 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
             >
@@ -130,11 +121,7 @@ export default function DemoLanding() {
           <div className="grid md:grid-cols-4 gap-6">
             <div>
               <h3 className="font-semibold mb-2">📊 Full Reports</h3>
-              <p className="text-gray-600">All 4 tabs (Code, Business, Investment, Design) with real data</p>
-            </div>
-            <div>
-              <h3 className="font-semibold mb-2">👤 Startup Dashboard</h3>
-              <p className="text-gray-600">Complete dashboard as a logged-in premium user</p>
+              <p className="text-gray-600">All 5 tabs (Overview, Code, Business, Investment, Design) with real data</p>
             </div>
             <div>
               <h3 className="font-semibold mb-2">🏢 Investor Portfolio</h3>
@@ -144,13 +131,17 @@ export default function DemoLanding() {
               <h3 className="font-semibold mb-2">⚡ Instant Access</h3>
               <p className="text-gray-600">No login, no waiting - everything works immediately</p>
             </div>
+            <div>
+              <h3 className="font-semibold mb-2">🎯 Complete Analysis</h3>
+              <p className="text-gray-600">Full Overview, Code, Business, Investment, and Design insights</p>
+            </div>
           </div>
         </div>
 
         {/* Quick Tips */}
         <div className="mt-8 text-center text-gray-600">
           <p className="mb-2">💡 <strong>Tip:</strong> Press 'M' anywhere to open quick commands</p>
-          <p>Type "mock1" through "mock4" for specific reports, or "dashboard" for user view</p>
+          <p>Type "mock1" through "mock4" for specific reports</p>
         </div>
       </div>
     </div>

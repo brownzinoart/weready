@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Tab } from '@headlessui/react';
 import { motion } from 'framer-motion';
-import { BarChart3, Code, Building, Target, Palette, Lock, Award, Brain, Shield, CheckCircle, ArrowRight, Calendar, AlertTriangle, Zap, TrendingUp } from 'lucide-react';
+import { BarChart3, Code, Building, Target, Palette, Lock, Award, Brain, Shield, CheckCircle, ArrowRight, Calendar, AlertTriangle, Zap, TrendingUp, Users } from 'lucide-react';
 import CodeTab from './tabs/CodeTab';
 import BusinessTab from './tabs/BusinessTab';
 import InvestmentTab from './tabs/InvestmentTab';
@@ -177,46 +177,47 @@ function OverviewTab({ result }: { result: any }) {
 
   return (
     <div className="space-y-8">
-      {/* Executive Summary */}
-      <div className="bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-2xl p-8 border-2 border-violet-200">
-        <div className="text-center mb-6">
-          <div className={`text-6xl font-bold mb-3 ${getScoreColor(result.overall_score || 0)}`}>
-            {result.overall_score || 0}/100
-          </div>
-          <div className="text-2xl font-bold text-slate-900 mb-2">WeReady Score</div>
-          <div className={`text-xl font-semibold mb-4 ${verdictInfo.color}`}>
-            {verdictInfo.emoji} {verdictInfo.text}
+      {/* Quick Status Overview */}
+      <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-xl p-6 border border-slate-200">
+        <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
+          <Brain className="w-6 h-6 text-indigo-600" />
+          <span>Analysis Summary</span>
+        </h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="text-center">
+            <div className={`text-3xl font-bold mb-2 ${verdictInfo.color}`}>
+              {verdictInfo.emoji}
+            </div>
+            <div className="text-lg font-semibold text-slate-900 mb-1">{verdictInfo.text}</div>
+            <div className="text-sm text-slate-600">Current Status</div>
           </div>
           
-          {result.weready_stamp_eligible && (
-            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg mb-4">
+          <div className="text-center">
+            <div className="text-3xl font-bold text-violet-600 mb-2">
+              {result.success_probability ? Math.round(result.success_probability * 100) : 65}%
+            </div>
+            <div className="text-lg font-semibold text-slate-900 mb-1">Success Rate</div>
+            <div className="text-sm text-slate-600">Based on similar startups</div>
+          </div>
+          
+          <div className="text-center">
+            <div className="text-3xl font-bold text-emerald-600 mb-2">
+              {result.market_percentile || 68}
+            </div>
+            <div className="text-lg font-semibold text-slate-900 mb-1">Percentile</div>
+            <div className="text-sm text-slate-600">Market position</div>
+          </div>
+        </div>
+
+        {result.weready_stamp_eligible && (
+          <div className="mt-6 text-center">
+            <div className="inline-flex items-center space-x-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg">
               <Award className="w-5 h-5" />
               <span>WeReady Stamp Eligible</span>
             </div>
-          )}
-        </div>
-
-        {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-200">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-violet-600 mb-1">
-              {result.success_probability ? Math.round(result.success_probability * 100) : 65}%
-            </div>
-            <div className="text-slate-600 font-medium">Success Probability</div>
           </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-slate-900 mb-1">
-              {result.funding_timeline || '6-12 months'}
-            </div>
-            <div className="text-slate-600 font-medium">Funding Timeline</div>
-          </div>
-          <div className="text-center">
-            <div className="text-lg font-bold text-slate-900 mb-1">
-              {result.market_percentile || 68}th Percentile
-            </div>
-            <div className="text-slate-600 font-medium">Market Position</div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Four Pillar Breakdown */}
@@ -289,6 +290,58 @@ function OverviewTab({ result }: { result: any }) {
               </div>
             );
           })}
+        </div>
+      </div>
+
+      {/* Next Steps Timeline */}
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-6">
+        <h3 className="text-xl font-bold text-slate-900 mb-6 flex items-center space-x-2">
+          <Calendar className="w-6 h-6 text-blue-600" />
+          <span>Recommended Timeline</span>
+        </h3>
+        
+        <div className="space-y-4">
+          <div className="flex items-start space-x-4">
+            <div className="bg-red-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+              1W
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-slate-900">This Week</h4>
+              <p className="text-sm text-slate-600 mb-2">Address critical issues and security vulnerabilities</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">Security fixes</span>
+                <span className="px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full">Performance audit</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="bg-yellow-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+              1M
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-slate-900">Next Month</h4>
+              <p className="text-sm text-slate-600 mb-2">Market validation and team building</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Customer research</span>
+                <span className="px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">Hiring plan</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex items-start space-x-4">
+            <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+              3M
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-slate-900">Next Quarter</h4>
+              <p className="text-sm text-slate-600 mb-2">Scale and optimize for growth</p>
+              <div className="flex flex-wrap gap-2">
+                <span className="px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">Product roadmap</span>
+                <span className="px-2 py-1 bg-indigo-100 text-indigo-800 text-xs rounded-full">Funding prep</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 

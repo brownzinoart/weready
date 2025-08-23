@@ -10,7 +10,7 @@ export default function DemoReport() {
   const router = useRouter();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("code");
+  const [activeTab, setActiveTab] = useState("overview");
   
   const reportId = params.id as string;
 
@@ -30,6 +30,7 @@ export default function DemoReport() {
   }, [reportId]);
 
   const tabs = [
+    { id: "overview", label: "Overview", icon: ChartBar },
     { id: "code", label: "Code Quality", icon: Code },
     { id: "business", label: "Business Model", icon: Briefcase },
     { id: "investment", label: "Investment Ready", icon: TrendingUp },
@@ -227,10 +228,10 @@ export default function DemoReport() {
         {/* Quick Navigation */}
         <div className="mt-8 flex justify-center gap-4">
           <button
-            onClick={() => router.push("/demo/dashboard")}
-            className="px-6 py-3 bg-black text-white rounded-lg hover:bg-gray-800 transition"
+            onClick={() => router.push("/demo")}
+            className="px-6 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition"
           >
-            View Demo Dashboard
+            ← Back to Demo Center
           </button>
           <button
             onClick={() => {

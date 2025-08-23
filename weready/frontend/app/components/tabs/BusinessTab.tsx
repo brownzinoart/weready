@@ -202,17 +202,6 @@ export default function BusinessTab({ result }: BusinessTabProps) {
         </div>
       )}
 
-      {/* Placeholder for full premium content */}
-      <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-6 text-center">
-        <h4 className="text-lg font-bold text-slate-900 mb-3">Premium Business Analysis</h4>
-        <p className="text-slate-600 mb-4">
-          Unlock detailed business model analysis including PMF validation frameworks, 
-          revenue optimization strategies, and competitive intelligence.
-        </p>
-        <button className="bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold px-6 py-3 rounded-xl hover:from-amber-600 hover:to-orange-600 transition-all">
-          Upgrade for $99/month
-        </button>
-      </div>
     </div>
   );
 }
