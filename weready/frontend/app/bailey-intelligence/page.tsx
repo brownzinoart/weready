@@ -287,7 +287,6 @@ export default function BaileyIntelligence() {
                 { id: "business", label: "Business Intelligence", icon: Building },
                 { id: "investment", label: "Investment Intelligence", icon: DollarSign },
                 { id: "design", label: "Design Intelligence", icon: Palette },
-                { id: "weready-sources", label: "WeReady Sources", icon: BookOpen },
                 { id: "semantic", label: "Semantic Search", icon: Search }
               ].map((tab) => (
                 <button
@@ -327,26 +326,9 @@ export default function BaileyIntelligence() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-semibold mb-4">Competitive Advantages</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <h4 className="font-semibold text-green-800 mb-2">vs ChatGPT</h4>
-                      <ul className="text-sm text-green-700 space-y-1">
-                        <li>• Real-time GitHub API access</li>
-                        <li>• Government data integration</li>
-                        <li>• Academic research validation</li>
-                        <li>• Confidence intervals</li>
-                      </ul>
-                    </div>
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                      <h4 className="font-semibold text-blue-800 mb-2">vs Competitors</h4>
-                      <ul className="text-sm text-blue-700 space-y-1">
-                        <li>• First with SEC EDGAR integration</li>
-                        <li>• Live repository momentum scoring</li>
-                        <li>• Multi-source contradiction detection</li>
-                        <li>• 98% credibility vs 60-70%</li>
-                      </ul>
-                    </div>
+                  <h3 className="text-lg font-semibold mb-4">WeReady Sources</h3>
+                  <div className="mt-4">
+                    <WeReadySourcesTab />
                   </div>
                 </div>
               </div>
@@ -380,10 +362,6 @@ export default function BaileyIntelligence() {
               <DesignIntelligenceTab />
             )}
 
-            {/* WeReady Sources Tab */}
-            {activeTab === "weready-sources" && (
-              <WeReadySourcesTab />
-            )}
 
             {/* Legacy WeReady Sources Content - Keep for now */}
             {activeTab === "weready-sources-old" && (
