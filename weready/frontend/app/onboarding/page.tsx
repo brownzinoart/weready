@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Github, ArrowRight, CheckCircle, Skip } from 'lucide-react';
+import { Github, ArrowRight, CheckCircle } from 'lucide-react';
 import GitHubRepoSelector from '../components/GitHubRepoSelector';
 import { useAuth } from '../contexts/AuthContext';
 

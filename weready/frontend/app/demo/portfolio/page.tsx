@@ -241,7 +241,7 @@ export default function DemoPortfolio() {
           
           <div className="flex items-center gap-2">
             <button
-              onClick={() => router.push("/demo/portfolio/compare/proj_001,proj_002,proj_004")}
+              onClick={() => router.push("/demo/portfolio-compare?ids=proj_001,proj_002,proj_004")}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
             >
               Compare Top 3

@@ -3,11 +3,12 @@
 import { useState } from 'react';
 import { Tab } from '@headlessui/react';
 import { motion } from 'framer-motion';
-import { BarChart3, Code, Building, Target, Palette, Lock, Award, Brain, Shield, CheckCircle, ArrowRight, Calendar, AlertTriangle, Zap, TrendingUp, Users } from 'lucide-react';
+import { BarChart3, Code, Building, Target, Palette, Lock, Award, Brain, Shield, CheckCircle, ArrowRight, Calendar, AlertTriangle, Zap, TrendingUp, Users, BookOpen } from 'lucide-react';
 import CodeTab from './tabs/CodeTab';
 import BusinessTab from './tabs/BusinessTab';
 import InvestmentTab from './tabs/InvestmentTab';
 import DesignTab from './tabs/DesignTab';
+import SourcesTab from './tabs/WeReadySourcesTab';
 
 interface TabNavigationProps {
   result: any;
@@ -50,6 +51,13 @@ export default function TabNavigation({ result, isFreeTier = true }: TabNavigati
       component: 'DesignTab',
       locked: isFreeTier,
       description: 'UX/UI quality, accessibility, conversion optimization'
+    },
+    {
+      name: 'Sources',
+      icon: BookOpen,
+      component: 'SourcesTab',
+      locked: false,
+      description: 'Analysis methodology, research sources, and citations'
     }
   ];
 
@@ -609,6 +617,8 @@ function TabContent({ tabComponent, result }: { tabComponent: string; result: an
       return <InvestmentTab result={result} />;
     case 'DesignTab':
       return <DesignTab result={result} />;
+    case 'SourcesTab':
+      return <SourcesTab />;
     default:
       return (
         <div className="text-center py-8">

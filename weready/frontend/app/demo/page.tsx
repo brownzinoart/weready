@@ -16,9 +16,9 @@ export default function DemoLanding() {
         if (input?.toLowerCase().includes("mock")) {
           const num = input.match(/\d/)?.[0];
           if (num) {
-            router.push(`/demo/report/${num}`);
+            router.push(`/demo/report-details?id=${num}`);
           } else {
-            router.push("/demo/report/1");
+            router.push("/demo/report-details?id=1");
           }
         }
       }
@@ -82,7 +82,7 @@ export default function DemoLanding() {
               Investor Portfolio
             </button>
             <button
-              onClick={() => router.push("/demo/report/4")}
+              onClick={() => router.push("/demo/report-details?id=4")}
               className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition"
             >
               <Play className="w-5 h-5" />
@@ -96,7 +96,7 @@ export default function DemoLanding() {
           {reports.map((report) => (
             <div
               key={report.id}
-              onClick={() => router.push(`/demo/report/${report.id}`)}
+              onClick={() => router.push(`/demo/report-details?id=${report.id}`)}
               className="bg-white rounded-lg shadow-lg p-6 cursor-pointer hover:shadow-xl transition transform hover:-translate-y-1"
             >
               <div className="flex items-start justify-between mb-4">

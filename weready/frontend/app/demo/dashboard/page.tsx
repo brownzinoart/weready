@@ -241,7 +241,7 @@ export default function DemoDashboard() {
         {/* Quick Actions */}
         <div className="mt-8 flex justify-center gap-4">
           <button
-            onClick={() => router.push("/demo/report/1")}
+            onClick={() => router.push("/demo/report-details?id=1")}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
           >
             View Reports
