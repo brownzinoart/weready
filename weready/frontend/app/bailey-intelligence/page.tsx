@@ -1,8 +1,13 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building } from "lucide-react";
+import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
 import Navigation from "../components/Navigation";
+import CodeIntelligenceTab from "../components/tabs/CodeIntelligenceTab";
+import BusinessIntelligenceTab from "../components/tabs/BusinessIntelligenceTab";
+import InvestmentIntelligenceTab from "../components/tabs/InvestmentIntelligenceTab";
+import DesignIntelligenceTab from "../components/tabs/DesignIntelligenceTab";
+import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -31,6 +36,17 @@ export default function BaileyIntelligence() {
   const [repoAnalysis, setRepoAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Handle URL parameters for deep linking
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tab = urlParams.get('tab');
+      if (tab) {
+        setActiveTab(tab);
+      }
+    }
+  }, []);
   const [sourcesStatus, setSourcesStatus] = useState<any>(null);
   const [academicResearch, setAcademicResearch] = useState<any>(null);
   const [governmentData, setGovernmentData] = useState<any>(null);
@@ -267,13 +283,12 @@ export default function BaileyIntelligence() {
               {[
                 { id: "overview", label: "Overview", icon: BarChart3 },
                 { id: "sources", label: "Live Sources", icon: Database },
+                { id: "code", label: "Code Intelligence", icon: Code },
+                { id: "business", label: "Business Intelligence", icon: Building },
+                { id: "investment", label: "Investment Intelligence", icon: DollarSign },
+                { id: "design", label: "Design Intelligence", icon: Palette },
                 { id: "weready-sources", label: "WeReady Sources", icon: BookOpen },
-                { id: "semantic", label: "Semantic Search", icon: Search },
-                { id: "government", label: "Government Data", icon: Building },
-                { id: "academic", label: "Academic Research", icon: GraduationCap },
-                { id: "github", label: "GitHub Intelligence", icon: Github },
-                { id: "technology", label: "Technology Trends", icon: TrendingUp },
-                { id: "competitive", label: "Competitive Edge", icon: Award }
+                { id: "semantic", label: "Semantic Search", icon: Search }
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -337,8 +352,41 @@ export default function BaileyIntelligence() {
               </div>
             )}
 
+            {/* Code Intelligence Tab */}
+            {activeTab === "code" && (
+              <CodeIntelligenceTab 
+                repositoryUrl={repositoryUrl}
+                setRepositoryUrl={setRepositoryUrl}
+                analyzeRepository={analyzeRepository}
+                loading={loading}
+                repoAnalysis={repoAnalysis}
+                getScoreIcon={getScoreIcon}
+                getScoreColor={getScoreColor}
+              />
+            )}
+
+            {/* Business Intelligence Tab */}
+            {activeTab === "business" && (
+              <BusinessIntelligenceTab />
+            )}
+
+            {/* Investment Intelligence Tab */}
+            {activeTab === "investment" && (
+              <InvestmentIntelligenceTab />
+            )}
+
+            {/* Design Intelligence Tab */}
+            {activeTab === "design" && (
+              <DesignIntelligenceTab />
+            )}
+
             {/* WeReady Sources Tab */}
             {activeTab === "weready-sources" && (
+              <WeReadySourcesTab />
+            )}
+
+            {/* Legacy WeReady Sources Content - Keep for now */}
+            {activeTab === "weready-sources-old" && (
               <div className="space-y-8">
                 <div>
                   <h3 className="text-2xl font-bold text-gray-900 mb-6 text-center">WeReady Analysis Sources by Vertical</h3>
@@ -1235,8 +1283,8 @@ export default function BaileyIntelligence() {
               </div>
             )}
 
-            {/* Government Data Tab */}
-            {activeTab === "government" && (
+            {/* REMOVED: Government Data Tab - Content migrated to Business Intelligence */}
+            {false && activeTab === "government" && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Government Data Intelligence</h3>
@@ -1317,8 +1365,8 @@ export default function BaileyIntelligence() {
               </div>
             )}
 
-            {/* Academic Research Tab */}
-            {activeTab === "academic" && (
+            {/* REMOVED: Academic Research Tab - Content migrated to respective pillar tabs */}
+            {false && activeTab === "academic" && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4">Academic Research Intelligence</h3>
@@ -1405,8 +1453,8 @@ export default function BaileyIntelligence() {
               </div>
             )}
 
-            {/* GitHub Intelligence Tab */}
-            {activeTab === "github" && (
+            {/* REMOVED: GitHub Intelligence Tab - Content migrated to Code Intelligence */}
+            {false && activeTab === "github" && (
               <div className="space-y-6">
                 <div>
                   <h3 className="text-lg font-semibold mb-4">GitHub Repository Analysis</h3>
@@ -1565,8 +1613,8 @@ export default function BaileyIntelligence() {
               </div>
             )}
 
-            {/* Competitive Edge Tab */}
-            {activeTab === "competitive" && (
+            {/* REMOVED: Competitive Edge Tab - Content integrated into WeReady Sources */}
+            {false && activeTab === "competitive" && (
               <div className="space-y-8">
                 <div className="text-center">
                   <h3 className="text-2xl font-bold text-gray-900 mb-4">Unbeatable Competitive Edge</h3>

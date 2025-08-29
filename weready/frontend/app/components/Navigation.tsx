@@ -82,6 +82,13 @@ export default function Navigation({ transparent = false }: NavigationProps) {
       icon: Target,
       description: "Strategic timing advisor",
       badge: "REAL-TIME"
+    },
+    {
+      name: "Technology Trends",
+      href: "/bailey-intelligence?tab=technology",
+      icon: Brain,
+      description: "Tech stack intelligence",
+      badge: "NEW"
     }
   ];
 
