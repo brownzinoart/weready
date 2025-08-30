@@ -8,6 +8,7 @@ import BusinessTab from "../components/tabs/BusinessTab";
 import InvestmentTab from "../components/tabs/InvestmentTab";
 import DesignTab from "../components/tabs/DesignTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
+import { getApiUrl, apiCall } from "../../lib/api-config";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -62,8 +63,8 @@ export default function BaileyIntelligence() {
     const loadIntelligenceOverview = async () => {
       try {
         const [healthResponse, trendingResponse] = await Promise.all([
-          fetch("http://localhost:8000/health"),
-          fetch("http://localhost:8000/github/trending-intelligence")
+          apiCall('/health'),
+          apiCall('/github/trending-intelligence')
         ]);
         
         const health = await healthResponse.json();
@@ -149,7 +150,7 @@ export default function BaileyIntelligence() {
     
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:8000/github/repository-analysis?repo_url=${encodeURIComponent(repositoryUrl)}`);
+      const response = await apiCall('/github/repository-analysis', {}, { repo_url: repositoryUrl });
       const data = await response.json();
       setRepoAnalysis(data);
     } catch (error) {
@@ -1140,11 +1141,8 @@ export default function BaileyIntelligence() {
                               setSemanticLoading(true);
                               try {
                                 // Call real Bailey semantic search API
-                                const response = await fetch('http://localhost:8000/bailey/semantic-query', {
+                                const response = await apiCall('/bailey/semantic-query', {
                                   method: 'POST',
-                                  headers: {
-                                    'Content-Type': 'application/json',
-                                  },
                                   body: JSON.stringify({
                                     query: semanticQuery,
                                     min_confidence: 0.7,
