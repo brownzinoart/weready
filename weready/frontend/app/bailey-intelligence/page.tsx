@@ -6,7 +6,7 @@ import Navigation from "../components/Navigation";
 import EnhancedCodeIntelligenceTab from "../components/tabs/EnhancedCodeIntelligenceTab";
 import BusinessTab from "../components/tabs/BusinessTab";
 import InvestmentTab from "../components/tabs/InvestmentTab";
-import DesignIntelligenceTab from "../components/tabs/DesignIntelligenceTab";
+import DesignTab from "../components/tabs/DesignTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
 
 interface IntelligenceMetrics {
@@ -382,7 +382,21 @@ export default function BaileyIntelligence() {
 
             {/* Design Intelligence Tab */}
             {activeTab === "design" && (
-              <DesignIntelligenceTab />
+              <DesignTab result={repoAnalysis || {
+                breakdown: {
+                  design_experience: {
+                    score: 75,
+                    weight: 25,
+                    detailed_analysis: {
+                      design_system_maturity: { maturity_score: 60 },
+                      accessibility_compliance: { wcag_score: 75 },
+                      conversion_optimization: { cro_score: 70 }
+                    },
+                    insights: []
+                  }
+                },
+                brain_recommendations: []
+              }} />
             )}
 
 

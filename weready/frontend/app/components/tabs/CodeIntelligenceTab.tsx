@@ -29,6 +29,38 @@ export default function CodeIntelligenceTab({
           <span>Code Intelligence Hub</span>
         </h3>
         
+        {/* Code Analysis Command Center */}
+        <div className="bg-gradient-to-r from-slate-50 via-blue-50 to-indigo-50 border-2 border-slate-200 rounded-xl p-6 mb-8">
+          <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
+            <Code className="w-6 h-6 text-blue-600" />
+            <span>Code Intelligence Command Center</span>
+          </h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600 mb-1">15+</div>
+              <div className="text-sm text-slate-600">Analysis Points</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-indigo-600 mb-1">Real-time</div>
+              <div className="text-sm text-slate-600">GitHub Analysis</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-cyan-600 mb-1">AI-Powered</div>
+              <div className="text-sm text-slate-600">Detection</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600 mb-1">Quality</div>
+              <div className="text-sm text-slate-600">Scoring</div>
+            </div>
+          </div>
+          
+          <div className="text-sm text-slate-700 text-center">
+            Advanced code analysis combining GitHub metrics, dependency scanning, and AI-assisted quality assessment. 
+            Designed to help founders understand their codebase health and technical debt.
+          </div>
+        </div>
+        
         {/* Code Quality Overview */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
