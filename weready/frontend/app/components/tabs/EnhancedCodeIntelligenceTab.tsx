@@ -441,60 +441,35 @@ export default function EnhancedCodeIntelligenceTab({
         </div>
       </div>
 
-      {/* Repository Analysis Section */}
-      <div className="bg-white border border-gray-200 rounded-xl p-6">
-        <h3 className="text-xl font-bold mb-4 flex items-center space-x-2">
-          <Github className="w-6 h-6 text-gray-900" />
-          <span>Analyze Your Repository</span>
-        </h3>
-        
-        <div className="space-y-4">
-          <div className="flex space-x-2">
-            <input
-              type="text"
-              value={repositoryUrl}
-              onChange={(e) => setRepositoryUrl(e.target.value)}
-              placeholder="https://github.com/username/repository"
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <button
-              onClick={analyzeRepository}
-              disabled={loading || !repositoryUrl}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition"
-            >
-              {loading ? 'Analyzing...' : 'Analyze'}
-            </button>
-          </div>
-          
-          {repoAnalysis && (
-            <div className="mt-6 p-6 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold">Analysis Results</h4>
-                <div className={`text-2xl font-bold ${getScoreColor(repoAnalysis.overall_score)}`}>
-                  {repoAnalysis.overall_score}/100
-                </div>
+      {/* Call to Action - Integration with Overview */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-700 rounded-xl p-8 text-white">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-2xl font-bold mb-3">Ready to Analyze Your Code?</h3>
+            <p className="text-lg text-indigo-100 mb-4">
+              Switch to the Overview tab to analyze your GitHub repository with our complete 7-layer analysis
+            </p>
+            <div className="flex items-center space-x-4 text-sm">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4" />
+                <span>Real-time Analysis</span>
               </div>
-              
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="text-xl font-bold text-purple-600">{repoAnalysis.ai_code_percentage}%</div>
-                  <div className="text-sm text-gray-600">AI-Generated</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-red-600">{repoAnalysis.vulnerabilities}</div>
-                  <div className="text-sm text-gray-600">Vulnerabilities</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-orange-600">${repoAnalysis.tech_debt}K</div>
-                  <div className="text-sm text-gray-600">Tech Debt</div>
-                </div>
-                <div className="text-center">
-                  <div className="text-xl font-bold text-green-600">{repoAnalysis.test_coverage}%</div>
-                  <div className="text-sm text-gray-600">Test Coverage</div>
-                </div>
+              <div className="flex items-center space-x-2">
+                <Shield className="w-4 h-4" />
+                <span>Security Scanning</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Brain className="w-4 h-4" />
+                <span>AI Detection</span>
               </div>
             </div>
-          )}
+          </div>
+          <div className="text-center">
+            <div className="bg-white/20 rounded-lg p-4 backdrop-blur">
+              <div className="text-3xl font-bold mb-1">7 Layers</div>
+              <div className="text-sm">Deep Analysis</div>
+            </div>
+          </div>
         </div>
       </div>
 
