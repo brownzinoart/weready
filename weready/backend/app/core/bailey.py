@@ -388,6 +388,27 @@ class Bailey:
                 "category": "market_strategy",
                 "numerical_value": 3,
                 "confidence": 0.9
+            },
+            {
+                "content": "Bailey analyzes code through multi-dimensional assessment: hallucination detection, dependency validation, security scanning, and business logic review",
+                "source_id": "mit_research",
+                "category": "code_analysis", 
+                "numerical_value": 4,
+                "confidence": 0.95
+            },
+            {
+                "content": "Code analysis includes AI-generated package detection with 89% accuracy rate for identifying non-existent dependencies",
+                "source_id": "github_api",
+                "category": "code_analysis",
+                "numerical_value": 89,
+                "confidence": 0.9
+            },
+            {
+                "content": "Bailey's business intelligence validates technical decisions against market readiness and investor appeal metrics",
+                "source_id": "yc_directory",
+                "category": "code_analysis",
+                "numerical_value": None,
+                "confidence": 0.85
             }
         ]
         

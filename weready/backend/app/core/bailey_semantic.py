@@ -50,10 +50,17 @@ class SemanticBailey:
         # Step 1: Generate embedding for the query
         query_embedding = await self._get_embedding(query)
         
-        # Step 2: Find semantically similar knowledge points
-        relevant_knowledge = await self._find_similar_knowledge(
-            query_embedding, min_confidence, max_results
-        )
+        # Step 2: Find relevant knowledge points
+        if query_embedding is None:
+            # Use keyword-based search as fallback
+            relevant_knowledge = await self._find_keyword_similar_knowledge(
+                query, min_confidence, max_results
+            )
+        else:
+            # Use semantic similarity search
+            relevant_knowledge = await self._find_similar_knowledge(
+                query_embedding, min_confidence, max_results
+            )
         
         # Step 3: Synthesize intelligent response
         synthesis = await self._synthesize_response(query, relevant_knowledge)
@@ -163,10 +170,48 @@ class SemanticBailey:
             
         except Exception as e:
             print(f"Embedding error: {e}")
-            # Fallback: return random embedding for development
-            embedding = np.random.rand(768)  # Gemini embedding size
-            self.embeddings_cache[text] = embedding
-            return embedding
+            # Check if it's an API key issue
+            if "API_KEY_INVALID" in str(e):
+                print("⚠️  Using keyword-based search fallback (Gemini API key needed for semantic search)")
+                # Return None to trigger keyword-based fallback
+                return None
+            else:
+                # Other errors: return random embedding for development
+                embedding = np.random.rand(768)  # Gemini embedding size
+                self.embeddings_cache[text] = embedding
+                return embedding
+    
+    async def _find_keyword_similar_knowledge(self, 
+                                            query: str,
+                                            min_confidence: float,
+                                            max_results: int) -> List[KnowledgePoint]:
+        """Fallback keyword-based search when embeddings fail"""
+        
+        query_lower = query.lower()
+        relevant_points = []
+        
+        # Simple keyword matching scoring
+        for point in self.bailey.knowledge_points.values():
+            if point.confidence < min_confidence:
+                continue
+            
+            # Create searchable text
+            searchable_text = f"{point.content} {point.category} {' '.join(point.source.data_categories)}".lower()
+            
+            # Count keyword matches (simple scoring)
+            query_words = set(query_lower.split())
+            text_words = set(searchable_text.split())
+            matches = len(query_words & text_words)
+            
+            if matches > 0:
+                # Simple relevance score based on keyword overlap
+                relevance_score = matches / len(query_words)
+                relevant_points.append((point, relevance_score))
+        
+        # Sort by relevance score and return top results
+        relevant_points.sort(key=lambda x: x[1], reverse=True)
+        
+        return [point for point, _ in relevant_points[:max_results]]
     
     async def _find_similar_knowledge(self, 
                                     query_embedding: np.ndarray,
@@ -232,7 +277,40 @@ class SemanticBailey:
             
         except Exception as e:
             print(f"Synthesis error: {e}")
-            return f"I found {len(knowledge_points)} relevant knowledge points for your query '{query}', but I'm having trouble synthesizing them right now. Please try again later."
+            
+            # Check if it's an API key issue
+            if "API_KEY_INVALID" in str(e):
+                # Provide basic summary of knowledge points instead
+                return self._create_basic_summary(query, knowledge_points)
+            else:
+                return f"I found {len(knowledge_points)} relevant knowledge points for your query '{query}', but I'm having trouble synthesizing them right now. Please try again later."
+    
+    def _create_basic_summary(self, query: str, knowledge_points: List[KnowledgePoint]) -> str:
+        """Create a basic summary without Gemini LLM synthesis"""
+        
+        if not knowledge_points:
+            return f"No relevant knowledge found for '{query}'. The knowledge base may need more data on this topic."
+        
+        summary_parts = [f"Based on {len(knowledge_points)} relevant sources, here's what I found for '{query}':\n"]
+        
+        for i, point in enumerate(knowledge_points, 1):
+            # Format each knowledge point
+            source_info = f"{point.source.name} ({point.source.credibility_score:.0f}% credibility)"
+            summary_parts.append(f"{i}. {point.content}\n   📊 Source: {source_info}")
+            
+            # Add numerical insight if available
+            if point.numerical_value:
+                if point.category == "funding":
+                    summary_parts.append(f"   💰 Amount: ${point.numerical_value:,.0f}")
+                elif point.category == "technology_trends":
+                    summary_parts.append(f"   📈 Growth: {point.numerical_value}%")
+                else:
+                    summary_parts.append(f"   📊 Value: {point.numerical_value}")
+        
+        # Add methodology note
+        summary_parts.append(f"\n💡 Note: This analysis uses keyword-based matching. For better semantic understanding, please configure a Gemini API key.")
+        
+        return "\n".join(summary_parts)
     
     def _prepare_knowledge_context(self, knowledge_points: List[KnowledgePoint]) -> str:
         """Format knowledge points for LLM context"""
