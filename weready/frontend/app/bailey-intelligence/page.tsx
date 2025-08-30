@@ -5,7 +5,7 @@ import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, 
 import Navigation from "../components/Navigation";
 import EnhancedCodeIntelligenceTab from "../components/tabs/EnhancedCodeIntelligenceTab";
 import BusinessTab from "../components/tabs/BusinessTab";
-import InvestmentIntelligenceTab from "../components/tabs/InvestmentIntelligenceTab";
+import InvestmentTab from "../components/tabs/InvestmentTab";
 import DesignIntelligenceTab from "../components/tabs/DesignIntelligenceTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
 
@@ -364,7 +364,20 @@ export default function BaileyIntelligence() {
 
             {/* Investment Intelligence Tab */}
             {activeTab === "investment" && (
-              <InvestmentIntelligenceTab />
+              <InvestmentTab result={repoAnalysis || {
+                breakdown: {
+                  investment_ready: {
+                    score: 70,
+                    weight: 25,
+                    detailed_analysis: {},
+                    insights: []
+                  }
+                },
+                brain_recommendations: [],
+                success_probability: 0.65,
+                funding_timeline: '6-12 months',
+                market_percentile: 68
+              }} />
             )}
 
             {/* Design Intelligence Tab */}
