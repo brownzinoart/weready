@@ -156,7 +156,7 @@ export default function EnhancedCodeIntelligenceTab({
             </div>
             <div className="flex items-center space-x-2">
               <SourceBadge sourceName="Stanford AI" sourceType="academic" credibilityScore={94} isLive={true} />
-              <SourceBadge sourceName="WeReady ML" sourceType="proprietary" credibilityScore={91} isLive={true} />
+              <SourceBadge sourceName="WeReady ML" sourceType="industry" credibilityScore={91} isLive={true} />
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export default function EnhancedCodeIntelligenceTab({
               <div className="text-sm text-gray-600">HIPAA, PCI-DSS, SOC2 • Regulatory requirements • Automated reporting</div>
             </div>
             <div className="flex items-center space-x-2">
-              <SourceBadge sourceName="ISO" sourceType="standards" credibilityScore={97} lastUpdated="Daily" />
+              <SourceBadge sourceName="ISO" sourceType="industry" credibilityScore={97} lastUpdated="Daily" />
             </div>
           </div>
         </div>
@@ -265,7 +265,7 @@ export default function EnhancedCodeIntelligenceTab({
               <CheckCircle className="w-5 h-5 text-green-400 mt-0.5 flex-shrink-0" />
               <div>
                 <div className="font-semibold mb-1">Zero False Positives in 2024</div>
-                <div className="text-sm text-gray-300">Industry average: 15-30% false positives. Our ML filters achieve <1.1% with human verification.</div>
+                <div className="text-sm text-gray-300">Industry average: 15-30% false positives. Our ML filters achieve &lt;1.1% with human verification.</div>
               </div>
             </div>
             
@@ -362,7 +362,7 @@ export default function EnhancedCodeIntelligenceTab({
                   </li>
                   <li className="flex items-start space-x-2">
                     <span className="text-blue-600">•</span>
-                    <span>Lowest false positive rate in the industry (<1.1%)</span>
+                    <span>Lowest false positive rate in the industry (&lt;1.1%)</span>
                   </li>
                 </ul>
               </div>

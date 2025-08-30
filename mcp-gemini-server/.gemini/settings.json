@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "gemini-server": {
+      "command": "node",
+      "args": [
+        "/Users/wallymo/weready/mcp-gemini-server/build/index.js"
+      ]
+    }
+  }
+}
