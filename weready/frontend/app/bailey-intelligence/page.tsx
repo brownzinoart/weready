@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
 import Navigation from "../components/Navigation";
-import EnhancedCodeIntelligenceTab from "../components/tabs/EnhancedCodeIntelligenceTab";
+import CodeIntelligenceTab from "../components/tabs/CodeIntelligenceTab";
 import BusinessTab from "../components/tabs/BusinessTab";
 import InvestmentTab from "../components/tabs/InvestmentTab";
 import DesignTab from "../components/tabs/DesignTab";
@@ -336,7 +336,7 @@ export default function BaileyIntelligence() {
 
             {/* Code Intelligence Tab */}
             {activeTab === "code" && (
-              <EnhancedCodeIntelligenceTab 
+              <CodeIntelligenceTab 
                 repositoryUrl={repositoryUrl}
                 setRepositoryUrl={setRepositoryUrl}
                 analyzeRepository={analyzeRepository}
