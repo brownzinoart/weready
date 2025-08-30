@@ -2,11 +2,23 @@
   command = "npm run build"
   publish = "out"
 
+[functions]
+  directory = "netlify/functions"
+
 [[redirects]]
   from = "/api/*"
-  to = "http://localhost:8000/api/:splat"
+  to = "/.netlify/functions/api/:splat"
   status = 200
-  force = true
+
+[[redirects]]
+  from = "/bailey/semantic-query"
+  to = "/.netlify/functions/bailey-semantic-query"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/api/health"
+  status = 200
 
 [[headers]]
   for = "/*"
