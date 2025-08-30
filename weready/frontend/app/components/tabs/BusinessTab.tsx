@@ -1,50 +1,16 @@
 'use client';
 
-import { useState } from 'react';
-import { Building, TrendingUp, Target, DollarSign, Users, BarChart3, Globe, Briefcase, Zap, Shield, Eye, PieChart, ChevronRight, BookOpen, Award, Lightbulb, Calculator, LineChart, Activity, ShoppingCart, Rocket } from 'lucide-react';
+import { Building, TrendingUp, Target, DollarSign, Users, BarChart3, Globe, Briefcase, Zap, Shield, PieChart, ChevronRight, BookOpen, Award, Lightbulb, Calculator, LineChart, Activity, ShoppingCart, Rocket } from 'lucide-react';
 
 interface BusinessTabProps {
   result: any;
 }
 
 export default function BusinessTab({ result }: BusinessTabProps) {
-  const [showEvidence, setShowEvidence] = useState<{[key: string]: boolean}>({});
-  const [evidenceData, setEvidenceData] = useState<{[key: string]: any}>({});
-  
   const businessData = result.breakdown?.business_model || {};
   const recommendations = (result.brain_recommendations || []).filter(
     (rec: any) => rec.category === 'business_model'
   );
-  
-  const toggleEvidence = async (component: string) => {
-    if (showEvidence[component]) {
-      setShowEvidence(prev => ({
-        ...prev,
-        [component]: false
-      }));
-    } else {
-      // Load evidence if not already loaded
-      if (!evidenceData[component]) {
-        try {
-          const response = await fetch(`http://localhost:8000/evidence/${component}`);
-          if (response.ok) {
-            const data = await response.json();
-            setEvidenceData(prev => ({
-              ...prev,
-              [component]: data
-            }));
-          }
-        } catch (error) {
-          console.error('Failed to load evidence:', error);
-        }
-      }
-      
-      setShowEvidence(prev => ({
-        ...prev,
-        [component]: true
-      }));
-    }
-  };
   
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
@@ -142,18 +108,6 @@ export default function BusinessTab({ result }: BusinessTabProps) {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="text-center">
-        <div className={`text-6xl font-bold mb-2 ${getScoreColor(businessData.score || 0)}`}>
-          {businessData.score || 0}/100
-        </div>
-        <div className="text-xl text-slate-900 font-semibold mb-2">
-          Business Model Analysis
-        </div>
-        <div className="text-slate-600">
-          {businessData.weight || 25}% of overall WeReady Score
-        </div>
-      </div>
 
       {/* Enterprise-Grade Business Analysis Overview */}
       <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 rounded-xl p-6 mb-8">
@@ -809,19 +763,9 @@ export default function BusinessTab({ result }: BusinessTabProps) {
 
       {/* Evidence Section */}
       <div className="bg-white border-2 border-slate-200 rounded-xl p-6 mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <h4 className="text-xl font-bold text-slate-900">Business Intelligence Evidence</h4>
-          <button
-            onClick={() => toggleEvidence('business_model')}
-            className="flex items-center space-x-2 px-4 py-2 bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors"
-          >
-            <Eye className="w-4 h-4" />
-            <span>View Research Sources</span>
-          </button>
-        </div>
-
-        {showEvidence['business_model'] && (
-          <div className="space-y-4">
+        <h4 className="text-xl font-bold text-slate-900 mb-6">Business Intelligence Evidence</h4>
+        
+        <div className="space-y-4">
             {/* Framework Methodologies */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4">
@@ -889,7 +833,6 @@ export default function BusinessTab({ result }: BusinessTabProps) {
               </div>
             </div>
           </div>
-        )}
       </div>
 
       {/* Business Insights */}
