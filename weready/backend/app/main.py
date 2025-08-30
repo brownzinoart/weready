@@ -7,6 +7,24 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 
+# Pydantic models for semantic search
+class SemanticQueryRequest(BaseModel):
+    query: str
+    min_confidence: Optional[float] = 0.7
+    max_results: Optional[int] = 10
+
+class MarketTimingRequest(BaseModel):
+    startup_category: str
+    time_horizon: Optional[str] = "6_months"
+
+class CompetitiveGapsRequest(BaseModel):
+    technology_focus: str
+
+class CrossDomainRequest(BaseModel):
+    domain_a: str
+    domain_b: str
+    relationship_type: Optional[str] = "correlation"
+
 # Load environment variables from .env file
 load_dotenv()
 from app.core.hallucination_detector import HallucinationDetector
@@ -15,7 +33,7 @@ from app.core.weready_brain import weready_brain, IntelligentWeReadyScore, Brain
 from app.core.learning_engine import learning_engine, OutcomeType
 from app.core.bailey import bailey
 from app.core.bailey_connectors import bailey_pipeline
-# from app.core.bailey_semantic import semantic_bailey
+from app.core.bailey_semantic import semantic_bailey
 from app.services.github_analyzer import GitHubAnalyzer
 from app.core.credible_sources import credible_sources
 from app.core.government_data_integrator import government_integrator
@@ -1029,11 +1047,79 @@ async def get_bailey_sources():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get Bailey sources: {str(e)}")
 
-# Semantic Bailey endpoints temporarily disabled due to OpenAI dependency
-# @app.post("/bailey/semantic-query")
-# @app.post("/bailey/market-timing")  
-# @app.post("/bailey/competitive-gaps")
-# @app.post("/bailey/cross-domain")
+# Semantic Bailey endpoints powered by Gemini
+@app.post("/bailey/semantic-query")
+async def semantic_query(request: SemanticQueryRequest):
+    """Query Bailey's knowledge base using natural language"""
+    try:
+        result = await semantic_bailey.semantic_query(
+            query=request.query,
+            min_confidence=request.min_confidence,
+            max_results=request.max_results
+        )
+        
+        return {
+            "status": "success",
+            "result": result,
+            "timestamp": datetime.now().isoformat()
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Semantic query failed: {str(e)}")
+
+@app.post("/bailey/market-timing")  
+async def market_timing_analysis(request: MarketTimingRequest):
+    """Analyze market timing for startup category"""
+    try:
+        result = await semantic_bailey.market_timing_intelligence(
+            startup_category=request.startup_category,
+            time_horizon=request.time_horizon
+        )
+        
+        return {
+            "status": "success", 
+            "result": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Market timing analysis failed: {str(e)}")
+
+@app.post("/bailey/competitive-gaps")
+async def competitive_gap_analysis(request: CompetitiveGapsRequest):
+    """Identify competitive gaps in technology focus area"""
+    try:
+        result = await semantic_bailey.competitive_gap_analysis(
+            technology_focus=request.technology_focus
+        )
+        
+        return {
+            "status": "success",
+            "result": result, 
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Competitive gap analysis failed: {str(e)}")
+
+@app.post("/bailey/cross-domain")
+async def cross_domain_analysis(request: CrossDomainRequest):
+    """Analyze relationships between knowledge domains"""
+    try:
+        result = await semantic_bailey.cross_domain_analysis(
+            domain_a=request.domain_a,
+            domain_b=request.domain_b,
+            relationship_type=request.relationship_type
+        )
+        
+        return {
+            "status": "success",
+            "result": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cross-domain analysis failed: {str(e)}")
 
 @app.get("/credibility/enhanced-assessment/{metric}")
 async def get_enhanced_credibility_assessment(metric: str):

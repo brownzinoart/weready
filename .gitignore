@@ -31,3 +31,6 @@ coverage/
 
 # Docker
 *.pid
+
+# Local Netlify folder
+.netlify

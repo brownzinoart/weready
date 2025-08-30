@@ -1139,31 +1139,58 @@ export default function BaileyIntelligence() {
                               if (!semanticQuery.trim()) return;
                               setSemanticLoading(true);
                               try {
-                                // Simulate semantic search processing
-                                await new Promise(resolve => setTimeout(resolve, 2000));
+                                // Call real Bailey semantic search API
+                                const response = await fetch('http://localhost:8000/bailey/semantic-query', {
+                                  method: 'POST',
+                                  headers: {
+                                    'Content-Type': 'application/json',
+                                  },
+                                  body: JSON.stringify({
+                                    query: semanticQuery,
+                                    min_confidence: 0.7,
+                                    max_results: 10
+                                  })
+                                });
+
+                                if (!response.ok) {
+                                  throw new Error(`HTTP error! status: ${response.status}`);
+                                }
+
+                                const data = await response.json();
+                                
+                                // Transform API response to frontend format
+                                setSemanticResults({
+                                  query: data.result.query,
+                                  results: data.result.knowledge_details?.map((detail: any) => ({
+                                    source: detail.source,
+                                    confidence: Math.round(detail.credibility),
+                                    summary: detail.content,
+                                    evidence: [detail.source],
+                                    timestamp: data.timestamp
+                                  })) || [],
+                                  contradictions: [],
+                                  methodology: `Bailey Intelligence Analysis (${data.result.relevant_knowledge_points} knowledge points, ${Math.round(data.result.credibility_score)}% credibility)`,
+                                  synthesis: data.result.synthesis
+                                });
+                              } catch (error) {
+                                console.error('Semantic search failed:', error);
+                                
+                                // Fallback to demo data if API fails
                                 setSemanticResults({
                                   query: semanticQuery,
                                   results: [
                                     {
-                                      source: 'MIT Research',
-                                      confidence: 94,
-                                      summary: 'AI startup funding increased 34% in 2024, with 67% of investments in early-stage companies.',
-                                      evidence: ['MIT Entrepreneurship Database', 'CB Insights Analysis'],
-                                      timestamp: '2024-12-15T10:30:00Z'
-                                    },
-                                    {
-                                      source: 'Federal Reserve',
-                                      confidence: 97,
-                                      summary: 'Current federal funds rate of 5.25% indicates favorable startup lending environment.',
-                                      evidence: ['FRED Economic Data', 'BLS Employment Statistics'],
-                                      timestamp: '2024-12-15T09:15:00Z'
+                                      source: 'Bailey Intelligence (Demo)',
+                                      confidence: 85,
+                                      summary: `I'm processing your query "${semanticQuery}" but the backend connection is temporarily unavailable. This is demo data showing how Bailey would respond.`,
+                                      evidence: ['Bailey Knowledge Base'],
+                                      timestamp: new Date().toISOString()
                                     }
                                   ],
                                   contradictions: [],
-                                  methodology: 'Multi-source semantic analysis with confidence weighting'
+                                  methodology: 'Demo mode - backend connection unavailable',
+                                  synthesis: `Thank you for your query about "${semanticQuery}". Bailey Intelligence is designed to provide comprehensive analysis using government, academic, and industry sources. Please ensure the backend is running to see real Bailey insights.`
                                 });
-                              } catch (error) {
-                                console.error('Semantic search failed:', error);
                               } finally {
                                 setSemanticLoading(false);
                               }
@@ -1263,6 +1290,21 @@ export default function BaileyIntelligence() {
                             </div>
                           </div>
                         ))}
+
+                        {/* Bailey's Synthesis */}
+                        {semanticResults.synthesis && (
+                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
+                            <div className="flex items-center space-x-2 mb-4">
+                              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                                <span className="text-white font-bold text-sm">B</span>
+                              </div>
+                              <h5 className="font-semibold text-purple-900">Bailey's Analysis</h5>
+                            </div>
+                            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
+                              {semanticResults.synthesis}
+                            </div>
+                          </div>
+                        )}
 
                         {/* Methodology Transparency */}
                         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">

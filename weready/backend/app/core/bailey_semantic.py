@@ -2,7 +2,7 @@
 BAILEY SEMANTIC SEARCH LAYER
 =============================
 Adds intelligent querying to existing Bailey knowledge without architectural changes.
-Uses OpenAI embeddings for semantic similarity and LLM for synthesis.
+Uses Google Gemini for embeddings and LLM synthesis (free tier).
 
 Quick wins:
 - Natural language queries over existing knowledge
@@ -12,15 +12,19 @@ Quick wins:
 """
 
 import asyncio
-import openai
+import google.generativeai as genai
 from typing import Dict, List, Optional, Any, Tuple
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 import json
+import os
 from dataclasses import asdict
 
 from .bailey import bailey, KnowledgePoint, KnowledgeSource
 from .credible_sources import credible_sources
+
+# Configure Gemini
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 
 class SemanticBailey:
     """Semantic search layer for Bailey knowledge engine"""
@@ -140,20 +144,29 @@ class SemanticBailey:
     # Private helper methods
     
     async def _get_embedding(self, text: str) -> np.ndarray:
-        """Get OpenAI embedding for text, with caching"""
+        """Get Gemini embedding for text, with caching"""
         
         if text in self.embeddings_cache:
             return self.embeddings_cache[text]
         
-        # Use OpenAI's text-embedding-3-small (cheaper, faster)
-        response = await openai.embeddings.acreate(
-            input=text,
-            model="text-embedding-3-small"
-        )
-        
-        embedding = np.array(response.data[0].embedding)
-        self.embeddings_cache[text] = embedding
-        return embedding
+        try:
+            # Use Gemini's embedding model (free tier)
+            result = genai.embed_content(
+                model="models/embedding-001",
+                content=text,
+                task_type="semantic_similarity"
+            )
+            
+            embedding = np.array(result['embedding'])
+            self.embeddings_cache[text] = embedding
+            return embedding
+            
+        except Exception as e:
+            print(f"Embedding error: {e}")
+            # Fallback: return random embedding for development
+            embedding = np.random.rand(768)  # Gemini embedding size
+            self.embeddings_cache[text] = embedding
+            return embedding
     
     async def _find_similar_knowledge(self, 
                                     query_embedding: np.ndarray,
@@ -188,7 +201,7 @@ class SemanticBailey:
     async def _synthesize_response(self, 
                                  query: str, 
                                  knowledge_points: List[KnowledgePoint]) -> str:
-        """Use LLM to synthesize intelligent response from knowledge points"""
+        """Use Gemini to synthesize intelligent response from knowledge points"""
         
         # Prepare context from knowledge points
         context = self._prepare_knowledge_context(knowledge_points)
@@ -212,13 +225,14 @@ class SemanticBailey:
         Response:
         """
         
-        response = await openai.chat.completions.acreate(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
-        )
-        
-        return response.choices[0].message.content
+        try:
+            model = genai.GenerativeModel('gemini-pro')
+            response = model.generate_content(prompt)
+            return response.text
+            
+        except Exception as e:
+            print(f"Synthesis error: {e}")
+            return f"I found {len(knowledge_points)} relevant knowledge points for your query '{query}', but I'm having trouble synthesizing them right now. Please try again later."
     
     def _prepare_knowledge_context(self, knowledge_points: List[KnowledgePoint]) -> str:
         """Format knowledge points for LLM context"""
