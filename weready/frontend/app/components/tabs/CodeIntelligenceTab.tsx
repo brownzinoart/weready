@@ -97,7 +97,7 @@ export default function CodeIntelligenceTab({
               <div className="text-xs text-gray-500 mt-1">Validated by academic research</div>
             </div>
           </div>
-        }
+        </div>
         
         {/* Security Vulnerability Intelligence */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
