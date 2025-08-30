@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
 import Navigation from "../components/Navigation";
 import EnhancedCodeIntelligenceTab from "../components/tabs/EnhancedCodeIntelligenceTab";
-import BusinessIntelligenceTab from "../components/tabs/BusinessIntelligenceTab";
+import BusinessTab from "../components/tabs/BusinessTab";
 import InvestmentIntelligenceTab from "../components/tabs/InvestmentIntelligenceTab";
 import DesignIntelligenceTab from "../components/tabs/DesignIntelligenceTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
@@ -349,7 +349,17 @@ export default function BaileyIntelligence() {
 
             {/* Business Intelligence Tab */}
             {activeTab === "business" && (
-              <BusinessIntelligenceTab />
+              <BusinessTab result={repoAnalysis || {
+                breakdown: {
+                  business_model: {
+                    score: 75,
+                    weight: 25,
+                    detailed_analysis: {},
+                    insights: []
+                  }
+                },
+                brain_recommendations: []
+              }} />
             )}
 
             {/* Investment Intelligence Tab */}
