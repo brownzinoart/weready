@@ -1156,9 +1156,12 @@ export default function BaileyIntelligence() {
 
                                 const data = await response.json();
                                 
-                                // Transform API response to frontend format
+                                // Transform API response to new personalized format
                                 setSemanticResults({
                                   query: data.result.query,
+                                  bailey_response: data.result.bailey_response || data.result.synthesis,
+                                  bailey_analysis: data.result.bailey_analysis,
+                                  sources_notes: data.result.sources_notes,
                                   results: data.result.knowledge_details?.map((detail: any) => ({
                                     source: detail.source,
                                     confidence: Math.round(detail.credibility),
@@ -1167,8 +1170,8 @@ export default function BaileyIntelligence() {
                                     timestamp: data.timestamp
                                   })) || [],
                                   contradictions: [],
-                                  methodology: `Bailey Intelligence Analysis (${data.result.relevant_knowledge_points} knowledge points, ${Math.round(data.result.credibility_score)}% credibility)`,
-                                  synthesis: data.result.synthesis
+                                  methodology: data.result.bailey_analysis?.methodology || `Bailey Intelligence Analysis (${data.result.relevant_knowledge_points} knowledge points, ${Math.round(data.result.credibility_score)}% credibility)`,
+                                  synthesis: data.result.bailey_response || data.result.synthesis
                                 });
                               } catch (error) {
                                 console.error('Semantic search failed:', error);
@@ -1289,17 +1292,39 @@ export default function BaileyIntelligence() {
                           </div>
                         ))}
 
-                        {/* Bailey's Synthesis */}
-                        {semanticResults.synthesis && (
-                          <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-6">
-                            <div className="flex items-center space-x-2 mb-4">
-                              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
-                                <span className="text-white font-bold text-sm">B</span>
+                        {/* Bailey's Personal Response */}
+                        {semanticResults.bailey_response && (
+                          <div className="bg-gradient-to-r from-violet-50 to-purple-50 border border-violet-200 rounded-lg p-6">
+                            <div className="flex items-center space-x-3 mb-4">
+                              <div className="w-10 h-10 bg-gradient-to-r from-violet-600 to-purple-600 rounded-full flex items-center justify-center">
+                                <Brain className="w-6 h-6 text-white" />
                               </div>
-                              <h5 className="font-semibold text-purple-900">Bailey's Analysis</h5>
+                              <div>
+                                <h5 className="font-semibold text-violet-900">Bailey Intelligence</h5>
+                                {semanticResults.bailey_analysis && (
+                                  <p className="text-sm text-violet-600">
+                                    {semanticResults.bailey_analysis.analysis_type} • {Math.round(semanticResults.bailey_analysis.confidence_level)}% confidence
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-                              {semanticResults.synthesis}
+                            <div className="text-gray-800 leading-relaxed text-base">
+                              {semanticResults.bailey_response}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Sources & Analysis Card */}
+                        {semanticResults.sources_notes && (
+                          <div className="bg-slate-50 border border-slate-200 rounded-lg p-6">
+                            <div className="flex items-center space-x-2 mb-4">
+                              <div className="w-8 h-8 bg-slate-600 rounded-full flex items-center justify-center">
+                                <BookOpen className="w-5 h-5 text-white" />
+                              </div>
+                              <h5 className="font-semibold text-slate-900">Sources & Methodology</h5>
+                            </div>
+                            <div className="text-slate-700 leading-relaxed whitespace-pre-line text-sm">
+                              {semanticResults.sources_notes}
                             </div>
                           </div>
                         )}

@@ -136,13 +136,25 @@ exports.handler = async (event, context) => {
     .sort((a, b) => b.relevanceScore - a.relevanceScore)
     .slice(0, max_results);
 
-    // Create response
+    // Create Bailey's personal response
+    const baileyResponse = createPersonalBaileyResponse(query, relevantKnowledge);
+    
+    // Create response with new personal format
     const response = {
       status: "success",
       result: {
         query: query,
         relevant_knowledge_points: relevantKnowledge.length,
-        synthesis: createBasicSummary(query, relevantKnowledge),
+        bailey_response: baileyResponse.personal_response,
+        bailey_analysis: {
+          confidence_level: relevantKnowledge.reduce((sum, item) => sum + item.credibility, 0) / relevantKnowledge.length,
+          sources_count: relevantKnowledge.length,
+          analysis_type: getAnalysisType(query),
+          methodology: "Multi-dimensional semantic analysis with weighted source credibility"
+        },
+        sources_notes: baileyResponse.sources_notes,
+        // Legacy fields for backward compatibility
+        synthesis: baileyResponse.personal_response,
         sources_used: relevantKnowledge.map(item => ({
           name: item.source.split(' (')[0],
           organization: item.source.split(' (')[1]?.replace(')', '') || 'Unknown',
@@ -153,7 +165,7 @@ exports.handler = async (event, context) => {
         credibility_score: relevantKnowledge.reduce((sum, item) => sum + item.credibility, 0) / relevantKnowledge.length,
         knowledge_details: relevantKnowledge.map(item => ({
           ...item,
-          similarity_score: Math.min(0.95, item.relevanceScore / 20) // Convert relevance to similarity (0-1)
+          similarity_score: Math.min(0.95, item.relevanceScore / 20)
         }))
       },
       timestamp: new Date().toISOString()
@@ -185,60 +197,106 @@ exports.handler = async (event, context) => {
   }
 };
 
-function createBasicSummary(query, knowledgePoints) {
+function createPersonalBaileyResponse(query, knowledgePoints) {
   if (!knowledgePoints.length) {
-    return `No relevant knowledge found for '${query}'. Bailey's knowledge base is continuously expanding - try more specific terms or different phrasing.`;
+    return {
+      personal_response: `I don't have specific information about '${query}' in my current knowledge base. I'm continuously learning from new sources though - try rephrasing your question or being more specific about what you'd like to know!`,
+      sources_notes: "My knowledge base spans academic research, industry reports, and real-time intelligence feeds."
+    };
   }
 
-  // Analyze query intent for better context
+  // Analyze query intent for Bailey's personal response
   const queryLower = query.toLowerCase();
-  let contextPrefix = "Based on Bailey's intelligence analysis,";
+  let personalIntro = "";
   
-  if (queryLower.includes('bailey') && queryLower.includes('analyze')) {
-    contextPrefix = "Bailey's code analysis capabilities include";
+  if (queryLower.includes('bailey') && (queryLower.includes('analyze') || queryLower.includes('work'))) {
+    personalIntro = "Great question! I analyze code through multiple layers of intelligence. ";
   } else if (queryLower.includes('funding') || queryLower.includes('investment')) {
-    contextPrefix = "Current investment intelligence shows";
+    personalIntro = "Based on my analysis of current investment patterns, ";
   } else if (queryLower.includes('security') || queryLower.includes('vulnerability')) {
-    contextPrefix = "Security intelligence reveals";
+    personalIntro = "From my security intelligence monitoring, ";
   } else if (queryLower.includes('trend') || queryLower.includes('technology')) {
-    contextPrefix = "Technology trend analysis indicates";
-  }
-
-  let summary = `${contextPrefix} the following insights for '${query}':\n\n`;
-  
-  knowledgePoints.forEach((point, i) => {
-    summary += `${i + 1}. ${point.content}\n`;
-    summary += `   📊 Source: ${point.source} (${point.credibility.toFixed(0)}% credibility`;
-    if (point.relevanceScore) {
-      summary += `, ${Math.round(point.relevanceScore)}% relevance`;
-    }
-    summary += `)\n`;
-    
-    if (point.numerical_value) {
-      if (point.category === "funding") {
-        summary += `   💰 Funding: $${point.numerical_value.toLocaleString()}\n`;
-      } else if (point.category === "technology_trends") {
-        summary += `   📈 Growth Rate: ${point.numerical_value}%\n`;
-      } else if (point.category === "ai_ml") {
-        summary += `   🤖 Performance Gain: ${point.numerical_value}%\n`;
-      } else if (point.category === "security") {
-        summary += `   🔒 Risk Factor: ${point.numerical_value}%\n`;
-      } else {
-        summary += `   📊 Metric: ${point.numerical_value}\n`;
-      }
-    }
-    summary += '\n';
-  });
-
-  // Add dynamic intelligence note based on results
-  const avgCredibility = knowledgePoints.reduce((sum, item) => sum + item.credibility, 0) / knowledgePoints.length;
-  const highCredibility = avgCredibility > 90;
-  
-  if (highCredibility) {
-    summary += '💡 High-confidence analysis from academic and industry-leading sources.';
+    personalIntro = "I've been tracking technology trends and ";
+  } else if (queryLower.includes('how') || queryLower.includes('what')) {
+    personalIntro = "Here's what I've discovered about that: ";
   } else {
-    summary += '💡 Analysis from validated industry sources with real-time intelligence.';
+    personalIntro = "Let me share what I know about this: ";
   }
+
+  // Create Bailey's personal narrative response
+  let personalResponse = personalIntro;
   
-  return summary;
+  // Weave insights into a cohesive narrative
+  if (knowledgePoints.length === 1) {
+    const point = knowledgePoints[0];
+    personalResponse += point.content + ". ";
+    if (point.numerical_value) {
+      personalResponse += `The data shows ${formatMetric(point.category, point.numerical_value)}. `;
+    }
+  } else {
+    // Multiple points - create flowing narrative
+    knowledgePoints.forEach((point, i) => {
+      if (i === 0) {
+        personalResponse += point.content + ". ";
+      } else if (i === knowledgePoints.length - 1) {
+        personalResponse += `Additionally, ${point.content.toLowerCase()}. `;
+      } else {
+        personalResponse += `I've also found that ${point.content.toLowerCase()}. `;
+      }
+      
+      if (point.numerical_value && i < 2) { // Only add metrics for first 2 to avoid clutter
+        personalResponse += `The numbers show ${formatMetric(point.category, point.numerical_value)}. `;
+      }
+    });
+  }
+
+  // Add Bailey's confidence and methodology note
+  const avgCredibility = knowledgePoints.reduce((sum, item) => sum + item.credibility, 0) / knowledgePoints.length;
+  if (avgCredibility > 90) {
+    personalResponse += "I'm quite confident in this analysis since it's backed by top-tier academic and industry sources.";
+  } else {
+    personalResponse += "This assessment comes from reliable industry intelligence that I continuously monitor.";
+  }
+
+  // Create sources and footnotes section
+  let sourcesNotes = "**Sources & Analysis:**\n";
+  knowledgePoints.forEach((point, i) => {
+    const orgName = point.source.split(' (')[1]?.replace(')', '') || 'Industry Source';
+    sourcesNotes += `${i + 1}. ${orgName} - ${point.credibility.toFixed(0)}% credibility`;
+    if (point.relevanceScore > 15) {
+      sourcesNotes += ` (highly relevant)`;
+    }
+    sourcesNotes += `\n`;
+  });
+  
+  sourcesNotes += `\n*Analysis completed: ${new Date().toLocaleString()}*`;
+
+  return {
+    personal_response: personalResponse,
+    sources_notes: sourcesNotes
+  };
+}
+
+function formatMetric(category, value) {
+  switch (category) {
+    case "funding":
+      return `$${value.toLocaleString()} in average funding`;
+    case "technology_trends":
+      return `${value}% growth rate`;
+    case "ai_ml":
+      return `${value}% performance improvement`;
+    case "security":
+      return `${value}% higher risk occurrence`;
+    default:
+      return `a key metric of ${value}`;
+  }
+}
+
+function getAnalysisType(query) {
+  const queryLower = query.toLowerCase();
+  if (queryLower.includes('bailey') && queryLower.includes('analyze')) return 'Code Analysis Methodology';
+  if (queryLower.includes('funding') || queryLower.includes('investment')) return 'Investment Intelligence';
+  if (queryLower.includes('security') || queryLower.includes('vulnerability')) return 'Security Analysis';
+  if (queryLower.includes('trend') || queryLower.includes('technology')) return 'Technology Trends';
+  return 'General Intelligence';
 }
