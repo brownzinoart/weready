@@ -30,6 +30,11 @@
   to = "/.netlify/functions/github-repository-analysis"
   status = 200
 
+[[redirects]]
+  from = "/semantic-search"
+  to = "/.netlify/functions/semantic-search-engine"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

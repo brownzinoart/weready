@@ -38,6 +38,7 @@ const ENDPOINT_MAPPING = {
   
   // Bailey Intelligence endpoints
   '/bailey/semantic-query': '/bailey-semantic-query',
+  '/semantic-search': '/semantic-search-engine',
   
   // GitHub endpoints (to be created)
   '/github/trending-intelligence': '/github-trending-intelligence',

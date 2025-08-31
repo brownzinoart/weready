@@ -1140,13 +1140,13 @@ export default function BaileyIntelligence() {
                               if (!semanticQuery.trim()) return;
                               setSemanticLoading(true);
                               try {
-                                // Call real Bailey semantic search API
-                                const response = await apiCall('/bailey/semantic-query', {
+                                // Call real semantic search engine
+                                const response = await apiCall('/semantic-search', {
                                   method: 'POST',
                                   body: JSON.stringify({
                                     query: semanticQuery,
-                                    min_confidence: 0.7,
-                                    max_results: 10
+                                    max_results: 8,
+                                    min_similarity: 0.1
                                   })
                                 });
 
@@ -1156,22 +1156,36 @@ export default function BaileyIntelligence() {
 
                                 const data = await response.json();
                                 
-                                // Transform API response to new personalized format
+                                // Transform semantic search response
+                                const searchEngine = data.search_engine;
                                 setSemanticResults({
-                                  query: data.result.query,
-                                  bailey_response: data.result.bailey_response || data.result.synthesis,
-                                  bailey_analysis: data.result.bailey_analysis,
-                                  sources_notes: data.result.sources_notes,
-                                  results: data.result.knowledge_details?.map((detail: any) => ({
-                                    source: detail.source,
-                                    confidence: Math.round(detail.credibility),
-                                    summary: detail.content,
-                                    evidence: [detail.source],
-                                    timestamp: data.timestamp
-                                  })) || [],
-                                  contradictions: [],
-                                  methodology: data.result.bailey_analysis?.methodology || `Bailey Intelligence Analysis (${data.result.relevant_knowledge_points} knowledge points, ${Math.round(data.result.credibility_score)}% credibility)`,
-                                  synthesis: data.result.bailey_response || data.result.synthesis
+                                  query: searchEngine.query,
+                                  search_method: searchEngine.method,
+                                  total_found: searchEngine.results_found,
+                                  total_searched: searchEngine.total_documents_searched,
+                                  results: (searchEngine.results || []).map((result: any) => ({
+                                    id: result.id,
+                                    title: result.title,
+                                    content: result.content,
+                                    source: result.source,
+                                    organization: result.organization,
+                                    similarity_score: result.similarity_score,
+                                    credibility_score: result.credibility_score,
+                                    match_type: result.match_type,
+                                    relevance_explanation: result.relevance_explanation,
+                                    category: result.category,
+                                    tags: result.tags,
+                                    metrics: result.metrics,
+                                    date: result.date,
+                                    evidence: result.tags || [],
+                                    confidence: result.similarity_score * 100,
+                                    summary: result.content,
+                                    timestamp: result.date
+                                  })),
+                                  related_categories: searchEngine.related_categories,
+                                  suggested_queries: searchEngine.suggested_queries,
+                                  methodology: `${searchEngine.method === 'semantic_embeddings' ? 'Gemini Embeddings' : 'Keyword Matching'} • ${searchEngine.results_found} of ${searchEngine.total_documents_searched} documents`,
+                                  api_model: data.api_info?.model || 'unknown'
                                 });
                               } catch (error) {
                                 console.error('Semantic search failed:', error);
@@ -1239,14 +1253,25 @@ export default function BaileyIntelligence() {
                     {/* Results */}
                     {semanticResults ? (
                       <div className="mt-6 space-y-4">
-                        <div className="flex items-center justify-between">
-                          <h4 className="text-lg font-semibold text-gray-900">Search Results</h4>
-                          <div className="text-sm text-gray-500">
-                            Query: "{semanticResults.query}"
+                        <div className="flex items-center justify-between mb-4">
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-900">🔍 Intelligent Search Results</h4>
+                            <p className="text-sm text-gray-600">
+                              {semanticResults.total_found || semanticResults.results?.length || 0} results 
+                              {semanticResults.total_searched && ` from ${semanticResults.total_searched} documents`}
+                              {semanticResults.search_method && (
+                                <span className="ml-2 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">
+                                  {semanticResults.search_method === 'semantic_embeddings' ? '🧠 AI Embeddings' : '🔍 Keyword Match'}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                          <div className="text-sm text-gray-500 italic">
+                            "{semanticResults.query}"
                           </div>
                         </div>
 
-                        {semanticResults.results.map((result: any, idx: number) => (
+                        {semanticResults.results?.map((result: any, idx: number) => (
                           <div key={idx} className="bg-white border border-gray-200 rounded-lg p-6">
                             <div className="flex items-center justify-between mb-3">
                               <div className="flex items-center space-x-3">
@@ -1268,7 +1293,7 @@ export default function BaileyIntelligence() {
                             <div className="border-t border-gray-100 pt-3">
                               <div className="text-sm text-gray-600 mb-2">Evidence Sources:</div>
                               <div className="flex flex-wrap gap-2">
-                                {result.evidence.map((evidence: string, evidenceIdx: number) => (
+                                {result.evidence?.map((evidence: string, evidenceIdx: number) => (
                                   <span key={evidenceIdx} className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
                                     {evidence}
                                   </span>
