@@ -1176,76 +1176,6 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Trust Signal Bar */}
-        <div className="bg-gradient-to-r from-emerald-50 via-blue-50 to-violet-50 border-2 border-emerald-200 rounded-2xl shadow-xl p-8 mb-12">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-700 to-blue-700 bg-clip-text text-transparent mb-4">
-                Evidence-Based Startup Intelligence
-              </h2>
-              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-                Every recommendation comes from authoritative sources - not opinions or guesswork
-              </p>
-            </div>
-            
-            <div className="grid md:grid-cols-4 gap-6 mb-8">
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-emerald-200 shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Database className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-emerald-600 mb-1">65+</div>
-                <div className="text-sm text-slate-600">Data Sources</div>
-              </div>
-              
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-blue-200 shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <ShieldCheck className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-blue-600 mb-1">4</div>
-                <div className="text-sm text-slate-600">Analysis Pillars</div>
-              </div>
-              
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-violet-200 shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <BarChart3 className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-violet-600 mb-1">Live</div>
-                <div className="text-sm text-slate-600">Demo Available</div>
-              </div>
-              
-              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-orange-200 shadow-lg">
-                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mx-auto mb-3">
-                  <Award className="w-6 h-6 text-white" />
-                </div>
-                <div className="text-2xl font-bold text-orange-600 mb-1">Free</div>
-                <div className="text-sm text-slate-600">First Analysis</div>
-              </div>
-            </div>
-            
-            <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-slate-600">
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Government Data Integration</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Academic Research Based</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Open Source Methodology</span>
-              </div>
-              <div className="flex items-center space-x-2">
-                <CheckCircle className="w-4 h-4 text-green-500" />
-                <span>Evidence-Based Analysis</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Authoritative Sources Section */}
-        <AuthoritativeSourcesSection sourceStats={sourceStats} setSourceStats={setSourceStats} />
-
         {/* Input Section */}
         <div className="relative bg-gradient-to-br from-violet-50 via-white to-purple-50 rounded-3xl shadow-2xl border-2 border-violet-200 p-10 mb-12">
           <div className="relative text-center mb-10">
@@ -1358,6 +1288,76 @@ export default function Home() {
             </p>
           </div>
         </div>
+
+        {/* Trust Signal Bar */}
+        <div className="bg-gradient-to-r from-emerald-50 via-blue-50 to-violet-50 border-2 border-emerald-200 rounded-2xl shadow-xl p-8 mb-12">
+          <div className="max-w-4xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-emerald-700 to-blue-700 bg-clip-text text-transparent mb-4">
+                Evidence-Based Startup Intelligence
+              </h2>
+              <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+                Every recommendation comes from authoritative sources - not opinions or guesswork
+              </p>
+            </div>
+            
+            <div className="grid md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-emerald-200 shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Database className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-emerald-600 mb-1">65+</div>
+                <div className="text-sm text-slate-600">Data Sources</div>
+              </div>
+              
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-blue-200 shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <ShieldCheck className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-blue-600 mb-1">4</div>
+                <div className="text-sm text-slate-600">Analysis Pillars</div>
+              </div>
+              
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-violet-200 shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-violet-500 to-purple-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <BarChart3 className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-violet-600 mb-1">Live</div>
+                <div className="text-sm text-slate-600">Demo Available</div>
+              </div>
+              
+              <div className="bg-white/80 backdrop-blur-sm rounded-xl p-6 text-center border border-orange-200 shadow-lg">
+                <div className="w-12 h-12 bg-gradient-to-r from-orange-500 to-red-500 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Award className="w-6 h-6 text-white" />
+                </div>
+                <div className="text-2xl font-bold text-orange-600 mb-1">Free</div>
+                <div className="text-sm text-slate-600">First Analysis</div>
+              </div>
+            </div>
+            
+            <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-slate-600">
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Government Data Integration</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Academic Research Based</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Open Source Methodology</span>
+              </div>
+              <div className="flex items-center space-x-2">
+                <CheckCircle className="w-4 h-4 text-green-500" />
+                <span>Evidence-Based Analysis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Authoritative Sources Section */}
+        <AuthoritativeSourcesSection sourceStats={sourceStats} setSourceStats={setSourceStats} />
 
         {/* How It Works Section */}
         <HowItWorks />
