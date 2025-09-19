@@ -1,19 +1,43 @@
+# Core frameworks
 fastapi
 uvicorn
 httpx
 python-multipart
+
+# Serialization and validation
+pydantic>=2.0.0
+
+# Authentication and security
+python-jose[cryptography]
+authlib
+passlib[bcrypt]
+itsdangerous
+email-validator
+
+# Persistence and migration
+sqlalchemy
+alembic
+
+# Configuration and resilience
+python-dotenv
+python-dateutil>=2.8.0
+backoff>=2.2.0
+
+# Intelligence and analytics
+numpy
+pandas>=2.0.0
+scikit-learn
+google-generativeai
+
+# External data and caching
+requests-cache>=1.0.0
+redis>=4.5.0
+aioredis>=2.0.0
+
+# Data parsing
+xmltodict>=0.13.0
+
+# Code intelligence tooling
 tree-sitter
 tree-sitter-python
 tree-sitter-javascript
-python-jose[cryptography]
-authlib
-sqlalchemy
-alembic
-redis
-passlib[bcrypt]
-python-dotenv
-itsdangerous
-email-validator
-google-generativeai
-scikit-learn
-numpy
