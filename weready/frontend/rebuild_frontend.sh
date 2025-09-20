@@ -109,12 +109,95 @@ NODE
 
 run_typecheck() {
   log "Running TypeScript compilation check."
-  (cd "${FRONTEND_DIR}" && npm run typecheck >>"${LOG_FILE}" 2>&1)
+  if ! (cd "${FRONTEND_DIR}" && npm run typecheck >>"${LOG_FILE}" 2>&1); then
+    log "TypeScript compilation failed. Inspect ${LOG_FILE} for compiler output."
+    exit 1
+  fi
 }
 
 run_component_validation() {
   log "Validating Business Intelligence components."
-  (cd "${FRONTEND_DIR}" && npm run validate:components >>"${LOG_FILE}" 2>&1)
+  if ! (cd "${FRONTEND_DIR}" && npm run validate:components >>"${LOG_FILE}" 2>&1); then
+    log "Component validation failed. Review ${LOG_FILE} for import/export issues."
+    exit 1
+  fi
+}
+
+verify_tab_component_registration() {
+  log "Ensuring Business tab components are imported and exported correctly."
+  if ! (
+    cd "${FRONTEND_DIR}" && node <<'NODE' >>"${LOG_FILE}" 2>&1
+const fs = require('fs');
+const path = require('path');
+
+const projectRoot = process.cwd();
+const read = (relativePath) => fs.readFileSync(path.join(projectRoot, relativePath), 'utf8');
+
+const checks = [
+  {
+    file: 'app/components/tabs/BusinessIntelligenceTab.tsx',
+    description: 'BusinessIntelligenceTab default export',
+    test: (content) => /export default function\s+BusinessIntelligenceTab/.test(content)
+  },
+  {
+    file: 'app/components/tabs/BusinessTab.tsx',
+    description: 'BusinessTab default export',
+    test: (content) => /export default function\s+BusinessTab/.test(content)
+  }
+];
+
+const issues = [];
+
+for (const check of checks) {
+  const filePath = path.join(projectRoot, check.file);
+  if (!fs.existsSync(filePath)) {
+    issues.push(`${check.description} missing (file not found: ${check.file})`);
+    continue;
+  }
+  const content = read(check.file);
+  if (!check.test(content)) {
+    issues.push(`${check.description} missing expected syntax`);
+  }
+}
+
+const pageFile = 'app/bailey-intelligence/page.tsx';
+const pagePath = path.join(projectRoot, pageFile);
+if (!fs.existsSync(pagePath)) {
+  issues.push('bailey-intelligence/page.tsx not found');
+} else {
+  const pageContent = read(pageFile);
+  if (!/import\s+BusinessIntelligenceTab\s+from\s+"\.\.\/components\/tabs\/BusinessIntelligenceTab"/.test(pageContent)) {
+    issues.push('BusinessIntelligenceTab import missing from bailey-intelligence/page.tsx');
+  }
+  if (!/activeTab\s*===\s*"business"[\s\S]+BusinessIntelligenceTab/.test(pageContent)) {
+    issues.push('BusinessIntelligenceTab conditional render missing for business tab');
+  }
+}
+
+if (issues.length) {
+  console.error('Tab component verification failed:');
+  for (const issue of issues) {
+    console.error(` - ${issue}`);
+  }
+  process.exit(1);
+}
+
+console.log('Tab components verified successfully.');
+NODE
+  ); then
+    log "Tab component registration check failed. See ${LOG_FILE} for details."
+    exit 1
+  fi
+}
+
+refresh_dev_hot_reload() {
+  if [[ "${MODE}" == "dev" ]]; then
+    log "Priming Next.js hot reload by touching updated tab components."
+    (cd "${FRONTEND_DIR}" && touch \
+      app/bailey-intelligence/page.tsx \
+      app/components/tabs/BusinessIntelligenceTab.tsx \
+      app/components/tabs/BusinessTab.tsx >>"${LOG_FILE}" 2>&1)
+  fi
 }
 
 build_frontend() {
@@ -128,6 +211,9 @@ build_frontend() {
 
 post_build_summary() {
   log "Rebuild complete. Artifacts located in ${FRONTEND_DIR}/.next"
+  if [[ "${MODE}" == "dev" ]]; then
+    log "Dev mode: restart or resume npm run dev to let hot reload pick up the refreshed tabs."
+  fi
 }
 
 main() {
@@ -137,6 +223,8 @@ main() {
   verify_dependency_versions
   run_typecheck
   run_component_validation
+  verify_tab_component_registration
+  refresh_dev_hot_reload
   build_frontend
   post_build_summary
 }

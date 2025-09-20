@@ -64,8 +64,11 @@ REQUIRED_ENV_VARS=(
   "BEA_API_KEY"
   "OECD_APP_ID"
   "PRODUCT_HUNT_TOKEN"
-  "WORLD_BANK_SOURCE"
   "STACKEXCHANGE_KEY"
+)
+
+OPTIONAL_WARN_ENV_VARS=(
+  "WORLD_BANK_SOURCE"
   "OPENALEX_BASE_URL"
 )
 
@@ -79,6 +82,15 @@ validate_env() {
   if (( ${#missing[@]} > 0 )); then
     log "ERROR: Missing required environment variables: ${missing[*]}"
     exit 1
+  fi
+  local warn_missing=()
+  for var in "${OPTIONAL_WARN_ENV_VARS[@]}"; do
+    if [[ -z "${!var:-}" ]]; then
+      warn_missing+=("$var")
+    fi
+  done
+  if (( ${#warn_missing[@]} > 0 )); then
+    log "WARNING: Optional environment variables not set: ${warn_missing[*]}"
   fi
   log "Environment variables validated."
 }
@@ -161,18 +173,19 @@ start_service() {
 
 wait_for_service() {
   local retries=30
+  local expected_status=200
   local status
   for attempt in $(seq 1 ${retries}); do
     status=$(curl -ks -o /tmp/backend-health-check.json -w '%{http_code}' "${HEALTH_URL}") || status="000"
-    if [[ "${status}" == "200" ]]; then
-      log "Service responded successfully (${HEALTH_URL})."
+    if [[ "${status}" == "${expected_status}" ]]; then
+      log "Service responded with ${expected_status} (${HEALTH_URL})."
       rm -f /tmp/backend-health-check.json
       return 0
     fi
     log "Waiting for service readiness (${attempt}/${retries})."
     sleep 1
   done
-  log "ERROR: Service did not respond with 200 within ${retries} seconds."
+  log "ERROR: Service did not respond with ${expected_status} within ${retries} seconds."
   return 1
 }
 
@@ -227,10 +240,11 @@ PY
 
 run_health_checks() {
   verify_redis
-  check_endpoint "/api/business-formation/software" "business_formation"
-  check_endpoint "/api/international-markets/us" "international_market"
-  check_endpoint "/api/technology-trends/ai" "technology_trends"
+  check_endpoint "/api/business-formation/software" "momentum_score"
+  check_endpoint "/api/international-markets/us" "signals"
+  check_endpoint "/api/technology-trends/ai" "signals"
   check_endpoint "/api/business-intelligence/dashboard" "business_formation"
+  check_endpoint "/api/procurement/541511" "top_agencies"
 }
 
 rollback() {
@@ -257,7 +271,7 @@ trap on_failure ERR
 
 main() {
   PORT="${PORT:-8000}"
-  HEALTH_URL="http://127.0.0.1:${PORT}/"
+  HEALTH_URL="http://127.0.0.1:${PORT}/api/business-intelligence/dashboard"
 
   validate_env
   activate_venv

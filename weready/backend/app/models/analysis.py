@@ -12,7 +12,7 @@ from enum import Enum as PyEnum
 from app.models.user import Base
 
 class Analysis(Base):
-    """Track each WeReady analysis for progress monitoring"""
+    """Track each analysis powered by Bailey Intelligence for progress monitoring"""
     
     __tablename__ = "analyses"
     
@@ -41,8 +41,8 @@ class Analysis(Base):
     
     # Detailed results
     issues_found = Column(JSON, nullable=True)  # List of issues by category
-    recommendations = Column(JSON, nullable=True)  # Bailey recommendations
-    brain_recommendations = Column(JSON, nullable=True)  # WeReady Brain suggestions
+    recommendations = Column(JSON, nullable=True)  # Bailey Intelligence recommendations
+    brain_recommendations = Column(JSON, nullable=True)  # Bailey Intelligence suggestions (legacy field name)
     improvement_roadmap = Column(JSON, nullable=True)  # Immediate, short-term, long-term
     competitive_moats = Column(JSON, nullable=True)
     category_issues = Column(JSON, nullable=True)  # Issues by category

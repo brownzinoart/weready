@@ -7,7 +7,7 @@
     "build": "npm run typecheck && next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "validate:components": "node ./validate_components.js",
+    "validate:components": "WATCHMAN_DISABLE=1 JEST_WATCHMAN=false jest --watchman=false --runTestsByPath __tests__/businessTabs.test.tsx",
     "verify:business": "npm run validate:components && npm run build"
   },
   "dependencies": {
@@ -43,6 +43,9 @@
     "@testing-library/react": "^14.1.2",
     "@testing-library/user-event": "^14.5.2",
     "jsdom": "^24.1.0",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "jest-environment-jsdom": "^29.7.0"
   }
 }

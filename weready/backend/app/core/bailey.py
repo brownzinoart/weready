@@ -31,6 +31,7 @@ import httpx
 from collections import defaultdict, Counter
 import statistics
 import time
+import re
 
 class SourceTier(Enum):
     GOVERNMENT = "government"  # SEC, USPTO, Federal Reserve, etc.
@@ -117,17 +118,54 @@ class Bailey:
             "minimum_supporting_sources": 2
         }
         
+        # Knowledge category metadata for expanded intelligence domains
+        self.category_metadata = {
+            "business_formation_trends": {
+                "description": "Startup formation velocity and new business applications across U.S. geographies.",
+                "primary_sources": ["census_bfs", "census_bds", "census_cbp"],
+                "update_frequency": "weekly",
+                "credibility_focus": "government"
+            },
+            "international_market_intelligence": {
+                "description": "Cross-country entrepreneurship, trade, and growth indicators.",
+                "primary_sources": ["world_bank_indicators", "oecd_sdmx", "eurostat"],
+                "update_frequency": "monthly",
+                "credibility_focus": "international"
+            },
+            "procurement_intelligence": {
+                "description": "Federal contract, grant, and small business program signals.",
+                "primary_sources": ["usaspending", "sam_gov", "grants_gov", "sbir_sttr"],
+                "update_frequency": "daily",
+                "credibility_focus": "government"
+            },
+            "technology_trend_intelligence": {
+                "description": "Product launches, developer momentum, and research signal tracking.",
+                "primary_sources": ["product_hunt", "stack_exchange", "openalex", "github_api"],
+                "update_frequency": "daily",
+                "credibility_focus": "industry"
+            },
+            "economic_health_intelligence": {
+                "description": "Industry GDP, labor dynamics, and banking sector health.",
+                "primary_sources": ["bea_api", "bls_data", "fdic_bankfind"],
+                "update_frequency": "monthly",
+                "credibility_focus": "government"
+            }
+        }
+
+        # External caching and rate limiting helpers
+        self._source_rate_history = defaultdict(list)
+        self._external_cache: Dict[str, Dict[str, Any]] = {}
+        self._external_cache_default_ttl = timedelta(hours=2)
         # Initialize with free sources
         self._initialize_free_sources()
         
     def _initialize_free_sources(self):
         """Initialize Bailey with maximum free authoritative sources"""
-        
-        # Government/Regulatory Sources (Tier 1 - Highest Credibility)
-        self.knowledge_sources.update({
+
+        government_sources = {
             "sec_edgar": KnowledgeSource(
                 name="SEC EDGAR Database",
-                organization="U.S. Securities and Exchange Commission", 
+                organization="U.S. Securities and Exchange Commission",
                 tier=SourceTier.GOVERNMENT,
                 url="https://www.sec.gov/edgar",
                 api_endpoint="https://data.sec.gov/api/xbrl/companyfacts/",
@@ -136,7 +174,6 @@ class Bailey:
                 rate_limit="10 requests/second",
                 data_categories=["funding", "financials", "ipo_data"]
             ),
-            
             "uspto_patents": KnowledgeSource(
                 name="USPTO Patent Database",
                 organization="U.S. Patent and Trademark Office",
@@ -148,7 +185,6 @@ class Bailey:
                 rate_limit="1000 requests/hour",
                 data_categories=["innovation", "technology_trends", "competitive_intelligence"]
             ),
-            
             "fed_data": KnowledgeSource(
                 name="Federal Reserve Economic Data (FRED)",
                 organization="Federal Reserve Bank of St. Louis",
@@ -160,7 +196,6 @@ class Bailey:
                 rate_limit="120 requests/minute",
                 data_categories=["macro_trends", "employment", "economic_indicators"]
             ),
-            
             "bls_data": KnowledgeSource(
                 name="Bureau of Labor Statistics",
                 organization="U.S. Department of Labor",
@@ -171,11 +206,147 @@ class Bailey:
                 cost=0.0,
                 rate_limit="500 requests/day",
                 data_categories=["employment", "wage_trends", "industry_growth"]
+            ),
+            "census_bfs": KnowledgeSource(
+                name="Census Business Formation Statistics",
+                organization="U.S. Census Bureau",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.census.gov/econ/bfs/",
+                api_endpoint="https://api.census.gov/data/timeseries/bfs/bfs",
+                credibility_score=97.5,
+                cost=0.0,
+                rate_limit="10 requests/minute",
+                data_categories=["business_formation", "entrepreneurship", "startup_density"]
+            ),
+            "census_bds": KnowledgeSource(
+                name="Census Business Dynamics Statistics",
+                organization="U.S. Census Bureau",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.census.gov/programs-surveys/bds.html",
+                api_endpoint="https://api.census.gov/data/bds",
+                credibility_score=96.5,
+                cost=0.0,
+                rate_limit="10 requests/minute",
+                data_categories=["business_formation", "establishment_births", "job_creation"]
+            ),
+            "census_cbp": KnowledgeSource(
+                name="Census County Business Patterns",
+                organization="U.S. Census Bureau",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.census.gov/programs-surveys/cbp.html",
+                api_endpoint="https://api.census.gov/data/cbp",
+                credibility_score=96.0,
+                cost=0.0,
+                rate_limit="10 requests/minute",
+                data_categories=["business_density", "industry_concentration", "regional_analysis"]
+            ),
+            "bea_api": KnowledgeSource(
+                name="Bureau of Economic Analysis",
+                organization="U.S. Department of Commerce",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.bea.gov/data/gdp/gdp-industry",
+                api_endpoint="https://apps.bea.gov/api/data",
+                credibility_score=97.5,
+                cost=0.0,
+                rate_limit="1000 requests/day",
+                auth_required=True,
+                data_categories=["industry_gdp", "economic_indicators", "regional_economy"]
+            ),
+            "usaspending": KnowledgeSource(
+                name="USAspending.gov",
+                organization="U.S. Treasury Department",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.usaspending.gov/",
+                api_endpoint="https://api.usaspending.gov/api/v2/",
+                credibility_score=95.0,
+                cost=0.0,
+                rate_limit="120 requests/minute",
+                data_categories=["federal_contracts", "procurement", "grant_activity"]
+            ),
+            "sam_gov": KnowledgeSource(
+                name="SAM.gov Contract Opportunities",
+                organization="U.S. General Services Administration",
+                tier=SourceTier.GOVERNMENT,
+                url="https://sam.gov/",
+                api_endpoint="https://api.sam.gov/opportunities/v1/search",
+                credibility_score=94.0,
+                cost=0.0,
+                rate_limit="60 requests/minute",
+                auth_required=True,
+                data_categories=["procurement", "contract_opportunities", "government_buyers"]
+            ),
+            "grants_gov": KnowledgeSource(
+                name="Grants.gov Open Opportunities",
+                organization="U.S. Department of Health and Human Services",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.grants.gov/",
+                api_endpoint="https://www.grants.gov/grantsws/rest/opportunities/search",
+                credibility_score=93.5,
+                cost=0.0,
+                rate_limit="60 requests/minute",
+                data_categories=["grants", "government_funding", "non_dilutive_capital"]
+            ),
+            "sbir_sttr": KnowledgeSource(
+                name="SBIR/STTR Awards",
+                organization="U.S. Small Business Administration",
+                tier=SourceTier.GOVERNMENT,
+                url="https://www.sbir.gov/award_data/",
+                api_endpoint="https://www.sbir.gov/api/awards.json",
+                credibility_score=92.5,
+                cost=0.0,
+                rate_limit="30 requests/minute",
+                data_categories=["sbir_awards", "deeptech_funding", "government_programs"]
+            ),
+            "fdic_bankfind": KnowledgeSource(
+                name="FDIC BankFind Suite",
+                organization="Federal Deposit Insurance Corporation",
+                tier=SourceTier.GOVERNMENT,
+                url="https://banks.data.fdic.gov/",
+                api_endpoint="https://banks.data.fdic.gov/api/",
+                credibility_score=95.0,
+                cost=0.0,
+                rate_limit="100 requests/minute",
+                data_categories=["financial_health", "banking_sector", "lending_activity"]
             )
-        })
-        
-        # Academic Sources (Tier 1 - High Credibility)
-        self.knowledge_sources.update({
+        }
+
+        international_sources = {
+            "world_bank_indicators": KnowledgeSource(
+                name="World Bank Development Indicators",
+                organization="World Bank Group",
+                tier=SourceTier.GOVERNMENT,
+                url="https://data.worldbank.org/indicator",
+                api_endpoint="https://api.worldbank.org/v2/",
+                credibility_score=93.0,
+                cost=0.0,
+                rate_limit="Unlimited",
+                data_categories=["global_markets", "entrepreneurship", "trade_flows"]
+            ),
+            "oecd_sdmx": KnowledgeSource(
+                name="OECD SDMX API",
+                organization="Organisation for Economic Co-operation and Development",
+                tier=SourceTier.GOVERNMENT,
+                url="https://stats.oecd.org/",
+                api_endpoint="https://stats.oecd.org/SDMX-JSON/",
+                credibility_score=94.0,
+                cost=0.0,
+                rate_limit="50 requests/minute",
+                data_categories=["international_markets", "innovation", "entrepreneurship"]
+            ),
+            "eurostat": KnowledgeSource(
+                name="Eurostat Data Explorer",
+                organization="European Commission",
+                tier=SourceTier.GOVERNMENT,
+                url="https://ec.europa.eu/eurostat",
+                api_endpoint="https://ec.europa.eu/eurostat/api/dissemination/statistics/1.0/data",
+                credibility_score=92.0,
+                cost=0.0,
+                rate_limit="Twice daily refresh",
+                data_categories=["european_markets", "business_demography", "regional_economics"]
+            )
+        }
+
+        academic_sources = {
             "arxiv": KnowledgeSource(
                 name="arXiv Preprint Repository",
                 organization="Cornell University",
@@ -187,7 +358,6 @@ class Bailey:
                 rate_limit="3 requests/second",
                 data_categories=["ai_research", "technology_trends", "innovation"]
             ),
-            
             "google_scholar": KnowledgeSource(
                 name="Google Scholar",
                 organization="Google",
@@ -197,7 +367,6 @@ class Bailey:
                 cost=0.0,
                 data_categories=["academic_research", "citations", "researcher_trends"]
             ),
-            
             "mit_research": KnowledgeSource(
                 name="MIT Startup Research",
                 organization="MIT Sloan School of Management",
@@ -207,7 +376,6 @@ class Bailey:
                 cost=0.0,
                 data_categories=["startup_success", "entrepreneurship", "innovation"]
             ),
-            
             "stanford_hai": KnowledgeSource(
                 name="Stanford AI Index",
                 organization="Stanford Human-Centered AI Institute",
@@ -216,11 +384,21 @@ class Bailey:
                 credibility_score=92.0,
                 cost=0.0,
                 data_categories=["ai_trends", "technology_adoption", "market_growth"]
+            ),
+            "openalex": KnowledgeSource(
+                name="OpenAlex Research Graph",
+                organization="OurResearch",
+                tier=SourceTier.ACADEMIC,
+                url="https://openalex.org/",
+                api_endpoint="https://api.openalex.org/",
+                credibility_score=90.0,
+                cost=0.0,
+                rate_limit="100k requests/day",
+                data_categories=["research_trends", "innovation_velocity", "academic_collaboration"]
             )
-        })
-        
-        # Industry Sources (Tier 2 - Good Credibility)
-        self.knowledge_sources.update({
+        }
+
+        industry_sources = {
             "yc_directory": KnowledgeSource(
                 name="Y Combinator Company Directory",
                 organization="Y Combinator",
@@ -230,7 +408,6 @@ class Bailey:
                 cost=0.0,
                 data_categories=["startup_outcomes", "funding", "batch_analysis"]
             ),
-            
             "github_api": KnowledgeSource(
                 name="GitHub API",
                 organization="GitHub (Microsoft)",
@@ -242,7 +419,6 @@ class Bailey:
                 rate_limit="5000 requests/hour",
                 data_categories=["developer_trends", "technology_adoption", "open_source"]
             ),
-            
             "stackoverflow": KnowledgeSource(
                 name="Stack Overflow Public Data",
                 organization="Stack Overflow",
@@ -251,10 +427,32 @@ class Bailey:
                 api_endpoint="https://api.stackexchange.com/",
                 credibility_score=82.0,
                 cost=0.0,
-                rate_limit="300 requests/day",
+                rate_limit="10,000 queries/day",
                 data_categories=["developer_trends", "technology_adoption", "programming_languages"]
             ),
-            
+            "stack_exchange": KnowledgeSource(
+                name="Stack Exchange Network",
+                organization="Stack Exchange",
+                tier=SourceTier.INDUSTRY,
+                url="https://stackexchange.com/",
+                api_endpoint="https://api.stackexchange.com/2.3/",
+                credibility_score=82.0,
+                cost=0.0,
+                rate_limit="10,000 queries/day",
+                data_categories=["developer_sentiment", "technology_trends", "community_engagement"]
+            ),
+            "product_hunt": KnowledgeSource(
+                name="Product Hunt GraphQL API",
+                organization="Product Hunt",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.producthunt.com/",
+                api_endpoint="https://api.producthunt.com/v2/api/graphql",
+                credibility_score=80.0,
+                cost=0.0,
+                rate_limit="6,250 points/15 minutes",
+                auth_required=True,
+                data_categories=["product_launches", "technology_trends", "startup_launches"]
+            ),
             "angellist": KnowledgeSource(
                 name="AngelList Public Data",
                 organization="AngelList",
@@ -264,10 +462,9 @@ class Bailey:
                 cost=0.0,
                 data_categories=["startup_data", "funding", "team_sizes"]
             )
-        })
-        
-        # Community Sources (Tier 3 - Moderate Credibility)
-        self.knowledge_sources.update({
+        }
+
+        community_sources = {
             "reddit_startups": KnowledgeSource(
                 name="Reddit Startup Communities",
                 organization="Reddit",
@@ -279,7 +476,6 @@ class Bailey:
                 rate_limit="60 requests/minute",
                 data_categories=["founder_sentiment", "trends", "community_wisdom"]
             ),
-            
             "hackernews": KnowledgeSource(
                 name="Hacker News",
                 organization="Y Combinator",
@@ -291,7 +487,6 @@ class Bailey:
                 rate_limit="No official limit",
                 data_categories=["tech_trends", "startup_discussions", "developer_sentiment"]
             ),
-            
             "twitter_api": KnowledgeSource(
                 name="Twitter API v2",
                 organization="Twitter/X",
@@ -304,16 +499,23 @@ class Bailey:
                 auth_required=True,
                 data_categories=["real_time_trends", "founder_insights", "market_sentiment"]
             )
-        })
-        
+        }
+
+        # Update global registry
+        self.knowledge_sources.update(government_sources)
+        self.knowledge_sources.update(international_sources)
+        self.knowledge_sources.update(academic_sources)
+        self.knowledge_sources.update(industry_sources)
+        self.knowledge_sources.update(community_sources)
+
         # Update stats
         self.ingestion_stats["total_sources"] = len(self.knowledge_sources)
         self.ingestion_stats["active_sources"] = len([s for s in self.knowledge_sources.values() if s.cost == 0.0])
         self.ingestion_stats["last_update"] = datetime.now()
-        
+
         # Seed initial knowledge points
         self._seed_initial_knowledge()
-        
+
     def _seed_initial_knowledge(self):
         """Seed Bailey with initial knowledge points for immediate testing"""
         
@@ -535,6 +737,87 @@ class Bailey:
             
         return True
         
+    def get_cached_external_payload(self, cache_key: str):
+        """Retrieve a cached external payload if it has not expired."""
+        entry = self._external_cache.get(cache_key)
+        if not entry:
+            return None
+        if datetime.now() - entry["timestamp"] > entry.get("ttl", self._external_cache_default_ttl):
+            # Expired cache entry
+            self._external_cache.pop(cache_key, None)
+            return None
+        return entry["data"]
+
+    def set_cached_external_payload(self, cache_key: str, data: Any, ttl: Optional[timedelta] = None):
+        """Store external payload responses for reuse across intelligence modules."""
+        self._external_cache[cache_key] = {
+            "timestamp": datetime.now(),
+            "data": data,
+            "ttl": ttl or self._external_cache_default_ttl
+        }
+
+    def normalize_external_payload(self, payload: Any, format_hint: str = "json") -> Dict[str, Any]:
+        """Normalize external payloads (SDMX, JSON-stat, GraphQL) into consistent dictionaries."""
+        normalized: Dict[str, Any] = {"raw": payload}
+        if payload is None:
+            return normalized
+
+        format_key = (format_hint or "").lower()
+        try:
+            if format_key == "sdmx" and isinstance(payload, dict):
+                data_sets = payload.get("data", {}).get("dataSets", [])
+                series = payload.get("data", {}).get("series", {})
+                normalized.update({
+                    "dataset_count": len(data_sets),
+                    "series_count": len(series),
+                    "observations": payload.get("data", {}).get("observations", {})
+                })
+            elif format_key in {"json-stat", "jsonstat"} and isinstance(payload, dict):
+                normalized.update({
+                    "dimension_keys": list(payload.get("dimension", {}).keys()),
+                    "value_count": len(payload.get("value", {}))
+                })
+            elif format_key == "graphql" and isinstance(payload, dict):
+                normalized.update({"records": payload.get("data", {}), "errors": payload.get("errors")})
+            elif isinstance(payload, dict):
+                normalized.update(payload)
+        except Exception as exc:
+            normalized["normalization_error"] = str(exc)
+        return normalized
+
+    async def respect_source_rate_limit(self, source_id: str):
+        """Ensure requests to an external source respect documented rate limits."""
+        source = self.knowledge_sources.get(source_id)
+        if not source or not source.rate_limit:
+            return
+
+        limit_text = source.rate_limit.lower()
+        numbers = re.findall(r"\d+", limit_text)
+        if not numbers:
+            return
+
+        max_calls = int(numbers[0])
+        period_seconds = 60.0
+        if "second" in limit_text:
+            period_seconds = 1.0
+        elif "hour" in limit_text:
+            period_seconds = 3600.0
+        elif "day" in limit_text:
+            period_seconds = 86400.0
+
+        call_history = self._source_rate_history[source_id]
+        now = time.time()
+        call_history[:] = [ts for ts in call_history if now - ts < period_seconds]
+
+        if len(call_history) >= max_calls:
+            sleep_for = period_seconds - (now - call_history[0])
+            if sleep_for > 0:
+                await asyncio.sleep(sleep_for + 0.01)
+                now = time.time()
+                call_history[:] = [ts for ts in call_history if now - ts < period_seconds]
+
+        call_history.append(now)
+
     def get_knowledge_by_category(self, category: str, min_confidence: float = 0.7) -> List[KnowledgePoint]:
         """Get all knowledge points for a specific category above confidence threshold"""
         
@@ -752,7 +1035,8 @@ class Bailey:
                 "total_points": len(self.knowledge_points),
                 "by_category": dict(knowledge_by_category.most_common()),
                 "avg_confidence": round(avg_confidence, 3),
-                "freshness_distribution": dict(freshness_dist)
+                "freshness_distribution": dict(freshness_dist),
+                "featured_categories": self.category_metadata
             },
             "insights": {
                 "total_generated": len(self.research_insights),
@@ -763,7 +1047,9 @@ class Bailey:
                 "last_update": self.ingestion_stats["last_update"].isoformat() if self.ingestion_stats["last_update"] else None,
                 "update_frequency": self.ingestion_stats["update_frequency"],
                 "free_source_percentage": round(source_by_cost["free"] / len(self.knowledge_sources) * 100, 1),
-                "credibility_score": round((avg_credibility + avg_confidence * 100) / 2, 1)
+                "credibility_score": round((avg_credibility + avg_confidence * 100) / 2, 1),
+                "external_cache_entries": len(self._external_cache),
+                "cache_ttl_hours": round(self._external_cache_default_ttl.total_seconds() / 3600, 2)
             }
         }
 

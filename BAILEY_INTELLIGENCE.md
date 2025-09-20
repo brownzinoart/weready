@@ -31,7 +31,7 @@ Bailey is a **growing, learning system** that improves continuously:
 ## Credibility Engine
 
 ### Source Hierarchy (by credibility score)
-- **Government**: SEC EDGAR (98%), NIST SSDF (98%), Federal Reserve (97%)
+- **Government**: SEC EDGAR (98%), Census BFS/BDS (97%), BEA & BLS (97%), Federal Reserve (97%)
 - **Academic**: MIT Research (94%), Stanford Studies (93%), IEEE Standards (94%) 
 - **Industry**: GitHub API (92%), Crunchbase (82%), PitchBook (85%)
 
@@ -59,6 +59,15 @@ Users can **interrogate Bailey's reasoning**, understand methodology, and get tr
 - **Contradiction alerts** when sources provide conflicting information
 - **Confidence intervals** for all predictions and recommendations
 - **Pattern recognition** from aggregated user interactions and outcomes
+
+### Expanded Intelligence Sources (2025 Roadmap)
+- **Census Business Formation Statistics (BFS/BDS/CBP)**: Weekly business application velocity, establishment births, and county business density to grade market entry timing.
+- **BEA + BLS + FDIC Economic Stack**: Industry GDP, labor momentum, and banking stability blended into a unified economic timing index.
+- **USAspending / SAM.gov / SBIR-STTR**: Government contract and grant pipeline signals to flag non-dilutive capital readiness.
+- **World Bank / OECD / Eurostat**: International entrepreneurship, trade, and business demography data powering global expansion scoring.
+- **Product Hunt + Stack Exchange + OpenAlex**: Technology adoption momentum combining launch velocity, developer engagement, and research output.
+
+These sources maintain Bailey's free-first philosophy while elevating the intelligence grounding behind business formation, global expansion, procurement, and technology timing recommendations.
 
 ### Learning & Improvement Mechanisms
 - **User behavior analytics** improve recommendation relevance
@@ -100,7 +109,7 @@ Users can **interrogate Bailey's reasoning**, understand methodology, and get tr
 - **Platform Intelligence Growth**: Measurable improvement in recommendation quality over time
 
 ## Competitive Advantage
-Bailey Intelligence is **not another dashboard**. It's an AI co-founder that provides:
+Bailey Intelligence is **the central intelligence engine** that powers all WeReady analysis - not another dashboard, but an AI co-founder that provides:
 - **Strategic guidance** with full transparency into reasoning
 - **Academic-grade credibility** unmatched by generic business tools  
 - **Real-time intelligence** from authoritative sources

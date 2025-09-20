@@ -12,7 +12,7 @@ import time
 def test_complete_workflow():
     """Test the complete user workflow from mock analysis to dashboard"""
     
-    print("🚀 STARTING COMPLETE WEREADY WORKFLOW TEST")
+    print("🚀 STARTING COMPLETE BAILEY INTELLIGENCE WORKFLOW TEST")
     print("=" * 60)
     
     # Step 1: Anonymous User - Free Analysis
@@ -80,7 +80,7 @@ def test_complete_workflow():
     # Step 3: Simulate successful OAuth callback
     print("\n👤 STEP 3: OAuth Success - User account created")
     print("-" * 40)
-    print("   🎉 User authorizes WeReady on GitHub")
+    print("   🎉 User authorizes WeReady (powered by Bailey Intelligence) on GitHub")
     print("   📝 Backend creates user account:")
     print("      - Email: developer@startup.com")
     print("      - Name: John Developer") 

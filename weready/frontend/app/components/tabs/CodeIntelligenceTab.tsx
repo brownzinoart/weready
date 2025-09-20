@@ -24,19 +24,19 @@ export default function CodeIntelligenceTab({
   const [activeTab, setActiveTab] = useState('metrics');
   
   return (
-    <div className="space-y-6">
+    <div id="code" className="space-y-6">
       <div>
         <h3 className="text-lg font-semibold mb-4 flex items-center space-x-2">
           <Code className="w-5 h-5 text-blue-600" />
           <span>Code Intelligence Hub</span>
         </h3>
         
-        {/* Industry Code Quality Benchmarks */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        {/* Methodology Overview */}
+        <div id="code-methodology" className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
               <BarChart3 className="w-5 h-5 text-blue-600" />
-              <span>Industry Code Quality Benchmarks</span>
+              <span>How Bailey Analyzes Codebases</span>
             </h4>
             <div className="flex items-center space-x-2">
               <SourceBadge sourceName="NIST SSDF" sourceType="government" credibilityScore={98} lastUpdated="Live" />
@@ -44,63 +44,59 @@ export default function CodeIntelligenceTab({
               <SourceBadge sourceName="ISO/IEC 25010" sourceType="industry" credibilityScore={96} lastUpdated="2h ago" />
             </div>
           </div>
-          
+
           {/* Code Quality Data Sources */}
           <div className="bg-blue-50 rounded-lg p-4 mb-4 border border-blue-200">
-            <h5 className="text-sm font-semibold mb-3 text-blue-800">Code Quality Assessment Pipeline</h5>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs mb-3">
-              <div className="bg-white rounded border p-2 text-center">
-                <Shield className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-                <div className="font-medium">Security Scan</div>
-                <div className="text-gray-600">SAST/DAST</div>
+            <h5 className="text-sm font-semibold mb-3 text-blue-800">Code Intelligence Pipeline</h5>
+            <p className="text-xs text-blue-700 mb-3">
+              Bailey brings security scans, quality reviews, and AI detection into one coordinated workflow so teams can see the
+              story behind every finding. Each stage blends trusted industry standards with Bailey guidance, translating the
+              technical deep dive into clear next steps for engineering leaders.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              <div className="bg-white rounded border p-2">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Shield className="w-4 h-4 text-blue-600" />
+                  <span className="font-medium">Security Intake</span>
+                </div>
+                <p className="text-gray-600">
+                  Normalizes NIST SSDF controls and OWASP coverage before dispatching SAST/DAST scanners.
+                </p>
               </div>
-              <div className="bg-white rounded border p-2 text-center">
-                <Bug className="w-4 h-4 mx-auto mb-1 text-orange-600" />
-                <div className="font-medium">Bug Detection</div>
-                <div className="text-gray-600">Static Analysis</div>
+              <div className="bg-white rounded border p-2">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Bug className="w-4 h-4 text-orange-600" />
+                  <span className="font-medium">Defect Discovery</span>
+                </div>
+                <p className="text-gray-600">
+                  Static analyzers and rule engines triage bug patterns, feeding Bailey's scoring model.
+                </p>
               </div>
-              <div className="bg-white rounded border p-2 text-center">
-                <Cpu className="w-4 h-4 mx-auto mb-1 text-green-600" />
-                <div className="font-medium">Performance</div>
-                <div className="text-gray-600">Complexity</div>
+              <div className="bg-white rounded border p-2">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Cpu className="w-4 h-4 text-green-600" />
+                  <span className="font-medium">Complexity Insight</span>
+                </div>
+                <p className="text-gray-600">
+                  Complexity metrics and performance heuristics surface maintainability risks.
+                </p>
               </div>
-              <div className="bg-white rounded border p-2 text-center">
-                <Zap className="w-4 h-4 mx-auto mb-1 text-purple-600" />
-                <div className="font-medium">AI Detection</div>
-                <div className="text-gray-600">Hallucinations</div>
+              <div className="bg-white rounded border p-2">
+                <div className="flex items-center space-x-2 mb-1">
+                  <Zap className="w-4 h-4 text-purple-600" />
+                  <span className="font-medium">AI Signal Review</span>
+                </div>
+                <p className="text-gray-600">
+                  Proprietary hallucination detectors flag synthetic patterns and reasoning gaps.
+                </p>
               </div>
-            </div>
-            <div className="text-xs text-blue-700">
-              <strong>Methodology:</strong> Multi-layer analysis using industry-standard tools (SonarQube, Semgrep, ESLint) 
-              combined with proprietary AI hallucination detection. Benchmarked against 847K+ repositories.
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-red-600 mb-1">23%</div>
-              <div className="text-sm text-gray-600">AI-Generated Code</div>
-              <div className="text-xs text-gray-500 mt-1">Industry average</div>
-            </div>
-            <div className="bg-orange-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600 mb-1">156K</div>
-              <div className="text-sm text-gray-600">Vulnerabilities Found</div>
-              <div className="text-xs text-gray-500 mt-1">Across all repos</div>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">$2.3M</div>
-              <div className="text-sm text-gray-600">Avg Technical Debt</div>
-              <div className="text-xs text-gray-500 mt-1">Per enterprise repo</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">87%</div>
-              <div className="text-sm text-gray-600">Detection Accuracy</div>
-              <div className="text-xs text-gray-500 mt-1">Validated by academic research</div>
-            </div>
-          </div>
+
         </div>
         
         {/* Security Vulnerability Intelligence */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div id="security-intel" className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
               <Shield className="w-5 h-5 text-red-600" />
@@ -113,72 +109,73 @@ export default function CodeIntelligenceTab({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h5 className="font-semibold mb-3">Most Critical Vulnerabilities (2024)</h5>
-              <div className="space-y-3">
-                {[
-                  { vulnerability: "SQL Injection", severity: "Critical", found: "34%", cwe: "CWE-89" },
-                  { vulnerability: "XSS", severity: "High", found: "28%", cwe: "CWE-79" },
-                  { vulnerability: "Command Injection", severity: "Critical", found: "19%", cwe: "CWE-78" },
-                  { vulnerability: "Path Traversal", severity: "Medium", found: "15%", cwe: "CWE-22" }
-                ].map((vuln, index) => (
-                  <div key={index} className="border border-gray-200 rounded p-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-medium">{vuln.vulnerability}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        vuln.severity === 'Critical' ? 'bg-red-100 text-red-700' : 
-                        vuln.severity === 'High' ? 'bg-orange-100 text-orange-700' : 
-                        'bg-yellow-100 text-yellow-700'
-                      }`}>
-                        {vuln.severity}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm text-gray-600">
-                      <span>Found in {vuln.found} of repos</span>
-                      <span>{vuln.cwe}</span>
-                    </div>
-                  </div>
-                ))}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div className="space-y-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <h5 className="font-semibold mb-2 text-red-900">Security Analysis Workflow</h5>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start space-x-2">
+                    <Shield className="w-4 h-4 text-red-600 mt-0.5" />
+                    <span>Ingest NIST CVE feeds and SSDF controls, mapping findings to Bailey's security ontology.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <FileSearch className="w-4 h-4 text-orange-600 mt-0.5" />
+                    <span>Run Semgrep, CodeQL, and dependency scanners in parallel to fingerprint vulnerable paths.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Activity className="w-4 h-4 text-orange-600 mt-0.5" />
+                    <span>Correlate results with OWASP Top 10 categories to prioritize exploitable issues.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <CheckCircle className="w-4 h-4 text-green-600 mt-0.5" />
+                    <span>Feed validated findings into <code>weready_scorer.py</code> for risk scoring and remediation guidance.</span>
+                  </li>
+                </ul>
+              </div>
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Continuous Intelligence</h6>
+                <p className="text-gray-600">
+                  Bailey performs delta analysis on every scan, comparing new commits to historical baselines so recurring
+                  weaknesses and regression risks are surfaced before reaching production.
+                </p>
               </div>
             </div>
-            
-            <div>
-              <h5 className="font-semibold mb-3">Security Score Distribution</h5>
-              <div className="space-y-2">
-                {[
-                  { range: "90-100 (Excellent)", percentage: 12, count: "101K repos" },
-                  { range: "80-89 (Good)", percentage: 34, count: "288K repos" },
-                  { range: "70-79 (Fair)", percentage: 28, count: "237K repos" },
-                  { range: "Below 70 (Poor)", percentage: 26, count: "221K repos" }
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm">{item.range}</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-24 bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full ${
-                            item.percentage > 30 ? 'bg-green-600' : 
-                            item.percentage > 20 ? 'bg-yellow-600' : 'bg-red-600'
-                          }`}
-                          style={{ width: `${item.percentage}%` }}
-                        ></div>
-                      </div>
-                      <span className="text-xs text-gray-600">{item.percentage}%</span>
-                    </div>
-                  </div>
-                ))}
+
+            <div className="space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Detection Stack</h6>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start space-x-2">
+                    <Database className="w-4 h-4 text-blue-600 mt-0.5" />
+                    <span>NIST CVE + CISA KEV data unify into a single exploit probability feed.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Shield className="w-4 h-4 text-red-600 mt-0.5" />
+                    <span>OWASP Top 10 alignment ensures policy coverage and compliance mapping.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600 mt-0.5" />
+                    <span>Semgrep rulesets deliver language-specific exploit patterns with explainable matches.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Zap className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <span>Runtime heuristics detect risky configuration and secrets exposure pathways.</span>
+                  </li>
+                </ul>
               </div>
-              <div className="mt-3 text-xs text-gray-600">
-                <strong>Methodology:</strong> Scores based on CVSS v3.1 severity ratings, 
-                weighted by exploitability and industry impact data.
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Remediation Guidance</h6>
+                <p className="text-gray-600">
+                  Bailey packages every high-signal finding with secure coding references, suggested code owners,
+                  and verification steps, making the security tab an operational playbook rather than a static report.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* AI Code Detection Intelligence */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div id="ai-detection" className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
               <Zap className="w-5 h-5 text-purple-600" />
@@ -192,67 +189,73 @@ export default function CodeIntelligenceTab({
             </div>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h5 className="font-semibold mb-3">AI-Generated Code Patterns</h5>
-              <div className="bg-purple-50 p-3 rounded-lg mb-3 border border-purple-200">
-                <div className="text-sm text-purple-800">
-                  <strong>Research Finding:</strong> 23.4% of modern codebases contain AI-generated code, 
-                  with 67% showing hallucination patterns that lead to bugs or security issues.
-                </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div className="space-y-4">
+              <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                <h5 className="font-semibold mb-2 text-purple-900">AI Hallucination Detection Framework</h5>
+                <ul className="space-y-2 text-purple-800">
+                  <li className="flex items-start space-x-2">
+                    <Zap className="w-4 h-4 mt-0.5" />
+                    <span>Fingerprint generation in <code>hallucination_detector.py</code> identifies synthetic stylistic traits and improbable API usage.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Database className="w-4 h-4 mt-0.5" />
+                    <span>Embeddings compare new code against a curated corpus of human-reviewed and AI-authored snippets.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Bug className="w-4 h-4 mt-0.5" />
+                    <span>Error simulation highlights logic gaps that typically arise from hallucinated code paths.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <AlertTriangle className="w-4 h-4 mt-0.5" />
+                    <span>Confidence scores guide triage, driving review playbooks for risky findings.</span>
+                  </li>
+                </ul>
               </div>
-              <div className="space-y-2">
-                {[
-                  { pattern: "Non-existent APIs", frequency: "34%", risk: "High" },
-                  { pattern: "Incorrect imports", frequency: "28%", risk: "Medium" },
-                  { pattern: "Logic inconsistencies", frequency: "19%", risk: "High" },
-                  { pattern: "Deprecated methods", frequency: "15%", risk: "Low" }
-                ].map((pattern, index) => (
-                  <div key={index} className="flex justify-between items-center p-2 bg-gray-50 rounded">
-                    <span className="text-sm">{pattern.pattern}</span>
-                    <div className="flex items-center space-x-2">
-                      <span className="text-xs text-gray-600">{pattern.frequency}</span>
-                      <span className={`text-xs px-2 py-1 rounded ${
-                        pattern.risk === 'High' ? 'bg-red-100 text-red-700' :
-                        pattern.risk === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                        'bg-green-100 text-green-700'
-                      }`}>
-                        {pattern.risk}
-                      </span>
-                    </div>
-                  </div>
-                ))}
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Signals Analyzed</h6>
+                <p className="text-gray-600">
+                  Bailey inspects dependency provenance, comment-to-code alignment, and temporal commit patterns to
+                  distinguish AI-assisted contributions from human-authored patches.
+                </p>
               </div>
             </div>
-            
-            <div>
-              <h5 className="font-semibold mb-3">Detection Accuracy by Model</h5>
-              <div className="space-y-3">
-                {[
-                  { model: "GPT-4/ChatGPT", accuracy: "94%", samples: "127K" },
-                  { model: "GitHub Copilot", accuracy: "89%", samples: "89K" },
-                  { model: "Claude/Anthropic", accuracy: "87%", samples: "45K" },
-                  { model: "Gemini/Bard", accuracy: "82%", samples: "23K" }
-                ].map((model, index) => (
-                  <div key={index} className="border border-gray-200 rounded p-3">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-medium">{model.model}</span>
-                      <span className="text-green-600 font-bold">{model.accuracy}</span>
-                    </div>
-                    <div className="text-xs text-gray-600">Validated on {model.samples} samples</div>
-                  </div>
-                ))}
+
+            <div className="space-y-4">
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Detection Playbooks</h6>
+                <ul className="space-y-2 text-gray-700">
+                  <li className="flex items-start space-x-2">
+                    <FileSearch className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <span>Non-existent API and import resolution checks prevent phantom integrations from shipping.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Cpu className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <span>Probabilistic control-flow analysis detects inconsistent branching introduced by AI suggestions.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <BookOpen className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <span>Documentation and commit message reconciliation flags hallucinated explanations for suspicious code.</span>
+                  </li>
+                  <li className="flex items-start space-x-2">
+                    <Award className="w-4 h-4 text-purple-600 mt-0.5" />
+                    <span>Academic partnerships with Stanford AI Lab and MIT CSAIL provide benchmark suites for continuous evaluation.</span>
+                  </li>
+                </ul>
               </div>
-              <div className="mt-3 text-xs text-gray-600">
-                <strong>Academic Validation:</strong> Results peer-reviewed by Stanford AI Lab 
-                and MIT CSAIL. Published in ICSE 2024 proceedings.
+              <div className="border border-gray-200 rounded-lg p-4">
+                <h6 className="font-semibold mb-2 text-gray-900">Operational Outcome</h6>
+                <p className="text-gray-600">
+                  Findings roll into Bailey's intelligence timeline, combining with repository analytics so engineering leaders
+                  can isolate AI-related regressions without relying on raw statistics.
+                </p>
               </div>
             </div>
           </div>
         </div>
 
         {/* Code Quality Methodology */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+        <div id="code-quality" className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <h4 className="text-lg font-semibold mb-6 flex items-center space-x-2">
             <BookOpen className="w-5 h-5 text-indigo-600" />
             <span>Code Quality Assessment Methodology</span>
@@ -263,8 +266,8 @@ export default function CodeIntelligenceTab({
           <div className="mb-8">
             <h5 className="text-lg font-semibold mb-4 text-blue-900">Assessment Framework Overview</h5>
             <p className="text-gray-700 mb-4">
-              Our code quality assessment combines 12 industry-standard analysis tools with proprietary machine learning models. 
-              Each repository undergoes multi-layer analysis across security, complexity, maintainability, and performance dimensions.
+              Bailey's intelligence fabric fuses industry-standard analyzers with the orchestration logic defined in <code>bailey_intelligence.py</code>.
+              The pipeline evaluates security, complexity, maintainability, and performance signals in a single, explainable framework.
             </p>
             <div className="bg-blue-50 p-4 rounded-lg">
               <h6 className="font-semibold mb-3">4-Layer Analysis Framework:</h6>
@@ -425,8 +428,8 @@ export default function CodeIntelligenceTab({
             <h5 className="text-lg font-semibold mb-4 text-purple-900">AI Code Detection (Unique to WeReady)</h5>
             <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
               <p className="text-sm text-gray-700 mb-4">
-                Proprietary machine learning algorithms trained on 847K+ repositories to detect AI-generated code and identify 
-                common hallucination patterns that lead to bugs, security vulnerabilities, and performance issues.
+                Proprietary machine learning algorithms trained on a diverse corpus of repositories detect AI-generated code and 
+                surface hallucination patterns that lead to bugs, security vulnerabilities, and performance issues.
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
                 <div>
@@ -455,19 +458,19 @@ export default function CodeIntelligenceTab({
                   <ul className="space-y-1 text-gray-700">
                     <li className="flex items-center space-x-2">
                       <Award className="w-4 h-4 text-blue-600" />
-                      <span>Stanford AI Lab validation (94%)</span>
+                      <span>Stanford AI Lab validation partnership</span>
                     </li>
                     <li className="flex items-center space-x-2">
                       <Award className="w-4 h-4 text-blue-600" />
-                      <span>MIT CSAIL collaboration (91%)</span>
+                      <span>MIT CSAIL collaboration on evaluation suites</span>
                     </li>
                     <li className="flex items-center space-x-2">
                       <BookOpen className="w-4 h-4 text-green-600" />
-                      <span>Published in ICSE 2024</span>
+                      <span>Published methodology in ICSE 2024</span>
                     </li>
                     <li className="flex items-center space-x-2">
                       <BarChart3 className="w-4 h-4 text-orange-600" />
-                      <span>847K+ repository training set</span>
+                      <span>Continuously expanded repository training corpus</span>
                     </li>
                   </ul>
                 </div>
@@ -477,7 +480,7 @@ export default function CodeIntelligenceTab({
         </div>
 
         {/* GitHub Repository Analysis */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6">
+        <div id="repo-analysis" className="bg-white border border-gray-200 rounded-lg p-6">
           <h4 className="text-lg font-semibold mb-4 flex items-center space-x-2">
             <Github className="w-5 h-5 text-gray-700" />
             <span>Repository Analysis</span>
@@ -513,43 +516,43 @@ export default function CodeIntelligenceTab({
           {repoAnalysis && repoAnalysis.status === "success" && (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h5 className="text-lg font-semibold">{repoAnalysis.repository.full_name}</h5>
+                <h5 className="text-lg font-semibold">{repoAnalysis?.repository?.full_name || 'Repository'}</h5>
                 <div className="flex items-center space-x-2">
                   <Star className="w-4 h-4 text-yellow-500" />
-                  <span className="text-sm text-gray-600">{repoAnalysis.repository.stars.toLocaleString()} stars</span>
+                  <span className="text-sm text-gray-600">{repoAnalysis?.repository?.stars ? repoAnalysis.repository.stars.toLocaleString() : '0'} stars</span>
                 </div>
               </div>
               
-              <p className="text-gray-600 mb-4">{repoAnalysis.repository.description}</p>
+              <p className="text-gray-600 mb-4">{repoAnalysis?.repository?.description || 'No description available'}</p>
               
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 <div className="text-center p-4 bg-white rounded-lg border">
                   <div className="flex items-center justify-center mb-2">
-                    {getScoreIcon(repoAnalysis.intelligence_metrics.momentum_score)}
+                    {getScoreIcon(repoAnalysis?.intelligence_metrics?.momentum_score || 0)}
                   </div>
                   <p className="text-sm text-gray-600">Momentum Score</p>
-                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis.intelligence_metrics.momentum_score)}`}>
-                    {repoAnalysis.intelligence_metrics.momentum_score}
+                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis?.intelligence_metrics?.momentum_score || 0)}`}>
+                    {repoAnalysis?.intelligence_metrics?.momentum_score || 0}
                   </p>
                 </div>
                 
                 <div className="text-center p-4 bg-white rounded-lg border">
                   <div className="flex items-center justify-center mb-2">
-                    {getScoreIcon(repoAnalysis.intelligence_metrics.quality_score)}
+                    {getScoreIcon(repoAnalysis?.intelligence_metrics?.quality_score || 0)}
                   </div>
                   <p className="text-sm text-gray-600">Quality Score</p>
-                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis.intelligence_metrics.quality_score)}`}>
-                    {repoAnalysis.intelligence_metrics.quality_score}
+                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis?.intelligence_metrics?.quality_score || 0)}`}>
+                    {repoAnalysis?.intelligence_metrics?.quality_score || 0}
                   </p>
                 </div>
                 
                 <div className="text-center p-4 bg-white rounded-lg border">
                   <div className="flex items-center justify-center mb-2">
-                    {getScoreIcon(repoAnalysis.intelligence_metrics.community_score)}
+                    {getScoreIcon(repoAnalysis?.intelligence_metrics?.community_score || 0)}
                   </div>
                   <p className="text-sm text-gray-600">Community Score</p>
-                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis.intelligence_metrics.community_score)}`}>
-                    {repoAnalysis.intelligence_metrics.community_score}
+                  <p className={`text-2xl font-bold ${getScoreColor(repoAnalysis?.intelligence_metrics?.community_score || 0)}`}>
+                    {repoAnalysis?.intelligence_metrics?.community_score || 0}
                   </p>
                 </div>
               </div>
@@ -564,7 +567,7 @@ export default function CodeIntelligenceTab({
                       <span className="font-medium">Technology Stack</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      Primary: {repoAnalysis.repository.language || 'Multiple'}
+                      Primary: {repoAnalysis?.repository?.language || 'Multiple'}
                     </p>
                   </div>
                   <div className="bg-green-50 p-4 rounded-lg">
@@ -573,7 +576,7 @@ export default function CodeIntelligenceTab({
                       <span className="font-medium">Health Status</span>
                     </div>
                     <p className="text-sm text-gray-600">
-                      {repoAnalysis.intelligence_metrics.momentum_score > 70 ? 'Healthy' : 'Needs Attention'}
+                      {(repoAnalysis?.intelligence_metrics?.momentum_score || 0) > 70 ? 'Healthy' : 'Needs Attention'}
                     </p>
                   </div>
                 </div>

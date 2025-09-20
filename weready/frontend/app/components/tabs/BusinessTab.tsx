@@ -12,10 +12,45 @@ export default function BusinessTab({ result }: BusinessTabProps) {
     (rec: any) => rec.category === 'business_model'
   );
   
+  const formationInsights = result.business_formation_insights || {};
+  const internationalInsights = result.international_market_intelligence || {};
+  const procurementInsights = result.procurement_intelligence || {};
+  const technologyInsights = result.technology_trend_intelligence || {};
+  const economicInsights = result.economic_context || {};
+
+  const formationSignals = Array.isArray(formationInsights.signals) ? formationInsights.signals.slice(0, 3) : [];
+  const procurementAgencies = Array.isArray(procurementInsights.top_agencies) ? procurementInsights.top_agencies.slice(0, 3) : [];
+  const technologyTrends = Array.isArray(technologyInsights.trends) ? technologyInsights.trends.slice(0, 3) : [];
+  const internationalSignals = Array.isArray(internationalInsights.signals) ? internationalInsights.signals.slice(0, 3) : [];
+
+  const businessScore = typeof businessData.score === 'number' ? Math.round(businessData.score) : null;
+  const businessStatusLabel = formatStatus(businessData.status);
+  const businessHighlights = Array.isArray(businessData.highlights) ? businessData.highlights : [];
+  const businessInsights = Array.isArray(businessData.insights) ? businessData.insights : [];
+  const criticalIssues = Array.isArray(businessData.critical_issues) ? businessData.critical_issues : [];
+  const quickWins = Array.isArray(businessData.quick_wins) ? businessData.quick_wins : [];
+  const longTerm = Array.isArray(businessData.long_term_improvements) ? businessData.long_term_improvements : [];
+  const highlightCount = businessHighlights.length;
+  const recommendationCount = recommendations.length;
+  const summaryMetrics = [
+    { label: 'Business Score', value: businessScore !== null ? `${businessScore}` : 'N/A', accent: 'text-indigo-600' },
+    { label: 'Status', value: businessStatusLabel, accent: 'text-purple-600' },
+    { label: 'Highlights Tracked', value: `${highlightCount}`, accent: 'text-pink-600' },
+    { label: 'Action Items', value: `${recommendationCount}`, accent: 'text-blue-600' }
+  ];
+
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600';
     if (score >= 60) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  const formatStatus = (status?: string) => {
+    if (!status) return 'Unrated';
+    return status
+      .split('_')
+      .map((fragment) => fragment.charAt(0).toUpperCase() + fragment.slice(1))
+      .join(' ');
   };
 
   // Market Analysis Functions (inspired by McKinsey/BCG)
@@ -109,36 +144,64 @@ export default function BusinessTab({ result }: BusinessTabProps) {
   return (
     <div className="space-y-8">
 
-      {/* Enterprise-Grade Business Analysis Overview */}
-      <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border-2 border-indigo-200 rounded-xl p-6 mb-8">
-        <h3 className="text-xl font-bold text-slate-900 mb-4 flex items-center space-x-2">
-          <Briefcase className="w-6 h-6 text-indigo-600" />
-          <span>Enterprise Business Intelligence Suite</span>
-        </h3>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-indigo-600 mb-1">10+</div>
-            <div className="text-sm text-slate-600">Frameworks</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-purple-600 mb-1">50+</div>
-            <div className="text-sm text-slate-600">KPIs Tracked</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-pink-600 mb-1">1000+</div>
-            <div className="text-sm text-slate-600">Market Insights</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600 mb-1">95%</div>
-            <div className="text-sm text-slate-600">Accuracy Rate</div>
-          </div>
+      {/* Business Model Summary */}
+      <div className="bg-gradient-to-r from-indigo-50 via-blue-50 to-purple-50 border-2 border-indigo-200 rounded-xl p-6 mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h3 className="text-xl font-bold text-slate-900 flex items-center space-x-2">
+            <Briefcase className="w-6 h-6 text-indigo-600" />
+            <span>Business Model Summary</span>
+          </h3>
+          {businessScore !== null && (
+            <div className={`flex items-center gap-2 text-sm font-semibold ${getScoreColor(businessScore)}`}>
+              <BarChart3 className="w-4 h-4" />
+              <span>{businessScore}/100</span>
+            </div>
+          )}
         </div>
-        
-        <p className="text-slate-700 text-center">
-          Powered by methodologies from McKinsey 7S, BCG Growth Matrix, Porter's Five Forces, 
-          Blue Ocean Strategy, and Lean Canvas. Enhanced with real-time market data and AI-driven insights.
+
+        <p className="text-sm text-slate-600 mt-2">
+          These metrics reflect the latest Bailey scoring run. They highlight where performance is strong and where focus is needed. Methodology details live in the Business Intelligence tab.
         </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          {summaryMetrics.map(({ label, value, accent }) => (
+            <div key={label} className="text-center">
+              <div className={`text-2xl font-bold ${accent} mb-1`}>{value}</div>
+              <div className="text-sm text-slate-600">{label}</div>
+            </div>
+          ))}
+        </div>
+
+        {businessHighlights.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-slate-900 mb-2">Top Highlights</h4>
+            <ul className="list-disc list-inside text-sm text-slate-700 space-y-1">
+              {businessHighlights.map((item: string, index: number) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {businessInsights.length > 0 && (
+          <div className="mt-6">
+            <h4 className="text-sm font-semibold text-slate-900 mb-2">Analyst Commentary</h4>
+            <ul className="space-y-1 text-sm text-slate-700">
+              {businessInsights.slice(0, 3).map((insight: string, index: number) => (
+                <li key={index} className="flex items-start gap-2">
+                  <Building className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                  <span>{insight}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {recommendationCount === 0 && businessHighlights.length === 0 && businessInsights.length === 0 && (
+          <div className="mt-6 rounded-lg border border-dashed border-indigo-200 bg-white/60 p-4 text-sm text-slate-600">
+            Business analysis will populate as soon as Bailey finishes processing this repository.
+          </div>
+        )}
       </div>
 
       {/* Market Analysis Section */}
@@ -268,6 +331,106 @@ export default function BusinessTab({ result }: BusinessTabProps) {
             <div className="mt-4 p-3 bg-orange-100 rounded-lg">
               <div className="text-xs text-orange-800">
                 <strong>Differentiation:</strong> AI-first approach, 10x faster
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Government & Global Intelligence */}
+      <div className="mb-8">
+        <h4 className="text-xl font-bold text-slate-900 mb-6 flex items-center space-x-2">
+          <Shield className="w-6 h-6 text-sky-600" />
+          <span>Market Intelligence Signals</span>
+        </h4>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-br from-sky-50 to-blue-50 border-2 border-sky-200 rounded-xl p-6">
+            <h5 className="text-md font-bold text-slate-900 mb-3 flex items-center space-x-2">
+              <TrendingUp className="w-4 h-4 text-sky-600" />
+              <span>Formation Momentum</span>
+            </h5>
+            <div className="text-3xl font-bold text-sky-700 mb-2">
+              {typeof formationInsights.momentum_score === 'number' ? formationInsights.momentum_score.toFixed(1) : '—'}
+            </div>
+            <p className="text-xs text-slate-600 mb-3">Census Business Formation Statistics weekly momentum score.</p>
+            <div className="space-y-1">
+              {formationSignals.length > 0 ? formationSignals.map((signal: any, idx: number) => (
+                <div key={idx} className="text-xs text-slate-700 flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 bg-sky-500 rounded-full"></span>
+                  <span>{signal.name || signal.metric}</span>
+                </div>
+              )) : (
+                <div className="text-xs text-slate-500">Awaiting fresh Census data</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-emerald-50 to-green-50 border-2 border-emerald-200 rounded-xl p-6">
+            <h5 className="text-md font-bold text-slate-900 mb-3 flex items-center space-x-2">
+              <Globe className="w-4 h-4 text-emerald-600" />
+              <span>Global Opportunity</span>
+            </h5>
+            <div className="text-3xl font-bold text-emerald-700 mb-2">
+              {typeof internationalInsights.opportunity_score === 'number' ? internationalInsights.opportunity_score.toFixed(1) : '—'}
+            </div>
+            <p className="text-xs text-slate-600 mb-3">World Bank & OECD entrepreneurship opportunity index.</p>
+            <div className="space-y-1">
+              {internationalSignals.length > 0 ? internationalSignals.map((signal: any, idx: number) => (
+                <div key={idx} className="text-xs text-slate-700 flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                  <span>{signal.metric}</span>
+                </div>
+              )) : (
+                <div className="text-xs text-slate-500">Monitoring international indicators</div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-xl p-6">
+            <h5 className="text-md font-bold text-slate-900 mb-3 flex items-center space-x-2">
+              <Briefcase className="w-4 h-4 text-amber-600" />
+              <span>Government Pipeline</span>
+            </h5>
+            <div className="text-3xl font-bold text-amber-700 mb-2">
+              {typeof procurementInsights.opportunity_count === 'number' ? procurementInsights.opportunity_count : (procurementInsights.opportunity_count || '—')}
+            </div>
+            <p className="text-xs text-slate-600 mb-3">Active USAspending, SAM.gov, and SBIR/STTR opportunities.</p>
+            <div className="space-y-1">
+              {procurementAgencies.length > 0 ? procurementAgencies.map((agency: string, idx: number) => (
+                <div key={idx} className="text-xs text-slate-700 flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                  <span>{agency}</span>
+                </div>
+              )) : (
+                <div className="text-xs text-slate-500">Track procurement-ready use cases</div>
+              )}
+              <div className="text-xs text-slate-600 mt-2">
+                Total Value: ${typeof procurementInsights.total_value === 'number' ? procurementInsights.total_value.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—'}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gradient-to-br from-violet-50 to-indigo-50 border-2 border-violet-200 rounded-xl p-6">
+            <h5 className="text-md font-bold text-slate-900 mb-3 flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-violet-600" />
+              <span>Technology Momentum</span>
+            </h5>
+            <div className="text-3xl font-bold text-violet-700 mb-2">
+              {typeof technologyInsights.adoption_index === 'number' ? technologyInsights.adoption_index.toFixed(1) : '—'}
+            </div>
+            <p className="text-xs text-slate-600 mb-3">Product Hunt, Stack Exchange, and OpenAlex momentum.</p>
+            <div className="space-y-1">
+              {technologyTrends.length > 0 ? technologyTrends.map((trend: any, idx: number) => (
+                <div key={idx} className="text-xs text-slate-700 flex items-center space-x-2">
+                  <span className="w-1.5 h-1.5 bg-violet-500 rounded-full"></span>
+                  <span>{trend.label}</span>
+                </div>
+              )) : (
+                <div className="text-xs text-slate-500">Tracking launch activity</div>
+              )}
+              <div className="text-xs text-slate-600 mt-2">
+                Economic Timing Index: {typeof economicInsights.timing_index === 'number' ? economicInsights.timing_index.toFixed(1) : '—'}
               </div>
             </div>
           </div>
@@ -836,11 +999,11 @@ export default function BusinessTab({ result }: BusinessTabProps) {
       </div>
 
       {/* Business Insights */}
-      {businessData.insights && businessData.insights.length > 0 && (
+      {businessInsights.length > 0 && (
         <div className="bg-gradient-to-r from-green-50 to-blue-50 border-2 border-green-200 rounded-xl p-6">
           <h4 className="text-lg font-bold text-slate-900 mb-4">Business Model Insights</h4>
           <ul className="space-y-3">
-            {businessData.insights.map((insight: string, idx: number) => (
+            {businessInsights.map((insight: string, idx: number) => (
               <li key={idx} className="flex items-start space-x-3">
                 <Building className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
                 <span className="text-slate-700">{insight}</span>
@@ -858,6 +1021,26 @@ export default function BusinessTab({ result }: BusinessTabProps) {
         </h4>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Critical Issues */}
+          <div className="bg-orange-50 border-2 border-orange-200 rounded-xl p-6">
+            <h5 className="font-bold text-orange-800 mb-3 flex items-center space-x-2">
+              <Shield className="w-5 h-5" />
+              <span>Critical Issues (Immediate)</span>
+            </h5>
+            <ul className="space-y-2">
+              {criticalIssues.length > 0 ? (
+                criticalIssues.map((item: string, index: number) => (
+                  <li key={index} className="text-sm text-slate-700 flex items-start">
+                    <ChevronRight className="w-4 h-4 text-orange-600 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-slate-500">No critical blockers detected in the latest run.</li>
+              )}
+            </ul>
+          </div>
+
           {/* Quick Wins */}
           <div className="bg-green-50 border-2 border-green-200 rounded-xl p-6">
             <h5 className="font-bold text-green-800 mb-3 flex items-center space-x-2">
@@ -865,62 +1048,36 @@ export default function BusinessTab({ result }: BusinessTabProps) {
               <span>Quick Wins (30 days)</span>
             </h5>
             <ul className="space-y-2">
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-green-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Launch freemium tier for PLG</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-green-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Implement usage analytics</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-green-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Create case studies</span>
-              </li>
+              {quickWins.length > 0 ? (
+                quickWins.map((item: string, index: number) => (
+                  <li key={index} className="text-sm text-slate-700 flex items-start">
+                    <ChevronRight className="w-4 h-4 text-green-600 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-slate-500">Bailey did not surface any short-term accelerators.</li>
+              )}
             </ul>
           </div>
-          
-          {/* Growth Initiatives */}
-          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-6">
-            <h5 className="font-bold text-blue-800 mb-3 flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5" />
-              <span>Growth Initiatives (90 days)</span>
-            </h5>
-            <ul className="space-y-2">
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-blue-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Build partner ecosystem</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-blue-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Launch content marketing</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-blue-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Optimize pricing tiers</span>
-              </li>
-            </ul>
-          </div>
-          
-          {/* Strategic Objectives */}
+
+          {/* Long-Term Plays */}
           <div className="bg-purple-50 border-2 border-purple-200 rounded-xl p-6">
             <h5 className="font-bold text-purple-800 mb-3 flex items-center space-x-2">
               <Lightbulb className="w-5 h-5" />
-              <span>Strategic Goals (1 year)</span>
+              <span>Long-Term Plays (Quarter+)</span>
             </h5>
             <ul className="space-y-2">
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-purple-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Achieve $5M ARR</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-purple-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>500+ enterprise customers</span>
-              </li>
-              <li className="text-sm text-slate-700 flex items-start">
-                <ChevronRight className="w-4 h-4 text-purple-600 mt-0.5 mr-1 flex-shrink-0" />
-                <span>Series A funding</span>
-              </li>
+              {longTerm.length > 0 ? (
+                longTerm.map((item: string, index: number) => (
+                  <li key={index} className="text-sm text-slate-700 flex items-start">
+                    <ChevronRight className="w-4 h-4 text-purple-600 mt-0.5 mr-1 flex-shrink-0" />
+                    <span>{item}</span>
+                  </li>
+                ))
+              ) : (
+                <li className="text-sm text-slate-500">Longer-horizon opportunities will appear as evidence accumulates.</li>
+              )}
             </ul>
           </div>
         </div>

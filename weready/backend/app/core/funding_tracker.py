@@ -23,6 +23,10 @@ import json
 import logging
 from urllib.parse import urlencode
 import xml.etree.ElementTree as ET
+from .business_formation_tracker import business_formation_tracker
+from .procurement_intelligence import procurement_intelligence
+from .international_market_intelligence import international_market_intelligence
+from .enhanced_economic_analyzer import enhanced_economic_analyzer
 
 # Removed Bailey dependency for improved reliability
 
@@ -49,6 +53,10 @@ class FundingTemperature:
     market_volatility: float  # 0-100: market stability
     economic_indicators: Dict[str, float]
     vc_activity_score: float  # 0-100: VC engagement level
+    procurement_signal_score: float = 0.0
+    business_formation_momentum: float = 0.0
+    international_opportunity_score: float = 0.0
+    forecast_velocity: float = 0.0
 
 @dataclass
 class EconomicIndicator:
@@ -67,6 +75,8 @@ class FundingTracker:
         self.funding_cache = {}
         self.economic_cache = {}
         self.cache_duration = timedelta(hours=1)
+        self.external_intelligence_cache = {}
+        self.external_cache_ttl = timedelta(hours=2)
         
         # Real data sources
         self.data_sources = {
@@ -104,7 +114,23 @@ class FundingTracker:
         temperatures = self._calculate_sector_temperatures(
             recent_events, economic_data, market_volatility, sector
         )
-        
+
+        formation_data, procurement_data, international_data, economic_snapshot = await asyncio.gather(
+            self._get_business_formation_velocity(sector),
+            self._integrate_procurement_signals(sector),
+            self._get_international_funding_trends(sector),
+            self._enhance_economic_context(sector)
+        )
+        predictions = self._predict_funding_velocity(temperatures, formation_data, economic_snapshot, procurement_data)
+
+        for sector_name, temperature in temperatures.items():
+            temperature.business_formation_momentum = formation_data.get("momentum_score", 0.0)
+            temperature.procurement_signal_score = float(procurement_data.get("opportunity_count", 0))
+            temperature.international_opportunity_score = international_data.get("opportunity_score", 0.0)
+            economic_timing = economic_snapshot.get("timing_index", 50.0)
+            temperature.temperature = min(100.0, max(0.0, temperature.temperature + (temperature.business_formation_momentum - 50) * 0.1 + (economic_timing - 50) * 0.08))
+            temperature.forecast_velocity = predictions.get(sector_name, temperature.temperature)
+
         return temperatures
     
     async def _collect_recent_funding_events(self) -> List[FundingEvent]:
@@ -619,6 +645,99 @@ class FundingTracker:
         random.seed(int(datetime.now().timestamp() / 3600))  # Changes hourly
         return random.uniform(15, 45)  # Moderate volatility range
     
+    def _get_cached_external_intelligence(self, key: str):
+        entry = self.external_intelligence_cache.get(key)
+        if entry and datetime.now() - entry["timestamp"] < self.external_cache_ttl:
+            return entry["data"]
+        return None
+
+    def _cache_external_intelligence(self, key: str, data: Any):
+        self.external_intelligence_cache[key] = {
+            "timestamp": datetime.now(),
+            "data": data
+        }
+
+    def _validate_external_payload(self, payload: Optional[Dict[str, Any]], required_keys: Optional[List[str]] = None) -> bool:
+        if not isinstance(payload, dict) or not payload:
+            return False
+        if required_keys:
+            return all(key in payload for key in required_keys)
+        return True
+
+    async def _integrate_procurement_signals(self, sector: Optional[str]) -> Dict[str, Any]:
+        cache_key = f"procurement::{sector or 'general'}"
+        cached = self._get_cached_external_intelligence(cache_key)
+        if cached:
+            return cached
+        try:
+            summary = await procurement_intelligence.get_procurement_opportunities(naics_code="541511", sector=sector)
+            if not self._validate_external_payload(summary, ["opportunity_count"]):
+                return {}
+            self._cache_external_intelligence(cache_key, summary)
+            return summary
+        except Exception as exc:
+            logging.debug(f"Procurement intelligence unavailable: {exc}")
+            return {}
+
+    async def _get_business_formation_velocity(self, sector: Optional[str]) -> Dict[str, Any]:
+        cache_key = f"formation::{sector or 'general'}"
+        cached = self._get_cached_external_intelligence(cache_key)
+        if cached:
+            return cached
+        try:
+            summary = await business_formation_tracker.get_business_formation_trends(sector=sector, region="US")
+            if not self._validate_external_payload(summary, ["momentum_score"]):
+                return {}
+            self._cache_external_intelligence(cache_key, summary)
+            return summary
+        except Exception as exc:
+            logging.debug(f"Business formation velocity unavailable: {exc}")
+            return {}
+
+    async def _get_international_funding_trends(self, sector: Optional[str]) -> Dict[str, Any]:
+        cache_key = f"international::{sector or 'general'}"
+        cached = self._get_cached_external_intelligence(cache_key)
+        if cached:
+            return cached
+        try:
+            summary = await international_market_intelligence.get_global_market_context(country="US", industry=sector)
+            if not self._validate_external_payload(summary, ["opportunity_score"]):
+                return {}
+            self._cache_external_intelligence(cache_key, summary)
+            return summary
+        except Exception as exc:
+            logging.debug(f"International funding trends unavailable: {exc}")
+            return {}
+
+    async def _enhance_economic_context(self, sector: Optional[str]) -> Dict[str, Any]:
+        cache_key = f"economic::{sector or 'general'}"
+        cached = self._get_cached_external_intelligence(cache_key)
+        if cached:
+            return cached
+        try:
+            summary = await enhanced_economic_analyzer.get_economic_context(industry=sector or "general", region="US")
+            if not self._validate_external_payload(summary, ["timing_index"]):
+                return {}
+            self._cache_external_intelligence(cache_key, summary)
+            return summary
+        except Exception as exc:
+            logging.debug(f"Economic context unavailable: {exc}")
+            return {}
+
+    def _predict_funding_velocity(self, temperatures: Dict[str, FundingTemperature], formation: Dict[str, Any], economic_snapshot: Dict[str, Any], procurement: Dict[str, Any]) -> Dict[str, float]:
+        predictions: Dict[str, float] = {}
+        formation_score = formation.get("momentum_score", 50.0)
+        timing_index = economic_snapshot.get("timing_index", 50.0)
+        procurement_score = procurement.get("opportunity_count", 0)
+        for sector_name, temp in temperatures.items():
+            base = temp.temperature
+            forecast = base
+            forecast += (formation_score - 50) * 0.15
+            forecast += (timing_index - 50) * 0.12
+            forecast += min(procurement_score, 10) * 0.5
+            predictions[sector_name] = max(0.0, min(100.0, forecast))
+        return predictions
+
     def _calculate_sector_temperatures(self, events: List[FundingEvent], economic_data: Dict[str, EconomicIndicator], 
                                     market_volatility: float, target_sector: str = None) -> Dict[str, FundingTemperature]:
         """Calculate funding temperature by sector"""

@@ -227,6 +227,7 @@ async def run_checks(base_url: str, include_api: bool) -> List[CheckResult]:
             "/api/international-markets/us",
             "/api/technology-trends/ai",
             "/api/business-intelligence/dashboard",
+            "/api/procurement/541511",
         ]
         api_results = await asyncio.gather(*[_check_internal_endpoint(base_url, path) for path in api_paths])
         results.extend(api_results)

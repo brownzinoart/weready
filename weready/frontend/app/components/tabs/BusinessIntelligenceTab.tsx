@@ -1,8 +1,43 @@
 import React from 'react';
-import { Building, Shield, TrendingUp, DollarSign, BarChart3, Globe, ArrowRight, Database } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import { Building, Shield, DollarSign, BarChart3, Globe, Factory, Zap, Briefcase } from 'lucide-react';
 import SourceBadge from '../SourceBadge';
+import MethodologyCard from '../MethodologyCard';
 
-export default function BusinessIntelligenceTab() {
+type SourceBadgeMeta = {
+  sourceName: string;
+  sourceType: 'government' | 'international' | 'industry' | 'community' | 'academic';
+  isLive?: boolean;
+  lastUpdated?: string;
+  cost?: 'free' | 'paid';
+};
+
+type FlowStage = {
+  icon: LucideIcon;
+  iconClassName: string;
+  title: string;
+  description: string;
+};
+
+const PIPELINE_SOURCES: SourceBadgeMeta[] = [
+  { sourceName: 'SEC EDGAR', sourceType: 'government', isLive: true },
+  { sourceName: 'USPTO', sourceType: 'government', isLive: true },
+  { sourceName: 'Federal Reserve', sourceType: 'government', isLive: true },
+  { sourceName: 'Census BFS', sourceType: 'government', lastUpdated: 'Weekly' },
+  { sourceName: 'BEA', sourceType: 'government', lastUpdated: 'Monthly' },
+  { sourceName: 'USAspending', sourceType: 'government', cost: 'free' },
+  { sourceName: 'World Bank', sourceType: 'international', lastUpdated: 'Quarterly' },
+  { sourceName: 'Product Hunt', sourceType: 'industry', lastUpdated: 'Real-time' }
+];
+
+const INTELLIGENCE_FLOW_STAGES: FlowStage[] = [
+  { icon: Building, iconClassName: 'text-blue-600', title: 'SEC + FCC Filings', description: 'Real-time credentialing' },
+  { icon: Shield, iconClassName: 'text-green-600', title: 'USPTO + Census', description: 'Innovation & formation data' },
+  { icon: DollarSign, iconClassName: 'text-purple-600', title: 'BEA + FRED', description: 'Economic timing index' },
+  { icon: Globe, iconClassName: 'text-indigo-600', title: 'World Bank/OECD', description: 'Global expansion signals' }
+];
+
+export default function BusinessIntelligenceTab(): JSX.Element {
   return (
     <div className="space-y-6">
       <div>
@@ -10,207 +45,253 @@ export default function BusinessIntelligenceTab() {
           <BarChart3 className="w-5 h-5 text-blue-600" />
           <span>Business Intelligence Hub</span>
         </h3>
-        
-        {/* Market Overview */}
-        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
+
+        <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6 space-y-6">
+          <div className="flex items-center justify-between flex-wrap gap-2">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
               <Globe className="w-5 h-5 text-purple-600" />
-              <span>Market Intelligence Overview</span>
+              <span>Authoritative Data Pipeline</span>
             </h4>
-            <div className="flex items-center space-x-2">
-              <SourceBadge sourceName="SEC EDGAR" sourceType="government" credibilityScore={98} isLive={true} />
-              <SourceBadge sourceName="Federal Reserve" sourceType="government" credibilityScore={99} isLive={true} />
-              <SourceBadge sourceName="USPTO Database" sourceType="government" credibilityScore={96} lastUpdated="Daily" />
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              {PIPELINE_SOURCES.map((source) => (
+                <SourceBadge key={source.sourceName} {...source} />
+              ))}
             </div>
           </div>
-          
-          {/* Business Data Flow */}
-          <div className="bg-purple-50 rounded-lg p-4 mb-4 border border-purple-200">
-            <h5 className="text-sm font-semibold mb-3 text-purple-800">Government Data Integration Pipeline</h5>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-              <div className="bg-white rounded border p-2 text-center">
-                <Building className="w-4 h-4 mx-auto mb-1 text-blue-600" />
-                <div className="font-medium">SEC Filings</div>
-                <div className="text-gray-600">Real-time</div>
-              </div>
-              <div className="bg-white rounded border p-2 text-center">
-                <Shield className="w-4 h-4 mx-auto mb-1 text-green-600" />
-                <div className="font-medium">Patent Data</div>
-                <div className="text-gray-600">Daily sync</div>
-              </div>
-              <div className="bg-white rounded border p-2 text-center">
-                <DollarSign className="w-4 h-4 mx-auto mb-1 text-purple-600" />
-                <div className="font-medium">Economic Data</div>
-                <div className="text-gray-600">Live feed</div>
-              </div>
+
+          <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+            <h5 className="text-sm font-semibold mb-3 text-purple-800">Intelligence Flow</h5>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+              {INTELLIGENCE_FLOW_STAGES.map(({ icon: Icon, iconClassName, title, description }) => (
+                <div key={title} className="bg-white rounded border p-3 text-center">
+                  <Icon className={`w-4 h-4 mx-auto mb-1 ${iconClassName}`} />
+                  <div className="font-medium">{title}</div>
+                  <div className="text-gray-600">{description}</div>
+                </div>
+              ))}
             </div>
             <div className="mt-3 text-xs text-purple-700">
-              <strong>Data Sources:</strong> All metrics sourced directly from US Government APIs with 95%+ credibility scores. 
-              No third-party interpretations or paid services - pure authoritative data.
+              <strong>Free-first principle:</strong> 95%+ of intelligence sourced directly from free government & international APIs. No paid intermediaries or resellers.
             </div>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">$2.1T</div>
-              <div className="text-sm text-gray-600">Global Market Cap</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">1,247</div>
-              <div className="text-sm text-gray-600">IPOs This Year</div>
-            </div>
-            <div className="bg-orange-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600 mb-1">324</div>
-              <div className="text-sm text-gray-600">AI Companies Public</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600 mb-1">15%</div>
-              <div className="text-sm text-gray-600">Market Growth Rate</div>
-            </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <MethodologyCard
+              title="Source Authentication"
+              description="Bailey Intelligence validates each feed before it reaches downstream analysis."
+              highlights={[
+                'SEC EDGAR, FCC licensing, and USPTO records are cross-checked in bailey_intelligence ingest routines.',
+                'API credentials and refresh cadences are logged to preserve provenance for every record.'
+              ]}
+              tone="sky"
+            />
+            <MethodologyCard
+              title="Schema Harmonization"
+              description="Core schemas normalize economic, regulatory, and innovation signals into a shared timeline."
+              highlights={[
+                'business_formation_tracker aligns weekly BFS filings with historic BDS cohorts.',
+                'Economic releases from BEA and Federal Reserve endpoints are mapped to Bailey taxonomies.'
+              ]}
+              tone="purple"
+            />
+            <MethodologyCard
+              title="Signal Scoring"
+              description="Quantitative heuristics weight each observation for readiness, momentum, and risk."
+              highlights={[
+                'International, procurement, and technology analyzers publish comparable credibility scores.',
+                'Anomaly detection flags outliers before insights move into analyst notebooks.'
+              ]}
+              tone="emerald"
+            />
+            <MethodologyCard
+              title="Analyst Delivery"
+              description="Insights render as evidence-backed briefs instead of single-point forecasts."
+              highlights={[
+                'Method cards link directly to source badges so teams can audit every claim.',
+                'Playbooks combine structured data, qualitative notes, and recommended next actions.'
+              ]}
+              tone="blue"
+            />
           </div>
         </div>
 
-        {/* SEC EDGAR Real-Time Filings */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
-              <Building className="w-5 h-5 text-blue-600" />
-              <span>SEC EDGAR Real-Time Filings</span>
+              <Factory className="w-5 h-5 text-sky-600" />
+              <span>Census Business Formation Statistics</span>
             </h4>
-            <div className="flex items-center space-x-2">
-              <SourceBadge sourceName="SEC EDGAR API" sourceType="government" credibilityScore={98} isLive={true} />
-              <SourceBadge sourceName="Direct Feed" sourceType="government" credibilityScore={99} cost="free" />
-            </div>
-          </div>
-          
-          <div className="bg-blue-50 rounded-lg p-3 mb-4 border border-blue-200">
-            <div className="text-sm text-blue-800">
-              <strong>Direct Government Source:</strong> Unfiltered data stream from SEC's Electronic Data Gathering, 
-              Analysis and Retrieval (EDGAR) system. Real-time filings with zero intermediary processing or interpretation costs.
-            </div>
+            <SourceBadge sourceName="Census BFS" sourceType="government" lastUpdated="Weekly" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">1,247</div>
-              <div className="text-sm text-gray-600">IPO Filings (2024)</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">$847B</div>
-              <div className="text-sm text-gray-600">Total Market Cap</div>
-            </div>
-            <div className="bg-purple-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-purple-600 mb-1">324</div>
-              <div className="text-sm text-gray-600">AI Companies</div>
-            </div>
+            <MethodologyCard
+              title="Formation Velocity Modeling"
+              description="business_formation_tracker treats Census BFS releases as a live indicator of founder momentum."
+              highlights={[
+                'Seasonal adjustment logic maps week-over-week swings onto historic BDS cohorts.',
+                'State and NAICS level deltas trigger alerts pushed into Bailey decision briefings.'
+              ]}
+              tone="sky"
+            />
+            <MethodologyCard
+              title="Founder Segmentation"
+              description="Entity resolution blends BFS applications with licensing and patent data to profile builder types."
+              highlights={[
+                'USPTO and Secretary of State registries supply identity anchors for emerging teams.',
+                'Segmented cohorts support localized GTM experimentation and capital matching.'
+              ]}
+              tone="blue"
+            />
+            <MethodologyCard
+              title="Market Entry Readiness"
+              description="Insights emphasize qualitative readiness narratives instead of synthetic forecasts."
+              highlights={[
+                'Analysts pair quantitative surges with policy and capital context before publishing guidance.',
+                'Findings feed into Bailey playbooks that outline timing and risk mitigations.'
+              ]}
+              tone="purple"
+            />
           </div>
+          <p className="text-xs text-slate-600 mt-4">
+            The Census BFS stream acts as the heartbeat for Bailey\'s formation coverage, grounding strategic recommendations in observable founder behavior rather than speculative projections.
+          </p>
         </div>
 
-        {/* USPTO Patent Intelligence */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-            <Shield className="w-5 h-5 text-green-600" />
-            <span>USPTO Patent Intelligence</span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">95% Credibility</span>
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">23,847</div>
-              <div className="text-sm text-gray-600">AI Patents (2024)</div>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">+34%</div>
-              <div className="text-sm text-gray-600">YoY Growth</div>
-            </div>
-            <div className="bg-orange-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-orange-600 mb-1">156</div>
-              <div className="text-sm text-gray-600">Startup Patents</div>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold flex items-center space-x-2">
+              <Globe className="w-5 h-5 text-emerald-600" />
+              <span>International Market Intelligence</span>
+            </h4>
+            <div className="flex items-center gap-2">
+              <SourceBadge sourceName="World Bank" sourceType="international" lastUpdated="Quarterly" />
+              <SourceBadge sourceName="OECD SDMX" sourceType="international" lastUpdated="Monthly" />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MethodologyCard
+              title="Opportunity Scoring Framework"
+              description="international_market_intelligence synthesizes entrepreneurship, trade, and capital signals."
+              highlights={[
+                'World Bank, OECD SDMX, and IMF indicators harmonize into comparable readiness tiers.',
+                'Local cost structures and digital infrastructure baselines shape weighting logic per market.'
+              ]}
+              tone="emerald"
+            />
+            <MethodologyCard
+              title="Regulatory Patterning"
+              description="Analysts map policy, procurement, and incentive regimes before greenlighting expansion hypotheses."
+              highlights={[
+                'Custom crawlers monitor export controls, privacy statutes, and incentive programs.',
+                'Findings update Bailey risk registers shared across GTM and compliance leads.'
+              ]}
+              tone="green"
+            />
+            <MethodologyCard
+              title="Scenario Narratives"
+              description="Every briefing couples quantitative rankings with qualitative guidance."
+              highlights={[
+                'Comparative cases highlight talent pipelines, capital access, and distribution partners.',
+                'Decision templates clarify trigger conditions for pilots, partnerships, or deferral.'
+              ]}
+              tone="blue"
+            />
+          </div>
+          <p className="text-xs text-slate-600 mt-4">
+            Global recommendations emerge from triangulating multilateral datasets with policy intelligence, ensuring Bailey clients understand the why behind every suggested market move.
+          </p>
         </div>
 
-        {/* Federal Reserve Economic Data */}
         <div className="bg-white border border-gray-200 rounded-lg p-6 mb-6">
-          <h4 className="text-lg font-semibold mb-4 flex items-center space-x-2">
-            <DollarSign className="w-5 h-5 text-green-600" />
-            <span>Federal Reserve Economic Intelligence</span>
-            <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">99% Credibility</span>
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-red-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-red-600 mb-1">3.2%</div>
-              <div className="text-sm text-gray-600">Inflation Rate</div>
-            </div>
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">4.8%</div>
-              <div className="text-sm text-gray-600">Unemployment Rate</div>
-            </div>
-            <div className="bg-green-50 p-4 rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">2.4%</div>
-              <div className="text-sm text-gray-600">GDP Growth</div>
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-lg font-semibold flex items-center space-x-2">
+              <Briefcase className="w-5 h-5 text-amber-600" />
+              <span>Government Procurement Intelligence</span>
+            </h4>
+            <div className="flex items-center gap-2">
+              <SourceBadge sourceName="USAspending" sourceType="government" isLive />
+              <SourceBadge sourceName="SAM.gov" sourceType="government" lastUpdated="Daily" />
+              <SourceBadge sourceName="SBIR/STTR" sourceType="government" lastUpdated="Weekly" />
             </div>
           </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MethodologyCard
+              title="Pipeline Mapping"
+              description="procurement_intelligence fuses USAspending awards with SAM.gov solicitations to surface emerging demand windows."
+              highlights={[
+                'Entity resolution links contracting officers, NAICS codes, and obligation history.',
+                'Temporal models surface renewal cycles and pre-solicitation chatter.'
+              ]}
+              tone="orange"
+            />
+            <MethodologyCard
+              title="Capability Fit Scoring"
+              description="Opportunity briefs emphasize fit criteria instead of top-line contract values."
+              highlights={[
+                'Bailey capability taxonomies map client offerings to requirement language.',
+                'Risk signals flag compliance hurdles, set-asides, and teaming prerequisites.'
+              ]}
+              tone="blue"
+            />
+            <MethodologyCard
+              title="Non-Dilutive Capital Playbooks"
+              description="Analysts translate intelligence into actionable teaming and bidding guidance."
+              highlights={[
+                'SBIR/STTR trackers connect research agendas with transition pathways.',
+                'Recommended actions span capture cadences, partner introductions, and grant prep.'
+              ]}
+              tone="purple"
+            />
+          </div>
+          <p className="text-xs text-slate-600 mt-4">
+            Procurement coverage focuses on how to earn placement, giving teams a repeatable methodology anchored in verifiable federal data rather than speculative revenue tallies.
+          </p>
         </div>
 
-        {/* Industry Benchmarks */}
         <div className="bg-white border border-gray-200 rounded-lg p-6">
           <div className="flex items-center justify-between mb-4">
             <h4 className="text-lg font-semibold flex items-center space-x-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              <span>Industry Benchmarks & Trends</span>
+              <Zap className="w-5 h-5 text-violet-600" />
+              <span>Technology Trend Monitoring</span>
             </h4>
-            <div className="flex items-center space-x-2">
-              <SourceBadge sourceName="CB Insights" sourceType="industry" credibilityScore={84} lastUpdated="Weekly" />
-              <SourceBadge sourceName="PitchBook Data" sourceType="industry" credibilityScore={88} lastUpdated="Daily" />
-              <SourceBadge sourceName="Industry Reports" sourceType="industry" credibilityScore={81} lastUpdated="Monthly" />
+            <div className="flex items-center gap-2">
+              <SourceBadge sourceName="Product Hunt" sourceType="industry" lastUpdated="Real-time" />
+              <SourceBadge sourceName="Stack Exchange" sourceType="community" lastUpdated="Daily" />
+              <SourceBadge sourceName="OpenAlex" sourceType="academic" lastUpdated="Daily" />
             </div>
           </div>
-          
-          <div className="bg-gray-50 rounded-lg p-3 mb-4 border">
-            <div className="text-sm text-gray-700">
-              <strong>Benchmark Sources:</strong> Cross-validated metrics from 3+ industry databases, normalized for 
-              company size and market segment. Updated continuously with new funding rounds and exits.
-            </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <MethodologyCard
+              title="Signal Fusion"
+              description="technology_trend_analyzer unifies product, community, and research feeds into a single insight layer."
+              highlights={[
+                'Product Hunt launches, GitHub velocity, and Stack Exchange threads normalize into comparable momentum signals.',
+                'Open source repositories tagged to Bailey themes feed longitudinal adoption curves.'
+              ]}
+              tone="purple"
+            />
+            <MethodologyCard
+              title="Community Pulse Stories"
+              description="Qualitative narratives describe why practitioners care about an emerging topic."
+              highlights={[
+                'Stack Exchange threads and developer blogs are summarized for plain-language briefs.',
+                'Analysts annotate sentiment and friction themes to guide enablement content.'
+              ]}
+              tone="blue"
+            />
+            <MethodologyCard
+              title="Research Translation"
+              description="OpenAlex publications and grant data bridge academic work with commercialization signals."
+              highlights={[
+                'Topic modeling links research clusters to Bailey client problem statements.',
+                'Early evidence flags when to pursue partnerships, build integrations, or monitor further.'
+              ]}
+              tone="emerald"
+            />
           </div>
-          <div className="space-y-4">
-            {[
-              {
-                sector: "SaaS",
-                metrics: { revenue_multiple: 8.5, growth_rate: 45, churn_rate: 5.2 },
-                trend: "up"
-              },
-              {
-                sector: "AI/ML",
-                metrics: { revenue_multiple: 12.3, growth_rate: 78, churn_rate: 7.1 },
-                trend: "up"
-              },
-              {
-                sector: "FinTech",
-                metrics: { revenue_multiple: 6.2, growth_rate: 35, churn_rate: 8.5 },
-                trend: "down"
-              }
-            ].map((sector, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h5 className="font-semibold">{sector.sector}</h5>
-                  <TrendingUp className={`w-4 h-4 ${sector.trend === 'up' ? 'text-green-600' : 'text-red-600'}`} />
-                </div>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-gray-600">Revenue Multiple:</span>
-                    <span className="font-medium ml-1">{sector.metrics.revenue_multiple}x</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Growth Rate:</span>
-                    <span className="font-medium ml-1">{sector.metrics.growth_rate}%</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-600">Churn Rate:</span>
-                    <span className="font-medium ml-1">{sector.metrics.churn_rate}%</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          <p className="text-xs text-slate-600 mt-4">
+            Trend briefs emphasize the methodology behind emerging tech coverage, giving builders the evidence trail behind Bailey commentary instead of vanity adoption scores.
+          </p>
         </div>
       </div>
     </div>

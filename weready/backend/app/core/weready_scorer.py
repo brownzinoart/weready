@@ -1124,6 +1124,136 @@ class WeReadyScorer:
         
         return critical_issues, quick_wins, long_term
     
+    def apply_intelligence_boosts(self, score: WeReadyScore, intelligence: Dict[str, Any]) -> WeReadyScore:
+        """Apply business intelligence boosts to existing WeReady score."""
+        if not intelligence:
+            return score
+
+        for breakdown in score.breakdown:
+            if breakdown.category == ScoreCategory.BUSINESS_MODEL:
+                self._apply_business_intelligence_boosts(breakdown, intelligence)
+            breakdown.weighted_contribution = breakdown.score * self.weights[breakdown.category]
+
+        overall = sum(b.weighted_contribution for b in score.breakdown)
+        score.overall_score = int(round(overall))
+        score.verdict = self._determine_verdict(overall)
+        score.weready_stamp_eligible = (
+            score.overall_score >= self.score_thresholds["ready_to_ship"] and
+            all(b.score >= 70 for b in score.breakdown)
+        )
+        score.next_steps, score.improvement_roadmap = self._generate_improvement_plan(score.breakdown, overall)
+        return score
+
+    def _apply_business_intelligence_boosts(self, breakdown: ScoreBreakdown, intelligence: Dict[str, Any]) -> None:
+        """Adjust business model score using expanded external intelligence."""
+        expanded = breakdown.detailed_analysis.setdefault("expanded_intelligence", {})
+
+        # Business formation momentum boost
+        formation = intelligence.get("business_formation", {})
+        momentum = formation.get("momentum_score")
+        if momentum is not None:
+            expanded["business_formation"] = formation
+            if momentum >= 75:
+                boost = 4
+            elif momentum >= 60:
+                boost = 3
+            elif momentum >= 50:
+                boost = 2
+            else:
+                boost = 0
+            if boost:
+                breakdown.score = min(100.0, breakdown.score + boost)
+                message = f"Census BFS momentum score {momentum:.1f} indicates strong market formation velocity."
+                if message not in breakdown.insights:
+                    breakdown.insights.append(message)
+                rec = "Prioritize launch programs in high-momentum states captured by Census BFS data."
+                if rec not in breakdown.recommendations:
+                    breakdown.recommendations.append(rec)
+                if rec not in breakdown.quick_wins:
+                    breakdown.quick_wins.append(rec)
+
+        # International opportunity boost
+        international = intelligence.get("international", {})
+        opportunity = international.get("opportunity_score")
+        if opportunity is not None:
+            expanded["international_market"] = international
+            if opportunity >= 80:
+                boost = 5
+            elif opportunity >= 65:
+                boost = 4
+            elif opportunity >= 50:
+                boost = 3
+            else:
+                boost = 0
+            if boost:
+                breakdown.score = min(100.0, breakdown.score + boost)
+                message = f"World Bank/OECD opportunity score {opportunity:.1f} supports international expansion."                     if opportunity is not None else "International opportunity insights available."
+                if message not in breakdown.insights:
+                    breakdown.insights.append(message)
+                rec = "Develop localized go-to-market experiments in top opportunity countries."
+                if rec not in breakdown.recommendations:
+                    breakdown.recommendations.append(rec)
+                if rec not in breakdown.long_term_improvements:
+                    breakdown.long_term_improvements.append(rec)
+
+        # Procurement potential boost
+        procurement = intelligence.get("procurement", {})
+        opportunity_count = procurement.get("opportunity_count")
+        if opportunity_count:
+            expanded["procurement_pipeline"] = procurement
+            total_value = procurement.get("total_value", 0)
+            if opportunity_count >= 10 or total_value >= 5_000_000:
+                boost = 3
+            elif opportunity_count >= 5 or total_value >= 1_000_000:
+                boost = 2
+            else:
+                boost = 0
+            if boost:
+                breakdown.score = min(100.0, breakdown.score + boost)
+                message = f"Government procurement pipeline totals ${total_value:,.0f} across {opportunity_count} opportunities."
+                if message not in breakdown.insights:
+                    breakdown.insights.append(message)
+                rec = "Align offerings with top federal agencies and submit capability statements."
+                if rec not in breakdown.recommendations:
+                    breakdown.recommendations.append(rec)
+                if rec not in breakdown.quick_wins:
+                    breakdown.quick_wins.append(rec)
+
+        # Technology trend alignment boost
+        technology = intelligence.get("technology", {})
+        adoption = technology.get("adoption_index")
+        if adoption is not None:
+            expanded["technology_trends"] = technology
+            if adoption >= 70:
+                boost = 4
+            elif adoption >= 60:
+                boost = 3
+            elif adoption >= 50:
+                boost = 2
+            else:
+                boost = 0
+            if boost:
+                breakdown.score = min(100.0, breakdown.score + boost)
+                message = f"Technology adoption index {adoption:.1f} shows strong launch momentum."
+                if message not in breakdown.insights:
+                    breakdown.insights.append(message)
+                rec = "Highlight technology momentum in customer and investor materials."
+                if rec not in breakdown.recommendations:
+                    breakdown.recommendations.append(rec)
+                if rec not in breakdown.quick_wins:
+                    breakdown.quick_wins.append(rec)
+
+        breakdown.status = self._determine_breakdown_status(breakdown.score)
+
+    def _determine_breakdown_status(self, score: float) -> str:
+        if score >= 85:
+            return "excellent"
+        if score >= 70:
+            return "good"
+        if score >= 50:
+            return "needs_work"
+        return "critical"
+
     def _calculate_design_experience_score(self, code_files: List[Dict] = None, repo_url: Optional[str] = None) -> ScoreBreakdown:
         """Calculate Design & Experience score (25% of overall) with detailed analysis"""
         

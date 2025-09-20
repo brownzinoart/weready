@@ -32,7 +32,6 @@ google-generativeai
 # External data and caching
 requests-cache>=1.0.0
 redis>=4.5.0
-aioredis>=2.0.0
 
 # Data parsing
 xmltodict>=0.13.0

@@ -1,4 +1,4 @@
-# WeReady - AI Code Reality Check
+# WeReady - Powered by Bailey Intelligence
 
 ## Quick Start
 1. Backend: `cd backend && source venv/bin/activate && python -m uvicorn app.main:app --reload`

@@ -4,6 +4,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 from datetime import datetime
+import asyncio
 import os
 from dotenv import load_dotenv
 
@@ -29,10 +30,15 @@ class CrossDomainRequest(BaseModel):
 load_dotenv()
 from app.core.hallucination_detector import HallucinationDetector
 from app.core.weready_scorer import WeReadyScorer
-from app.core.weready_brain import weready_brain, IntelligentWeReadyScore, BrainRecommendation
+from app.core.bailey_intelligence import bailey_intelligence, IntelligentBaileyScore, BaileyRecommendation
 from app.core.learning_engine import learning_engine, OutcomeType
 from app.core.bailey import bailey
 from app.core.bailey_connectors import bailey_pipeline
+from app.core.business_formation_tracker import business_formation_tracker
+from app.core.international_market_intelligence import international_market_intelligence
+from app.core.procurement_intelligence import procurement_intelligence
+from app.core.technology_trend_analyzer import technology_trend_analyzer
+from app.core.enhanced_economic_analyzer import enhanced_economic_analyzer
 from app.core.bailey_semantic import semantic_bailey
 from app.services.github_analyzer import GitHubAnalyzer
 from app.core.credible_sources import credible_sources
@@ -63,7 +69,7 @@ app.add_middleware(
 detector = HallucinationDetector()
 github_analyzer = GitHubAnalyzer()
 weready_scorer = WeReadyScorer()
-brain = weready_brain
+brain = bailey_intelligence
 
 # Include API routers
 app.include_router(analysis_router, prefix="/api", tags=["analysis"])
@@ -94,7 +100,7 @@ class ScoreEvidence(BaseModel):
     explanation: str
     chatgpt_comparison: str  # What ChatGPT would say vs our evidence
 
-class BrainRecommendationResponse(BaseModel):
+class BaileyRecommendationResponse(BaseModel):
     recommendation: str
     priority: str
     evidence_source_name: str
@@ -117,13 +123,14 @@ class WeReadyScoreResponse(BaseModel):
     repo_info: Optional[Dict[str, Any]] = None
     files_analyzed: int = 0
     market_context: Dict[str, str]
+    market_percentile: Optional[int] = None
     
     # Brain enhancements
     credibility_score: Optional[int] = None
     intelligence_boost: Optional[int] = None
     market_timing_score: Optional[int] = None
     competitive_advantage_score: Optional[int] = None
-    brain_recommendations: Optional[List[BrainRecommendationResponse]] = None
+    brain_recommendations: Optional[List[BaileyRecommendationResponse]] = None
     success_probability: Optional[float] = None
     funding_timeline_prediction: Optional[str] = None
     key_risks: Optional[List[str]] = None
@@ -133,6 +140,12 @@ class WeReadyScoreResponse(BaseModel):
     
     # Intelligent roadmap (enhanced version)
     intelligent_roadmap: Optional[Dict[str, List[Dict[str, Any]]]] = None
+    
+    business_formation_insights: Optional[Dict[str, Any]] = None
+    international_market_intelligence: Optional[Dict[str, Any]] = None
+    procurement_intelligence: Optional[Dict[str, Any]] = None
+    technology_trend_intelligence: Optional[Dict[str, Any]] = None
+    economic_context: Optional[Dict[str, Any]] = None
     
     # Evidence and credibility tracking
     score_evidence: Optional[List[ScoreEvidence]] = None
@@ -163,7 +176,7 @@ async def root():
         "status": "alive",
         "message": "WeReady API - The evidence-based reality check every AI-first founder needs.",
         "features": ["hallucination_detection", "github_analysis", "weready_score", "intelligent_recommendations", "pattern_learning"],
-        "brain_status": "active - learning from every scan",
+        "bailey_status": "active - learning from every scan",
         "market_stats": {
             "ai_adoption": "76% of developers use AI tools",
             "trust_rate": "Only 33% trust their accuracy",
@@ -171,9 +184,60 @@ async def root():
         }
     }
 
-@app.post("/scan/brain", response_model=WeReadyScoreResponse)
-async def brain_scan(request: CodeScanRequest):
-    """Get intelligent WeReady Score with brain-powered insights, credible sources, and learning"""
+@app.get("/api/business-formation/{sector}")
+async def business_formation_insights(sector: str, region: Optional[str] = "US"):
+    data = await business_formation_tracker.get_business_formation_trends(sector=sector, region=region)
+    if not data:
+        raise HTTPException(status_code=404, detail="Formation data unavailable")
+    return {"sector": sector, "region": region, **data}
+
+@app.get("/api/international-markets/{country}")
+async def international_market_insights(country: str, industry: Optional[str] = None):
+    data = await international_market_intelligence.get_global_market_context(country=country, industry=industry)
+    if not data:
+        raise HTTPException(status_code=404, detail="International market data unavailable")
+    return {"country": country, "industry": industry or "general", **data}
+
+@app.get("/api/procurement/{naics_code}")
+async def procurement_insights(naics_code: str, sector: Optional[str] = None):
+    data = await procurement_intelligence.get_procurement_opportunities(naics_code=naics_code, sector=sector)
+    if not data:
+        raise HTTPException(status_code=404, detail="Procurement data unavailable")
+    return {"naics_code": naics_code, "sector": sector or "general", **data}
+
+@app.get("/api/technology-trends/{category}")
+async def technology_trend_insights(category: str):
+    data = await technology_trend_analyzer.get_trend_report(category)
+    if not data:
+        raise HTTPException(status_code=404, detail="Technology trend data unavailable")
+    return {"category": category, **data}
+
+@app.get("/api/business-intelligence/dashboard")
+async def business_intelligence_dashboard(sector: Optional[str] = None, country: Optional[str] = "US", naics_code: Optional[str] = "541511"):
+    sector_normalized = sector or "general"
+    formation_task = business_formation_tracker.get_business_formation_trends(sector=sector_normalized, region="US")
+    international_task = international_market_intelligence.get_global_market_context(country=country or "US", industry=sector_normalized)
+    procurement_task = procurement_intelligence.get_procurement_opportunities(naics_code=naics_code or "541511", sector=sector_normalized)
+    technology_task = technology_trend_analyzer.get_trend_report(sector_normalized)
+    economic_task = enhanced_economic_analyzer.get_economic_context(industry=sector_normalized, region="US")
+    formation, international, procurement, technology, economic = await asyncio.gather(
+        formation_task, international_task, procurement_task, technology_task, economic_task
+    )
+    return {
+        "sector": sector_normalized,
+        "country": country or "US",
+        "naics_code": naics_code or "541511",
+        "business_formation": formation,
+        "international_market": international,
+        "procurement": procurement,
+        "technology_trends": technology,
+        "economic_context": economic,
+        "updated_at": datetime.utcnow().isoformat()
+    }
+
+@app.post("/scan/bailey", response_model=WeReadyScoreResponse)
+async def bailey_scan(request: CodeScanRequest):
+    """Get intelligent WeReady Score with Bailey Intelligence insights, credible sources, and learning"""
     
     # Validate input
     if not request.code and not request.repo_url:
@@ -227,7 +291,7 @@ async def brain_scan(request: CodeScanRequest):
             # Convert brain recommendations to response format
             brain_recs = []
             for rec in intelligent_score.brain_recommendations:
-                brain_recs.append(BrainRecommendationResponse(
+                brain_recs.append(BaileyRecommendationResponse(
                     recommendation=rec.recommendation,
                     priority=rec.priority,
                     evidence_source_name=rec.evidence_source.name,
@@ -248,7 +312,7 @@ async def brain_scan(request: CodeScanRequest):
                 repo_info=repo_analysis.get("repo_info"),
                 files_analyzed=repo_analysis["files_analyzed"],
                 
-                # Brain enhancements
+                # Bailey Intelligence enhancements
                 credibility_score=intelligent_score.credibility_score,
                 intelligence_boost=intelligent_score.intelligence_boost,
                 market_timing_score=intelligent_score.market_timing_score,
@@ -304,7 +368,7 @@ async def brain_scan(request: CodeScanRequest):
             # Convert brain recommendations to response format
             brain_recs = []
             for rec in intelligent_score.brain_recommendations:
-                brain_recs.append(BrainRecommendationResponse(
+                brain_recs.append(BaileyRecommendationResponse(
                     recommendation=rec.recommendation,
                     priority=rec.priority,
                     evidence_source_name=rec.evidence_source.name,
@@ -324,7 +388,7 @@ async def brain_scan(request: CodeScanRequest):
                 **base_report,
                 files_analyzed=1,
                 
-                # Brain enhancements
+                # Bailey Intelligence enhancements
                 credibility_score=intelligent_score.credibility_score,
                 intelligence_boost=intelligent_score.intelligence_boost,
                 market_timing_score=intelligent_score.market_timing_score,
@@ -350,9 +414,15 @@ async def brain_scan(request: CodeScanRequest):
                 hallucinated_packages=hallucination_result.hallucinated_packages,
                 action_required=intelligent_score.base_score.next_steps[0] if intelligent_score.base_score.next_steps else "Analysis complete"
             )
-            
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Manual code analysis failed: {str(e)}")
+
+@app.post("/scan/brain", response_model=WeReadyScoreResponse)
+async def brain_scan(request: CodeScanRequest):
+    """DEPRECATED: Use /scan/bailey instead. Backward compatibility alias."""
+    # Optionally log a deprecation warning
+    # import logging; logging.warning("/scan/brain is deprecated; use /scan/bailey")
+    return await bailey_scan(request)
 
 @app.post("/scan/quick", response_model=WeReadyScoreResponse)
 async def quick_scan(request: CodeScanRequest):
@@ -529,7 +599,7 @@ async def report_outcome(outcome: OutcomeReportRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to record outcome: {str(e)}")
 
-@app.get("/brain/credibility")
+@app.get("/bailey/credibility")
 async def get_credibility_report():
     """Get WeReady's credibility report showing evidence sources and learning stats"""
     
@@ -544,7 +614,7 @@ async def get_credibility_report():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate credibility report: {str(e)}")
 
-@app.get("/brain/stats")
+@app.get("/bailey/stats-learning")
 async def get_learning_stats():
     """Get statistics about WeReady's learning and pattern recognition"""
     
@@ -658,8 +728,8 @@ async def get_score_evidence(score_component: str):
             raise HTTPException(status_code=404, detail=f"Score component '{score_component}' not found. Available: {list(component_mapping.keys())}")
             
         # Get detailed evidence
-        evidence_details = weready_brain.credible_sources.get_detailed_evidence(metric)
-        chatgpt_comparison = weready_brain.credible_sources.get_chatgpt_comparison(metric)
+        evidence_details = bailey_intelligence.credible_sources.get_detailed_evidence(metric)
+        chatgpt_comparison = bailey_intelligence.credible_sources.get_chatgpt_comparison(metric)
         
         # Get comprehensive evidence information for each category
         evidence_info = {
@@ -729,8 +799,8 @@ async def get_credibility_methodology():
     """Get WeReady's complete credibility methodology"""
     
     try:
-        methodology = weready_brain._generate_credibility_methodology()
-        validation = weready_brain.credible_sources.validate_scoring_thresholds()
+        methodology = bailey_intelligence.generate_credibility_methodology()
+        validation = bailey_intelligence.credible_sources.validate_scoring_thresholds()
         
         return {
             "status": "success",
@@ -1521,39 +1591,65 @@ async def get_academic_credibility_report():
 async def analyze_github_repository(repo_url: str):
     """Analyze a GitHub repository with intelligence metrics"""
     try:
-        repository = await github_intelligence.analyze_repository(repo_url)
+        import httpx
+        import os
         
-        if repository:
-            return {
-                "status": "success",
-                "repository": {
-                    "name": repository.name,
-                    "full_name": repository.full_name,
-                    "owner": repository.owner,
-                    "description": repository.description,
-                    "language": repository.language,
-                    "stars": repository.stars,
-                    "forks": repository.forks,
-                    "watchers": repository.watchers,
-                    "open_issues": repository.open_issues,
-                    "created_at": repository.created_at.isoformat(),
-                    "updated_at": repository.updated_at.isoformat(),
-                    "pushed_at": repository.pushed_at.isoformat()
-                },
-                "intelligence_metrics": {
-                    "momentum_score": repository.momentum_score,
-                    "credibility_score": repository.credibility_score,
-                    "innovation_score": repository.innovation_score,
-                    "startup_signals": repository.startup_signals,
-                    "risk_factors": repository.risk_factors
-                },
-                "competitive_advantage": "Real-time GitHub intelligence unavailable to ChatGPT"
-            }
+        # In production, call the Netlify function
+        if os.getenv('ENVIRONMENT') == 'production' or os.getenv('NETLIFY'):
+            # Call the Netlify function
+            netlify_function_url = os.getenv('NETLIFY_FUNCTION_URL', 'http://localhost:8888/.netlify/functions/github-repository-analysis')
+            
+            async with httpx.AsyncClient() as client:
+                response = await client.get(f"{netlify_function_url}?repo_url={repo_url}")
+                
+                if response.status_code == 200:
+                    return response.json()
+                else:
+                    # Fall back to local analysis if Netlify function fails
+                    return await _analyze_repository_locally(repo_url)
         else:
-            return {"status": "error", "message": f"Could not analyze repository: {repo_url}"}
+            # In development, use local analysis
+            return await _analyze_repository_locally(repo_url)
             
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Fall back to local analysis on error
+        try:
+            return await _analyze_repository_locally(repo_url)
+        except Exception as fallback_error:
+            raise HTTPException(status_code=500, detail=f"GitHub analysis failed: {str(fallback_error)}")
+
+async def _analyze_repository_locally(repo_url: str):
+    """Fallback local repository analysis"""
+    repository = await github_intelligence.analyze_repository(repo_url)
+    
+    if repository:
+        return {
+            "status": "success",
+            "repository": {
+                "name": repository.name,
+                "full_name": repository.full_name,
+                "owner": repository.owner,
+                "description": repository.description,
+                "language": repository.language,
+                "stars": repository.stars,
+                "forks": repository.forks,
+                "watchers": repository.watchers,
+                "open_issues": repository.open_issues,
+                "created_at": repository.created_at.isoformat(),
+                "updated_at": repository.updated_at.isoformat(),
+                "pushed_at": repository.pushed_at.isoformat()
+            },
+            "intelligence_metrics": {
+                "momentum_score": repository.momentum_score,
+                "credibility_score": repository.credibility_score,
+                "innovation_score": repository.innovation_score,
+                "startup_signals": repository.startup_signals,
+                "risk_factors": repository.risk_factors
+            },
+            "competitive_advantage": "Real-time GitHub intelligence unavailable to ChatGPT"
+        }
+    else:
+        return {"status": "error", "message": f"Could not analyze repository: {repo_url}"}
 
 @app.post("/github/startup-intelligence")
 async def analyze_startup_github_intelligence(request: Dict[str, Any]):
@@ -1657,7 +1753,7 @@ async def health_check():
         "detectors": {
             "hallucination": "active",
             "github_analyzer": "active",
-            "weready_brain": "active",
+            "bailey_intelligence": "active",
             "learning_engine": "active",
             "bailey_knowledge_engine": "active",
             "government_data_integrator": "active",

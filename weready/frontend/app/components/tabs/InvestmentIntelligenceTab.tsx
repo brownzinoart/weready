@@ -101,7 +101,7 @@ export default function InvestmentIntelligenceTab() {
           <h4 className="text-lg font-semibold mb-4 flex items-center space-x-2">
             <Target className="w-5 h-5 text-red-600" />
             <span>Investment Readiness Framework</span>
-            <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">WeReady Original</span>
+            <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full">Bailey Intelligence</span>
           </h4>
           <div className="space-y-4">
             {[

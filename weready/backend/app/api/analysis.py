@@ -11,12 +11,15 @@ from typing import Optional, Dict, Any, List
 from datetime import datetime
 import uuid
 import time
+import os
 
 from app.database.connection import get_db
 from app.models.analysis import Analysis, IssueTracking
 from app.models.user import User
 from app.core.weready_scorer import WeReadyScorer
-from app.core.weready_brain import weready_brain
+from app.core.bailey_intelligence import bailey_intelligence
+
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
 
 router = APIRouter()
 
@@ -39,12 +42,12 @@ class AnalysisResponse(BaseModel):
     market_percentile: Optional[int]
     issues_found: Optional[Dict[str, Any]]
     recommendations: Optional[Dict[str, Any]]
-    brain_recommendations: Optional[list]
+    bailey_recommendations: Optional[list]
     improvement_roadmap: Optional[Dict[str, Any]]
     intelligent_roadmap: Optional[Dict[str, List[Dict[str, Any]]]] = None  # Enhanced roadmap
     competitive_moats: Optional[list]
     breakdown: Optional[Dict[str, Any]] = None  # Rich category analysis
-    credibility_methodology: Optional[Dict[str, Any]] = None  # Bailey Intelligence data
+    credibility_methodology: Optional[Dict[str, Any]] = None  # Bailey Intelligence credibility data
     files_analyzed: int
     is_free_analysis: bool = True
     signup_prompt: Optional[Dict[str, Any]] = None
@@ -73,9 +76,10 @@ async def analyze_free(
         import httpx
         
         if analysis_type == "repository":
-            # Use the existing working scan/brain endpoint
+            # Use the existing working scan/bailey endpoint
             async with httpx.AsyncClient() as client:
-                response = await client.post("http://localhost:8000/scan/brain", json={
+                url = f"{API_BASE_URL}/scan/bailey"
+                response = await client.post(url, json={
                     "repo_url": request.repository_url,
                     "language": request.language
                 })
@@ -84,9 +88,10 @@ async def analyze_free(
                 else:
                     raise Exception(f"Brain analysis failed: {response.status_code}")
         else:
-            # Use the existing working scan/brain endpoint for code
+            # Use the existing working scan/bailey endpoint for code
             async with httpx.AsyncClient() as client:
-                response = await client.post("http://localhost:8000/scan/brain", json={
+                url = f"{API_BASE_URL}/scan/bailey"
+                response = await client.post(url, json={
                     "code": request.code_snippet,
                     "language": request.language
                 })
@@ -110,7 +115,7 @@ async def analyze_free(
             success_probability=result.get("success_probability"),
             funding_timeline=result.get("funding_timeline"),
             credibility_score=result.get("credibility_score"),
-            market_percentile=result.get("market_percentile"),
+            market_percentile=None,  # Not available in Bailey response
             issues_found=result.get("category_issues"),
             recommendations=result.get("recommendations"),
             brain_recommendations=result.get("brain_recommendations"),
@@ -189,7 +194,7 @@ async def analyze_free(
             market_percentile=analysis.market_percentile,  # Show percentile - competitive insight
             issues_found=analysis.issues_found,  # Show issues - actionable value
             recommendations=analysis.recommendations,  # Show standard recommendations
-            brain_recommendations=limited_recommendations,  # 2 full + 1 partial
+            bailey_recommendations=limited_recommendations,  # 2 full + 1 partial
             improvement_roadmap=limited_roadmap,  # Full roadmap (legacy)
             intelligent_roadmap=result.get("intelligent_roadmap"),  # Enhanced roadmap
             competitive_moats=analysis.competitive_moats,  # Show moats - valuable insight
@@ -268,7 +273,7 @@ async def get_free_analysis_results(
         "market_percentile": analysis.market_percentile,
         "issues_found": analysis.issues_found,
         "recommendations": analysis.recommendations,
-        "brain_recommendations": analysis.brain_recommendations,
+        "bailey_recommendations": analysis.brain_recommendations,
         "improvement_roadmap": analysis.improvement_roadmap,
         "competitive_moats": analysis.competitive_moats,
         "files_analyzed": analysis.files_analyzed,

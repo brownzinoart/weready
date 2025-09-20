@@ -1,9 +1,9 @@
 import React from 'react';
-import { Shield, Database, GraduationCap, Users, CheckCircle, Clock, AlertTriangle } from 'lucide-react';
+import { Shield, Database, GraduationCap, Users, CheckCircle, Clock, AlertTriangle, Globe } from 'lucide-react';
 
 interface SourceBadgeProps {
   sourceName: string;
-  sourceType: 'government' | 'academic' | 'industry' | 'community';
+  sourceType: 'government' | 'academic' | 'industry' | 'community' | 'international';
   credibilityScore?: number;
   lastUpdated?: string;
   isLive?: boolean;
@@ -30,6 +30,8 @@ export default function SourceBadge({
         return <Database className="w-3 h-3" />;
       case 'community':
         return <Users className="w-3 h-3" />;
+      case 'international':
+        return <Globe className="w-3 h-3" />;
       default:
         return <Database className="w-3 h-3" />;
     }
@@ -45,6 +47,8 @@ export default function SourceBadge({
         return 'bg-purple-100 text-purple-700 border-purple-200';
       case 'community':
         return 'bg-orange-100 text-orange-700 border-orange-200';
+      case 'international':
+        return 'bg-cyan-100 text-cyan-700 border-cyan-200';
       default:
         return 'bg-gray-100 text-gray-700 border-gray-200';
     }

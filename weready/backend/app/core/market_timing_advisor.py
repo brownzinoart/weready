@@ -17,6 +17,11 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 import asyncio
 import logging
+from .business_formation_tracker import business_formation_tracker
+from .international_market_intelligence import international_market_intelligence
+from .procurement_intelligence import procurement_intelligence
+from .technology_trend_analyzer import technology_trend_analyzer
+from .enhanced_economic_analyzer import enhanced_economic_analyzer
 
 from .funding_tracker import funding_tracker, FundingTemperature
 from .hallucination_trends import hallucination_trends
@@ -31,6 +36,9 @@ class MarketWindow:
     key_indicators: List[str]
     action_recommendation: str
     urgency_level: str  # "immediate", "1-2_weeks", "1-3_months", "wait"
+    confidence_interval: Tuple[float, float] = (0.0, 0.0)
+    global_opportunity_score: float = 0.0
+    procurement_alignment_score: float = 0.0
 
 @dataclass
 class TimingRecommendation:
@@ -65,23 +73,39 @@ class MarketTimingAdvisor:
         
         # Get sector-specific intelligence
         sector_intel = await self._get_sector_intelligence(startup_category)
-        
+
+        # Enrich with external market intelligence
+        formation_signals, international_timing, procurement_cycles, technology_momentum, economic_context = await asyncio.gather(
+            self._get_business_formation_signals(startup_category),
+            self._get_global_market_timing(startup_category),
+            self._get_procurement_cycles(startup_category),
+            self._get_technology_momentum(startup_category),
+            self._get_economic_context(startup_category)
+        )
+        intelligence_context = {
+            "formation": formation_signals,
+            "international": international_timing,
+            "procurement": procurement_cycles,
+            "technology": technology_momentum,
+            "economic": economic_context
+        }
+
         # Get competitive landscape timing
         competitive_analysis = await self._analyze_competitive_timing(startup_category)
         
         # Combine all signals into timing windows
         timing_windows = self._identify_timing_windows(
-            startup_category, funding_temps, github_trends, sector_intel
+            startup_category, funding_temps, github_trends, sector_intel, intelligence_context
         )
         
         # Generate strategic recommendations
         strategic_advice = self._generate_strategic_advice(
-            startup_category, current_stage, timing_windows, competitive_analysis
+            startup_category, current_stage, timing_windows, competitive_analysis, intelligence_context
         )
         
         # Calculate confidence
         confidence = self._calculate_timing_confidence(
-            funding_temps, github_trends, sector_intel
+            funding_temps, github_trends, sector_intel, intelligence_context
         )
         
         return TimingRecommendation(
@@ -547,7 +571,8 @@ class MarketTimingAdvisor:
                                 sector: str,
                                 funding_temps: Dict[str, FundingTemperature],
                                 github_trends: Dict[str, Any],
-                                sector_intel: Dict[str, Any]) -> List[MarketWindow]:
+                                sector_intel: Dict[str, Any],
+                                intelligence_context: Dict[str, Any]) -> List[MarketWindow]:
         """Identify specific timing windows for different actions"""
         
         windows = []
@@ -555,55 +580,78 @@ class MarketTimingAdvisor:
         # Funding window analysis
         sector_funding = funding_temps.get(sector.lower())
         if sector_funding:
+            base_temp = sector_funding.temperature
+            formation_score = formation_data.get("momentum_score", 50.0)
+            economic_timing = economic_data.get("timing_index", 50.0)
+            procurement_score = float(procurement_data.get("opportunity_count", 0))
+            adjusted_temp = min(100.0, max(0.0, base_temp + (formation_score - 50) * 0.2 + (economic_timing - 50) * 0.15 + min(procurement_score, 10) * 0.5))
+            confidence = min(0.95, 0.7 + (sector_funding.recent_deals * 0.03) + (procurement_score * 0.01))
             funding_window = MarketWindow(
                 sector=sector,
                 window_type="funding",
-                temperature=sector_funding.temperature,
-                duration_estimate=self._estimate_funding_window_duration(sector_funding.temperature),
-                confidence=0.8 if sector_funding.recent_deals > 3 else 0.6,
+                temperature=adjusted_temp,
+                duration_estimate=self._estimate_funding_window_duration(adjusted_temp),
+                confidence=confidence,
                 key_indicators=[
                     f"{sector_funding.recent_deals} recent deals",
                     f"${sector_funding.average_deal_size:.1f}M average",
-                    f"Market trend: {sector_funding.trend_direction}"
+                    f"Market trend: {sector_funding.trend_direction}",
+                    f"Formation momentum: {formation_score:.1f}",
+                    f"Procurement opportunities: {procurement_score:.0f}"
                 ],
-                action_recommendation=self._get_funding_action(sector_funding.temperature),
-                urgency_level=self._get_funding_urgency(sector_funding.temperature)
+                action_recommendation=self._get_funding_action(adjusted_temp),
+                urgency_level=self._get_funding_urgency(adjusted_temp),
+                confidence_interval=(max(0.0, adjusted_temp - 7), min(100.0, adjusted_temp + 7)),
+                global_opportunity_score=international_data.get("opportunity_score", 0.0),
+                procurement_alignment_score=min(100.0, procurement_score * 5)
             )
             windows.append(funding_window)
         
         # Product launch window
         github_signal = github_trends.get("timing_signal", 50)
+        tech_adoption = technology_data.get("adoption_index", github_signal)
+        launch_temperature = min(100.0, max(0.0, (github_signal * 0.6) + (tech_adoption * 0.4)))
         launch_window = MarketWindow(
             sector=sector,
             window_type="launch",
-            temperature=github_signal,
-            duration_estimate=self._estimate_launch_window_duration(github_signal),
-            confidence=0.7,
+            temperature=launch_temperature,
+            duration_estimate=self._estimate_launch_window_duration(launch_temperature),
+            confidence=0.68 + min(0.22, tech_adoption / 200),
             key_indicators=[
                 f"GitHub momentum: {github_trends.get('total_momentum', 0):.0f}",
                 f"Market acceleration: {github_trends.get('acceleration', 'stable')}",
+                f"Tech adoption index: {tech_adoption:.1f}",
                 f"Hot categories: {', '.join(github_trends.get('hot_categories', []))}"
             ],
-            action_recommendation=self._get_launch_action(github_signal),
-            urgency_level=self._get_launch_urgency(github_signal)
+            action_recommendation=self._get_launch_action(launch_temperature),
+            urgency_level=self._get_launch_urgency(launch_temperature),
+            confidence_interval=(max(0.0, launch_temperature - 5), min(100.0, launch_temperature + 5)),
+            global_opportunity_score=international_data.get("opportunity_score", 0.0),
+            procurement_alignment_score=min(100.0, float(procurement_data.get("opportunity_count", 0)) * 3)
         )
         windows.append(launch_window)
         
         # Hiring window
         sector_health = sector_intel.get("sector_health", 60)
+        economic_timing = economic_data.get("timing_index", sector_health)
+        hiring_temperature = min(100.0, max(0.0, (sector_health * 0.7) + (economic_timing * 0.3)))
         hiring_window = MarketWindow(
             sector=sector,
             window_type="hiring",
-            temperature=sector_health,
-            duration_estimate=self._estimate_hiring_window_duration(sector_health),
-            confidence=0.6,
+            temperature=hiring_temperature,
+            duration_estimate=self._estimate_hiring_window_duration(hiring_temperature),
+            confidence=0.6 + min(0.2, economic_timing / 200),
             key_indicators=[
                 f"Sector health: {sector_health:.0f}/100",
+                f"Economic timing index: {economic_timing:.1f}",
                 f"Market activity: {sector_intel.get('market_activity', 0)} signals",
                 "Talent availability varies by location"
             ],
-            action_recommendation=self._get_hiring_action(sector_health),
-            urgency_level=self._get_hiring_urgency(sector_health)
+            action_recommendation=self._get_hiring_action(hiring_temperature),
+            urgency_level=self._get_hiring_urgency(hiring_temperature),
+            confidence_interval=(max(0.0, hiring_temperature - 8), min(100.0, hiring_temperature + 8)),
+            global_opportunity_score=international_data.get("opportunity_score", 0.0),
+            procurement_alignment_score=min(100.0, float(procurement_data.get("opportunity_count", 0)) * 2)
         )
         windows.append(hiring_window)
         
@@ -741,7 +789,8 @@ class MarketTimingAdvisor:
                                  sector: str,
                                  stage: str,
                                  windows: List[MarketWindow],
-                                 competitive_analysis: Dict[str, Any]) -> str:
+                                 competitive_analysis: Dict[str, Any],
+                                 intelligence_context: Dict[str, Any]) -> str:
         """Generate strategic advice based on all timing factors"""
         
         # Find highest temperature window
@@ -749,7 +798,12 @@ class MarketTimingAdvisor:
         
         if not best_window:
             return "Insufficient market data for timing recommendation."
-        
+
+        formation_score = intelligence_context.get("formation", {}).get("momentum_score", 50.0)
+        international_score = intelligence_context.get("international", {}).get("opportunity_score", 0.0)
+        procurement_score = intelligence_context.get("procurement", {}).get("opportunity_count", 0)
+        economic_timing = intelligence_context.get("economic", {}).get("timing_index", 50.0)
+
         if best_window.temperature > 80:
             advice = f"OPTIMAL TIMING: {sector} market is extremely hot. "
             if best_window.window_type == "funding":
@@ -768,6 +822,13 @@ class MarketTimingAdvisor:
         else:
             advice = f"WAIT: {sector} market conditions are challenging. "
             advice += "Focus on product development and wait for market improvement."
+
+        advice += f" Formation momentum score {formation_score:.1f} indicates startup creation velocity."             if formation_score else ""
+        if international_score > 60:
+            advice += f" Global opportunity score {international_score:.1f} suggests evaluating expansion markets."
+        if procurement_score:
+            advice += f" Government demand ({procurement_score:.0f} active opportunities) can de-risk revenue." 
+        advice += f" Economic timing index {economic_timing:.1f} informs runway planning."
         
         # Add competitive context
         threats = competitive_analysis.get("threats", [])
@@ -783,7 +844,8 @@ class MarketTimingAdvisor:
     def _calculate_timing_confidence(self,
                                    funding_temps: Dict,
                                    github_trends: Dict,
-                                   sector_intel: Dict) -> float:
+                                   sector_intel: Dict,
+                                   intelligence_context: Dict[str, Any]) -> float:
         """Calculate confidence in timing recommendation"""
         
         confidence_factors = []
@@ -802,6 +864,18 @@ class MarketTimingAdvisor:
         activity = sector_intel.get("market_activity", 0)
         sector_confidence = min(0.8, 0.4 + (activity * 0.1))
         confidence_factors.append(sector_confidence)
+
+        formation_score = intelligence_context.get("formation", {}).get("momentum_score", 50.0)
+        confidence_factors.append(min(0.85, 0.5 + formation_score / 200))
+
+        tech_adoption = intelligence_context.get("technology", {}).get("adoption_index", 50.0)
+        confidence_factors.append(min(0.9, 0.4 + tech_adoption / 150))
+
+        procurement_score = float(intelligence_context.get("procurement", {}).get("opportunity_count", 0))
+        confidence_factors.append(min(0.8, 0.3 + procurement_score * 0.02))
+
+        economic_timing = intelligence_context.get("economic", {}).get("timing_index", 50.0)
+        confidence_factors.append(min(0.9, 0.5 + economic_timing / 150))
         
         # Return weighted average
         return sum(confidence_factors) / len(confidence_factors)

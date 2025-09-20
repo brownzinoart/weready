@@ -26,6 +26,11 @@ import logging
 from dataclasses import asdict
 
 from .bailey import bailey, KnowledgePoint, DataFreshness
+from .business_formation_tracker import business_formation_tracker
+from .international_market_intelligence import international_market_intelligence
+from .procurement_intelligence import procurement_intelligence
+from .technology_trend_analyzer import technology_trend_analyzer
+from .enhanced_economic_analyzer import enhanced_economic_analyzer
 
 class BaileyConnector:
     """Base class for Bailey data connectors"""
@@ -984,6 +989,180 @@ class RedditConnector(BaileyConnector):
             logging.error(f"Reddit sentiment analysis error: {e}")
             
         return knowledge_ids
+class CensusBusinessFormationConnector(BaileyConnector):
+    """Connector for U.S. Census Business Formation Statistics"""
+
+    def __init__(self):
+        super().__init__("census_bfs")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            formation = await business_formation_tracker.get_business_formation_trends()
+            if formation:
+                momentum_raw = formation.get("momentum_score")
+                momentum = float(momentum_raw) if momentum_raw is not None else 0.0
+                point_id = await bailey.ingest_knowledge_point(
+                    content=f"Census BFS momentum score {momentum:.1f} indicates startup formation velocity vs national baseline.",
+                    source_id=self.source_id,
+                    category="business_formation_trends",
+                    numerical_value=momentum,
+                    confidence=0.87
+                )
+                knowledge_ids.append(point_id)
+
+                for signal in formation.get("signals", [])[:5]:
+                    name = signal.get("name") or signal.get("metric")
+                    value = signal.get("current_value")
+                    point_id = await bailey.ingest_knowledge_point(
+                        content=f"Business formation signal: {name} at {value}",
+                        source_id=self.source_id,
+                        category="business_formation_signals",
+                        numerical_value=float(value) if isinstance(value, (int, float)) else None,
+                        confidence=0.82
+                    )
+                    knowledge_ids.append(point_id)
+        except Exception as exc:
+            logging.error(f"Census BFS connector error: {exc}")
+        return knowledge_ids
+
+class InternationalMarketConnector(BaileyConnector):
+    """Connector for World Bank/OECD international market intelligence"""
+
+    def __init__(self):
+        super().__init__("world_bank_indicators")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            context = await international_market_intelligence.get_global_market_context(country="US", industry=None)
+            if context:
+                opportunity_raw = context.get("opportunity_score")
+                risk_raw = context.get("risk_score")
+                opportunity_val = float(opportunity_raw) if opportunity_raw is not None else 0.0
+                risk_val = float(risk_raw) if risk_raw is not None else 0.0
+                point_id = await bailey.ingest_knowledge_point(
+                    content=f"Global market opportunity score {opportunity_val:.1f} with risk {risk_val:.1f} from World Bank/OECD indicators.",
+                    source_id=self.source_id,
+                    category="international_market_intelligence",
+                    numerical_value=opportunity_val,
+                    confidence=0.84
+                )
+                knowledge_ids.append(point_id)
+
+                for signal in context.get("signals", [])[:5]:
+                    metric = signal.get("metric")
+                    value = signal.get("value")
+                    point_id = await bailey.ingest_knowledge_point(
+                        content=f"International signal {metric}: {value}",
+                        source_id=self.source_id,
+                        category="international_market_signals",
+                        numerical_value=float(value) if isinstance(value, (int, float)) else None,
+                        confidence=0.8
+                    )
+                    knowledge_ids.append(point_id)
+        except Exception as exc:
+            logging.error(f"International market connector error: {exc}")
+        return knowledge_ids
+
+class ProcurementConnector(BaileyConnector):
+    """Connector for federal procurement intelligence"""
+
+    def __init__(self):
+        super().__init__("usaspending")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            procurement = await procurement_intelligence.get_procurement_opportunities(naics_code="541511", sector=None)
+            if procurement:
+                count = float(procurement.get("opportunity_count", 0) or 0)
+                total_value = float(procurement.get("total_value", 0.0) or 0.0)
+                point_id = await bailey.ingest_knowledge_point(
+                    content=f"Government pipeline shows {count:.0f} active AI/ML opportunities totaling ${total_value:,.0f}",
+                    source_id=self.source_id,
+                    category="government_procurement",
+                    numerical_value=count,
+                    confidence=0.86
+                )
+                knowledge_ids.append(point_id)
+
+                for agency in (procurement.get("top_agencies") or [])[:5]:
+                    point_id = await bailey.ingest_knowledge_point(
+                        content=f"Top procurement agency focus: {agency}",
+                        source_id=self.source_id,
+                        category="government_procurement_agencies",
+                        confidence=0.78
+                    )
+                    knowledge_ids.append(point_id)
+        except Exception as exc:
+            logging.error(f"Procurement connector error: {exc}")
+        return knowledge_ids
+
+class TechnologyMomentumConnector(BaileyConnector):
+    """Connector for technology adoption momentum"""
+
+    def __init__(self):
+        super().__init__("product_hunt")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            trends = await technology_trend_analyzer.get_trend_report("ai")
+            if trends:
+                adoption_raw = trends.get("adoption_index")
+                adoption = float(adoption_raw) if adoption_raw is not None else 0.0
+                point_id = await bailey.ingest_knowledge_point(
+                    content=f"Technology adoption index is {adoption:.1f} based on Product Hunt + Stack Exchange momentum",
+                    source_id=self.source_id,
+                    category="technology_trend_intelligence",
+                    numerical_value=adoption,
+                    confidence=0.83
+                )
+                knowledge_ids.append(point_id)
+
+                for trend in trends.get("trends", [])[:5]:
+                    label = trend.get("label")
+                    score = trend.get("score")
+                    point_id = await bailey.ingest_knowledge_point(
+                        content=f"Technology trend: {label} momentum score {score}",
+                        source_id=self.source_id,
+                        category="technology_trends",
+                        numerical_value=float(score) if isinstance(score, (int, float)) else None,
+                        confidence=0.8
+                    )
+                    knowledge_ids.append(point_id)
+        except Exception as exc:
+            logging.error(f"Technology trend connector error: {exc}")
+        return knowledge_ids
+
+class EconomicContextConnector(BaileyConnector):
+    """Connector for BEA/BLS enhanced economic context"""
+
+    def __init__(self):
+        super().__init__("bea_api")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            context = await enhanced_economic_analyzer.get_economic_context(industry="ai", region="US")
+            if context:
+                timing_raw = context.get("timing_index")
+                recession_raw = context.get("recession_risk")
+                timing = float(timing_raw) if timing_raw is not None else 0.0
+                recession = float(recession_raw) if recession_raw is not None else 0.0
+                point_id = await bailey.ingest_knowledge_point(
+                    content=f"Economic timing index {timing:.1f} with recession risk {recession:.1f} from BEA/BLS composite",
+                    source_id=self.source_id,
+                    category="economic_health_intelligence",
+                    numerical_value=timing,
+                    confidence=0.84
+                )
+                knowledge_ids.append(point_id)
+        except Exception as exc:
+            logging.error(f"Economic context connector error: {exc}")
+        return knowledge_ids
+
 
 class BaileyDataPipeline:
     """Main data pipeline for Bailey to ingest from all sources"""
@@ -993,7 +1172,12 @@ class BaileyDataPipeline:
             "github": GitHubConnector,
             "arxiv": ArxivConnector,
             "yc": YCombinatorConnector,
-            "reddit": RedditConnector
+            "reddit": RedditConnector,
+            "census": CensusBusinessFormationConnector,
+            "international": InternationalMarketConnector,
+            "procurement": ProcurementConnector,
+            "technology_trends": TechnologyMomentumConnector,
+            "economic_context": EconomicContextConnector
         }
         
     async def run_full_ingestion(self) -> Dict[str, Any]:
@@ -1040,7 +1224,7 @@ class BaileyDataPipeline:
         """Run incremental update for specific sources"""
         
         if source_names is None:
-            source_names = ["github", "reddit"]  # Fast sources for frequent updates
+            source_names = ["github", "reddit", "technology_trends", "census"]  # Fast sources for frequent updates
             
         results = {
             "start_time": datetime.now(),

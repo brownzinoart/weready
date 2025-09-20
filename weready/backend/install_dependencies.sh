@@ -85,7 +85,6 @@ required = {
     "xmltodict": "0.13.0",
     "dateutil": "2.8.0",
     "redis": "4.5.0",
-    "aioredis": "2.0.0",
     "backoff": "2.2.0",
 }
 

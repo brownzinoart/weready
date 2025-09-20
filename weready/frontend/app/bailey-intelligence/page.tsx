@@ -1,10 +1,10 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
 import Navigation from "../components/Navigation";
 import CodeIntelligenceTab from "../components/tabs/CodeIntelligenceTab";
-import BusinessTab from "../components/tabs/BusinessTab";
+import BusinessIntelligenceTab from "../components/tabs/BusinessIntelligenceTab";
 import InvestmentTab from "../components/tabs/InvestmentTab";
 import DesignTab from "../components/tabs/DesignTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
@@ -37,15 +37,44 @@ export default function BaileyIntelligence() {
   const [repoAnalysis, setRepoAnalysis] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  
-  // Handle URL parameters for deep linking
+  const [businessIntelLoading, setBusinessIntelLoading] = useState(true);
+  const [businessIntelError, setBusinessIntelError] = useState<string | null>(null);
+
+  const initializeBusinessIntelligence = useCallback(async () => {
+    setBusinessIntelLoading(true);
+    setBusinessIntelError(null);
+
+    try {
+      // Placeholder for future backend handshake; content is static today.
+      await Promise.resolve();
+    } catch (error) {
+      console.error("Failed to initialize business intelligence methodology:", error);
+      setBusinessIntelError("We couldn't load the business intelligence methodology right now. Please try again.");
+    } finally {
+      setBusinessIntelLoading(false);
+    }
+  }, []);
+
+  // Handle URL hash for deep linking
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tab = urlParams.get('tab');
-      if (tab) {
-        setActiveTab(tab);
+      const hash = window.location.hash.replace('#', '');
+      if (hash) {
+        setActiveTab(hash);
       }
+
+      // Listen for hash changes
+      const handleHashChange = () => {
+        const newHash = window.location.hash.replace('#', '');
+        if (newHash) {
+          setActiveTab(newHash);
+        } else {
+          setActiveTab('overview'); // Default to overview if no hash
+        }
+      };
+
+      window.addEventListener('hashchange', handleHashChange);
+      return () => window.removeEventListener('hashchange', handleHashChange);
     }
   }, []);
   const [sourcesStatus, setSourcesStatus] = useState<any>(null);
@@ -57,6 +86,10 @@ export default function BaileyIntelligence() {
   const [sourceHealth, setSourceHealth] = useState<any>(null);
   const [lastUpdated, setLastUpdated] = useState<string>("");
   const [contradictions, setContradictions] = useState<any[]>([]);
+
+  useEffect(() => {
+    initializeBusinessIntelligence();
+  }, [initializeBusinessIntelligence]);
 
   // Load Bailey intelligence overview
   useEffect(() => {
@@ -292,7 +325,10 @@ export default function BaileyIntelligence() {
               ].map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    window.location.hash = tab.id;
+                  }}
                   className={`py-4 px-3 border-b-2 font-medium text-xs sm:text-sm flex items-center space-x-1 sm:space-x-2 whitespace-nowrap ${
                     activeTab === tab.id
                       ? "border-blue-500 text-blue-600"
@@ -350,17 +386,28 @@ export default function BaileyIntelligence() {
 
             {/* Business Intelligence Tab */}
             {activeTab === "business" && (
-              <BusinessTab result={repoAnalysis || {
-                breakdown: {
-                  business_model: {
-                    score: 75,
-                    weight: 25,
-                    detailed_analysis: {},
-                    insights: []
-                  }
-                },
-                brain_recommendations: []
-              }} />
+              <div className="space-y-4">
+                {businessIntelLoading && (
+                  <div className="flex justify-center py-12">
+                    <span className="text-sm text-gray-500">Loading business intelligence methodology...</span>
+                  </div>
+                )}
+                {businessIntelError && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <p className="font-medium">{businessIntelError}</p>
+                    <button
+                      type="button"
+                      onClick={initializeBusinessIntelligence}
+                      className="mt-3 inline-flex items-center rounded-md border border-red-300 bg-white px-3 py-1 text-xs font-semibold text-red-600 hover:bg-red-100"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {!businessIntelLoading && !businessIntelError && (
+                  <BusinessIntelligenceTab />
+                )}
+              </div>
             )}
 
             {/* Investment Intelligence Tab */}
