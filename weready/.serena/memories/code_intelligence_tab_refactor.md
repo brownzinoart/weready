@@ -1,0 +1,1 @@
+The Code Intelligence tab in the frontend now focuses on methodology instead of mock metrics. The pipeline intro is consumer-friendly and aligns with the Bailey multi-layer analysis narrative. Security, AI detection, and methodology sections now explain workflow, detection playbooks, and operational outcomes instead of presenting fabricated numbers.

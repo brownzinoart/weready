@@ -1,0 +1,26 @@
+# WeReady Project Overview
+
+- Purpose: WeReady provides an evidence‑based “AI code reality check” for founders and developers. It scores repositories or code snippets, detects hallucinated packages, and produces actionable recommendations and roadmaps. The platform includes OAuth, JWT auth, and a dashboard experience.
+- Components:
+  - Backend (FastAPI, Python): API endpoints for scans, free analysis funnel, OAuth, JWT, user and analysis models, and “Bailey/Brain” intelligence modules.
+  - Frontend (Next.js 14 + TypeScript + Tailwind): Dashboard, results, onboarding, and OAuth callback that stores tokens in localStorage.
+  - Database: SQLAlchemy ORM; default `sqlite` via `DATABASE_URL` (SQLite file in backend).
+- Key Entry Points:
+  - API server: `backend/app/main.py` (FastAPI). Start with `uvicorn app.main:app --reload` inside `backend`.
+  - Frontend app: `frontend` Next.js app. Start with `npm run dev` inside `frontend`.
+- Core Backend Routes (selection):
+  - `GET /` – health/info.
+  - `POST /scan/brain` – primary analysis combining hallucination detection, GitHub analysis, and “brain” intelligence.
+  - `POST /scan/quick` – legacy comprehensive score flow.
+  - `POST /api/analyze/free` – funnels anonymous users into a free baseline analysis and generates a signup prompt; persists an `Analysis` row.
+  - OAuth: `GET /api/auth/{provider}`, `GET /api/auth/{provider}/callback`, `POST /api/auth/signup`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`.
+- Persistence:
+  - SQLAlchemy session per request via `app.database.connection.get_db()`; tables created by calling `init_db()`.
+  - Default DB path: `sqlite:///./weready.db` (resolves inside `backend`).
+- Third‑party Integrations:
+  - GitHub: repository analysis (real network call in `app/services/github_analyzer.py`).
+  - OAuth via Authlib clients (GitHub/Google/LinkedIn) – requires client IDs/secrets.
+  - Hallucination detection uses tree‑sitter for Python/JS parsing.
+- Notable Defaults / Demo:
+  - Some endpoints (e.g., `/trending/github`, portions of OAuth repo listing) include obvious demo/mocked data. Real tokens/storage should be used for production.
+- OS/Runtime: Darwin (macOS). Repo contains both Python and TypeScript workspaces.
