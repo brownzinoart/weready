@@ -16,10 +16,21 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+weready/frontend/out/
+*.tsbuildinfo
 
 # Logs
 *.log
 npm-debug.log*
+
+# Local tooling + agent configs
+.serena/
+.claude/
+.traycer/
+
+# Local logs/cache directories
+logs/
+weready/logs/
 
 # OS
 .DS_Store

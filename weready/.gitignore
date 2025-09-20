@@ -4,11 +4,14 @@ __pycache__/
 *.pyc
 .env
 .env.local
+.env.*
 .next/
 dist/
 build/
 *.egg-info/
 *.log
+.tsbuildinfo
+frontend/out/
 .DS_Store
 Thumbs.db
 coverage/

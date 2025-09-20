@@ -3,8 +3,48 @@
   publish = "out"
   command = "npm run build"
 
+[functions]
+  directory = "netlify/functions"
+
 [build.environment]
   NODE_VERSION = "18"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/api/:splat"
+  status = 200
+
+[[redirects]]
+  from = "/bailey/semantic-query"
+  to = "/.netlify/functions/bailey-semantic-query"
+  status = 200
+
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
+  from = "/github/trending-intelligence"
+  to = "/.netlify/functions/github-trending-intelligence"
+  status = 200
+
+[[redirects]]
+  from = "/github/repository-analysis"
+  to = "/.netlify/functions/github-repository-analysis"
+  status = 200
+
+[[redirects]]
+  from = "/semantic-search"
+  to = "/.netlify/functions/semantic-search-engine"
+  status = 200
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    X-XSS-Protection = "1; mode=block"
 
 [[redirects]]
   from = "/*"

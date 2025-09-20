@@ -1,0 +1,69 @@
+# Build artifacts and dependencies
+node_modules/
+.next/
+dist/
+build/
+out/
+.cache/
+.turbo/
+coverage/
+venv/
+__pycache__/
+
+# Environment and secrets
+.env*
+!.env.example
+*.key
+*.pem
+secrets/
+
+# Large media files and documents
+*.mp4
+*.mov
+*.pdf
+*.zip
+*.tar.gz
+*.gz
+public/uploads/
+assets/videos/
+weready/insights/
+
+# IDE and system
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Database and migrations
+**/migrations/
+**/fixtures/
+*.db
+*.sqlite
+data/raw/
+
+# Documentation archives
+docs/archive/
+legacy/
+deprecated/
+OLD_*/
+
+# Test artifacts
+**/__snapshots__/
+*.log
+test-results/
+
+# Lock files (too large for context)
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build caches and webpack artifacts
+**/cache/
+trace
+
+# Claude state files
+.claude/state/
+
+# Generated optimization files
+AUTONOMOUS-OPTIMIZATION.md
+docs/token-audit.md
