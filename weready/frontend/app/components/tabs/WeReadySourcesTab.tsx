@@ -28,13 +28,9 @@ import {
   exportSourceHealthToCsv,
   formatRelativeTime,
   formatServiceReliability,
-  getConsumerStatus,
-  getConsumerStatusBadgeClasses,
   getDataSourceIndicator,
   getServiceContinuityMessage,
   getStatusBadgeClasses,
-  getStatusPulseClasses,
-  type ConsumerStatus,
 } from '../../utils/sourceHealthUtils';
 
 const STATUS_LEGEND = [
@@ -120,7 +116,8 @@ export default function WeReadySourcesTab({
   }, [sourceHealth]);
 
   const dataSourceIndicator = useMemo(() => {
-    return getDataSourceIndicator(loading, !!error, sourceHealth);
+    const data = sourceHealth.length > 0 ? sourceHealth : null;
+    return getDataSourceIndicator(loading, !!error, data);
   }, [loading, error, sourceHealth]);
 
   const serviceMessage = useMemo(() => {
@@ -172,7 +169,7 @@ export default function WeReadySourcesTab({
                   {dataSourceIndicator === 'live' ? 'Real-time updates' : 'Cached data'}
                 </span>
                 <span className="text-blue-600">
-                  Last update {formatRelativeTime(lastUpdated)}
+                  Last update {formatRelativeTime(lastUpdated || null)}
                 </span>
               </div>
             </div>

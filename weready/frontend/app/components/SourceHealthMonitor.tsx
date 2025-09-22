@@ -18,18 +18,13 @@ import type {
 import {
   formatDataFreshness,
   formatRelativeTime,
-  formatServiceReliability,
   formatUptime,
   formatConnectionQuality,
   getBusinessImpactDescription,
   getConnectionQuality,
   getConsumerStatus,
   getConsumerStatusBadgeClasses,
-  getConsumerStatusDescription,
   getQualityColor,
-  getSimpleStatus,
-  getSimpleStatusBadgeClasses,
-  type ConsumerStatus,
 } from '../utils/sourceHealthUtils';
 
 interface SourceHealthMonitorProps {
@@ -244,11 +239,11 @@ export default function SourceHealthMonitor({
                 <div className="grid gap-3 text-xs text-slate-500 md:grid-cols-2">
                   <div>
                     <p className="font-medium text-slate-600">Last refresh</p>
-                    <p>{formatRelativeTime(source.lastUpdate)}</p>
+                    <p>{formatRelativeTime(source.lastUpdate ?? null)}</p>
                   </div>
                   <div>
                     <p className="font-medium text-slate-600">Data freshness</p>
-                    <p>{formatDataFreshness(source.lastUpdate)}</p>
+                    <p>{formatDataFreshness(source.dataFreshness ?? source.lastUpdate ?? null)}</p>
                   </div>
                   <div className="md:col-span-2">
                     <p className="font-medium text-slate-600">Business impact</p>

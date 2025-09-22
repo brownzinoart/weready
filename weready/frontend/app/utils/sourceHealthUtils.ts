@@ -1,9 +1,14 @@
 import {
   CategoryCoverage,
+  ConsumerStatus,
   ContradictionSeverity,
+  DataSourceIndicator,
   SourceHealthData,
   SourceStatus,
+  SourceInventoryItem,
 } from '@/app/types/sources';
+
+export type { ConsumerStatus, DataSourceIndicator } from '@/app/types/sources';
 
 export type ConnectionQuality = 'good' | 'fair' | 'poor' | 'unknown';
 
@@ -112,6 +117,8 @@ export function getSimpleStatus(status: SourceStatus): 'Online' | 'Offline' | 'M
       return 'Online';
     case 'maintenance':
       return 'Maintenance';
+    case 'sunset':
+      return 'Offline';
     case 'offline':
     default:
       return 'Offline';
@@ -128,6 +135,8 @@ export function getStatusBadgeClasses(status: SourceStatus): string {
       return 'bg-rose-50 text-rose-700 border-rose-200';
     case 'maintenance':
       return 'bg-purple-50 text-purple-700 border-purple-200';
+    case 'sunset':
+      return 'bg-purple-50 text-purple-700 border-purple-200';
     default:
       return 'bg-slate-50 text-slate-700 border-slate-200';
   }
@@ -143,6 +152,8 @@ export function getStatusPulseClasses(status: SourceStatus): string {
       return 'bg-rose-500';
     case 'maintenance':
       return 'bg-purple-500 animate-pulse';
+    case 'sunset':
+      return 'bg-purple-500';
     default:
       return 'bg-slate-400';
   }
@@ -157,6 +168,8 @@ export function getStatusColor(status: SourceStatus): string {
     case 'offline':
       return 'rose';
     case 'maintenance':
+      return 'purple';
+    case 'sunset':
       return 'purple';
     default:
       return 'slate';
@@ -200,6 +213,7 @@ export function calculateOverallHealthScore(
     degraded: 0.7,
     maintenance: 0.6,
     offline: 0.2,
+    sunset: 0.1,
   };
   const total = sources.reduce((accumulator, source) => {
     const uptimeScore = source.uptime / 100;
@@ -228,7 +242,7 @@ export function calculateCategorySummary(
     }
 
     summary[source.category].total += 1;
-    if (source.status !== 'offline') {
+    if (source.status !== 'offline' && source.status !== 'sunset') {
       summary[source.category].implemented += 1;
     }
     summary[source.category].health_score += source.credibility;
@@ -299,6 +313,25 @@ export function exportSourceHealthToCsv(sources: SourceHealthData[]): void {
     'API Quota Limit',
   ];
 
+  const normaliseTemporal = (
+    value: SourceHealthData['lastUpdate'] | SourceHealthData['dataFreshness'],
+  ): string => {
+    if (value == null) {
+      return '';
+    }
+
+    if (value instanceof Date) {
+      return value.toISOString();
+    }
+
+    if (typeof value === 'number') {
+      const parsed = new Date(value);
+      return Number.isNaN(parsed.getTime()) ? String(value) : parsed.toISOString();
+    }
+
+    return value;
+  };
+
   const body = sources.map((source) => [
     source.source_id,
     source.name,
@@ -307,8 +340,8 @@ export function exportSourceHealthToCsv(sources: SourceHealthData[]): void {
     source.uptime,
     source.responseTime,
     source.credibility,
-    source.lastUpdate,
-    source.dataFreshness,
+    normaliseTemporal(source.lastUpdate),
+    normaliseTemporal(source.dataFreshness),
     source.errorRate,
     source.apiQuotaRemaining ?? '',
     source.apiQuotaLimit ?? '',
@@ -359,12 +392,8 @@ export function getSeverityBadgeClasses(
   }
 }
 
-// Consumer-friendly status types
-export type ConsumerStatus = 'ON' | 'NOT RESPONDING' | 'OFFLINE' | 'SUNSET';
-export type DataSourceIndicator = 'live' | 'cached' | 'mock';
-
 // Consumer-friendly status mapping functions
-export function getConsumerStatus(status: SourceStatus | 'sunset'): ConsumerStatus {
+export function getConsumerStatus(status: SourceStatus): ConsumerStatus {
   switch (status) {
     case 'online':
     case 'degraded':
@@ -411,10 +440,20 @@ export function getConsumerStatusDescription(status: ConsumerStatus): string {
 }
 
 // Data source indicator functions
-export function getDataSourceIndicator(isLoading: boolean, hasError: boolean, data: any): DataSourceIndicator {
-  if (isLoading) return 'cached';
-  if (hasError) return 'cached';
-  if (!data) return 'mock';
+export function getDataSourceIndicator(
+  isLoading: boolean,
+  hasError: boolean,
+  data: SourceHealthData[] | null | undefined,
+): DataSourceIndicator {
+  if (isLoading) {
+    return 'cached';
+  }
+  if (hasError) {
+    return data && data.length > 0 ? 'cached' : 'mock';
+  }
+  if (!data || data.length === 0) {
+    return 'mock';
+  }
   return 'live';
 }
 
@@ -451,13 +490,25 @@ export function formatServiceReliability(uptime: number): string {
   return 'Service experiencing issues';
 }
 
-export function formatDataFreshness(lastUpdate: string | Date | null): string {
-  if (!lastUpdate) {
-    return 'Data freshness unknown';
+function parseDateInput(value: string | number | Date | null | undefined): Date | null {
+  if (value == null) {
+    return null;
   }
 
-  const parsed = new Date(lastUpdate);
-  if (Number.isNaN(parsed.getTime())) {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+export function formatDataFreshness(
+  dataFreshness: SourceHealthData['dataFreshness'] | Date | null | undefined,
+): string {
+  const parsed = parseDateInput(dataFreshness ?? null);
+
+  if (!parsed) {
     return 'Data freshness unknown';
   }
 
@@ -494,50 +545,45 @@ export function getBusinessImpactDescription(status: ConsumerStatus): string {
   }
 }
 
-// Comprehensive source merging utilities
-export interface SourceInventoryItem {
-  source_id: string;
-  name: string;
-  category: string;
-  description?: string;
-  isAvailable: boolean;
-}
-
 export function mergeInventoryWithHealth(
   inventory: SourceInventoryItem[],
-  healthData: SourceHealthData[]
+  healthData: SourceHealthData[],
 ): SourceHealthData[] {
-  const healthMap = new Map(healthData.map(h => [h.source_id, h]));
+  const healthMap = new Map(healthData.map((record) => [record.source_id, record]));
 
-  return inventory.map(item => {
+  return inventory.map((item) => {
     const health = healthMap.get(item.source_id);
     if (health) {
       return health;
     }
+
+    const isAvailable = item.status === 'implemented' || item.status === 'mock';
 
     // Create placeholder health data for inventory items without health data
     return {
       source_id: item.source_id,
       name: item.name,
       category: item.category,
-      status: item.isAvailable ? 'maintenance' : 'offline' as SourceStatus,
-      uptime: item.isAvailable ? 90 : 0,
+      status: isAvailable ? 'maintenance' : 'sunset',
+      uptime: isAvailable ? 90 : 0,
       responseTime: 0,
-      credibility: item.isAvailable ? 80 : 0,
+      credibility: isAvailable ? 80 : 0,
       lastUpdate: null,
-      dataFreshness: 0,
+      dataFreshness: null,
       errorRate: 0,
       dataPointsLast24h: 0,
       knowledgePoints: 0,
-      trend: 'stable' as const,
-      description: item.description || `${item.name} data source`,
-    };
+      healthTrend: 'stable',
+      healthHistory: [],
+      maintenanceWindow: isAvailable ? undefined : 'Activation pending',
+      description: item.implementation_notes ?? undefined,
+    } satisfies SourceHealthData;
   });
 }
 
 export function getCompleteSourceList(
   inventory: SourceInventoryItem[],
-  healthData: SourceHealthData[]
+  healthData: SourceHealthData[],
 ): SourceHealthData[] {
   const merged = mergeInventoryWithHealth(inventory, healthData);
 

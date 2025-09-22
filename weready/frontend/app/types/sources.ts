@@ -1,4 +1,6 @@
-export type SourceStatus = 'online' | 'degraded' | 'offline' | 'maintenance';
+export type SourceStatus = 'online' | 'degraded' | 'offline' | 'maintenance' | 'sunset';
+export type ConsumerStatus = 'ON' | 'NOT RESPONDING' | 'OFFLINE' | 'SUNSET';
+export type DataSourceIndicator = 'live' | 'cached' | 'mock';
 export type HealthTrend = 'improving' | 'stable' | 'degrading';
 
 export type SourceConnectionStatus =
@@ -49,9 +51,9 @@ export interface SourceHealthData {
   uptime: number;
   responseTime: number;
   credibility: number;
-  lastUpdate: string;
+  lastUpdate: string | Date | null;
   errorRate: number;
-  dataFreshness: string;
+  dataFreshness: string | Date | null;
   apiQuotaRemaining?: number;
   apiQuotaLimit?: number;
   dependsOn?: string[];
@@ -62,6 +64,7 @@ export interface SourceHealthData {
   knowledgePoints?: number;
   maintenanceWindow?: string;
   healthHistory?: number[];
+  description?: string;
 }
 
 export interface SourceInventoryItem {
@@ -128,6 +131,28 @@ export interface SourceStatusResponse {
   sources: Record<string, SourceHealthData>;
   metrics: SourceMetrics;
   last_updated: string;
+}
+
+export type CacheDataSource = 'network' | 'stream' | 'mock' | 'restore';
+
+export interface CacheMetadata {
+  lastUpdated: string;
+  version: string;
+  expiresAt: string;
+  dataSource: CacheDataSource;
+}
+
+export interface CachedSourceData {
+  data: SourceHealthData[];
+  metadata: CacheMetadata;
+  isExpired: boolean;
+}
+
+export interface CacheInfo {
+  isAvailable: boolean;
+  lastCacheTime: string | null;
+  cacheSize: number;
+  isExpired: boolean;
 }
 
 export interface SourceStatusStreamEvent {

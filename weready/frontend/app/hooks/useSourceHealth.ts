@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { apiCall, getApiUrl } from '@/lib/api-config';
+import { sourceHealthCache } from '@/app/services/sourceHealthCache';
 import type {
   SourceConnectionState,
   SourceHealthData,
@@ -13,7 +14,6 @@ import type {
 import { calculateOverallHealthScore } from '@/app/utils/sourceHealthUtils';
 import { createSourceMonitoringTracker } from '@/app/utils/sourceHealthMonitoring';
 
-const DEFAULT_REFRESH_INTERVAL = 30_000;
 const HEALTH_ENDPOINT = '/api/sources/health';
 const STREAM_ENDPOINT = '/api/sources/status/stream';
 const TEST_ENDPOINT = (sourceId: string) => `/api/sources/${sourceId}/test`;
@@ -28,6 +28,16 @@ const MAX_BACKOFF_MS = 20_000;
 const STREAM_INITIAL_BACKOFF_MS = 2_000;
 const STREAM_MAX_BACKOFF_MS = 60_000;
 const STREAM_FAILURE_THRESHOLD = 3;
+const MIN_CACHE_TTL_MS = 60_000;
+const STALE_CACHE_MESSAGE =
+  'Cached telemetry restored while we refresh live source health data.';
+
+const {
+  getSourceHealth: getCachedSourceHealth,
+  getMetrics: getCachedMetrics,
+  storeSourceHealth: cacheSourceHealth,
+  storeMetrics: cacheMetrics,
+} = sourceHealthCache;
 
 const now = () => {
   if (typeof performance !== 'undefined' && typeof performance.now === 'function') {
@@ -484,7 +494,6 @@ function buildMockMetrics(): SourceMetrics {
       ),
     system_health_score: calculateOverallHealthScore(MOCK_SOURCE_HEALTH),
     last_updated: new Date().toISOString(),
-    refresh_interval_seconds: DEFAULT_REFRESH_INTERVAL / 1000,
     total_knowledge_points: MOCK_SOURCE_HEALTH.reduce(
       (acc, source) => acc + (source.knowledgePoints ?? 0),
       0,
@@ -513,17 +522,57 @@ export function useSourceHealth(): UseSourceHealthReturn {
   const [isStreaming, setIsStreaming] = useState(false);
   const streamFailureCountRef = useRef(0);
   const fallbackUsedRef = useRef(false);
-  const refreshIntervalRef = useRef<number>(DEFAULT_REFRESH_INTERVAL);
   const eventSourceRef = useRef<EventSource | null>(null);
   const isMountedRef = useRef(true);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFailureMessageRef = useRef<string | null>(null);
+  const hasRestoredCacheRef = useRef(false);
 
   const syncMonitoringState = useCallback(() => {
     const snapshot = monitoringRef.current.getSnapshot();
     setMonitoringSnapshot(snapshot);
     setConnectionState(snapshot.connection);
   }, []);
+
+  const restoreFromCache = useCallback(async () => {
+    if (hasRestoredCacheRef.current || typeof window === 'undefined') {
+      return false;
+    }
+
+    hasRestoredCacheRef.current = true;
+
+    try {
+      const [cachedHealth, cachedMetrics] = await Promise.all([
+        getCachedSourceHealth(),
+        getCachedMetrics(),
+      ]);
+
+      let restored = false;
+
+      if (cachedHealth?.data?.length && isMountedRef.current) {
+        setSourceHealth(cachedHealth.data);
+        setLastUpdated(cachedHealth.metadata.lastUpdated);
+        setUsingMockData(false);
+        setLoading(false);
+        restored = true;
+        if (cachedHealth.isExpired) {
+          setError((previous) => previous ?? STALE_CACHE_MESSAGE);
+        }
+      }
+
+      if (cachedMetrics?.data && isMountedRef.current) {
+        setMetrics(cachedMetrics.data);
+        if (!restored && cachedMetrics.metadata.lastUpdated) {
+          setLastUpdated(cachedMetrics.metadata.lastUpdated);
+        }
+      }
+
+      return restored;
+    } catch (err) {
+      console.warn('Failed to restore cached source health data.', err);
+      return false;
+    }
+  }, [getCachedMetrics, getCachedSourceHealth]);
 
   const applyPayload = useCallback(
     (payload: SourceStatusResponse, context: 'fetch' | 'stream' = 'fetch') => {
@@ -532,9 +581,18 @@ export function useSourceHealth(): UseSourceHealthReturn {
       setSourceHealth(sources);
       setMetrics(computedMetrics);
       setLastUpdated(computedMetrics.last_updated);
-      refreshIntervalRef.current =
-        (computedMetrics.refresh_interval_seconds ?? DEFAULT_REFRESH_INTERVAL / 1000) *
-        1000;
+      const cacheTtl = MIN_CACHE_TTL_MS;
+      const cacheSource = context === 'stream' ? 'stream' : 'network';
+      void cacheSourceHealth(sources, {
+        dataSource: cacheSource,
+        lastUpdated: computedMetrics.last_updated,
+        expiresInMs: cacheTtl,
+      });
+      void cacheMetrics(computedMetrics, {
+        dataSource: cacheSource,
+        lastUpdated: computedMetrics.last_updated,
+        expiresInMs: cacheTtl,
+      });
       fallbackUsedRef.current = false;
       setUsingMockData(false);
       monitoringRef.current.resetRetries();
@@ -545,7 +603,7 @@ export function useSourceHealth(): UseSourceHealthReturn {
       lastFailureMessageRef.current = null;
       setError(null);
     },
-    [syncMonitoringState],
+    [cacheMetrics, cacheSourceHealth, syncMonitoringState],
   );
 
   const applyMockData = useCallback(
@@ -555,7 +613,6 @@ export function useSourceHealth(): UseSourceHealthReturn {
       const mockMetrics = buildMockMetrics();
       setMetrics(mockMetrics);
       setLastUpdated(mockMetrics.last_updated);
-      refreshIntervalRef.current = DEFAULT_REFRESH_INTERVAL;
       setUsingMockData(true);
       fallbackUsedRef.current = true;
       monitoringRef.current.setUsingMockData(true);
@@ -661,9 +718,30 @@ export function useSourceHealth(): UseSourceHealthReturn {
         setError(friendlyMessage);
         lastFailureMessageRef.current = lastErrorMessage || friendlyMessage;
         monitoringRef.current.setStatus('degraded');
-        monitoringRef.current.setUsingMockData(true);
+
+        const cachedHealth = await getCachedSourceHealth();
+
+        if (cachedHealth?.data?.length && isMountedRef.current) {
+          monitoringRef.current.setUsingMockData(false);
+          setSourceHealth(cachedHealth.data);
+          setLastUpdated(cachedHealth.metadata.lastUpdated);
+          setUsingMockData(false);
+          fallbackUsedRef.current = false;
+
+          const cachedMetrics = await getCachedMetrics();
+          if (cachedMetrics?.data) {
+            setMetrics(cachedMetrics.data);
+          }
+
+          if (cachedHealth.isExpired) {
+            setError((previous) => previous ?? friendlyMessage);
+          }
+        } else {
+          monitoringRef.current.setUsingMockData(true);
+          applyMockData(lastErrorMessage);
+        }
+
         syncMonitoringState();
-        applyMockData(lastErrorMessage);
       } else {
         setError(null);
       }
@@ -674,15 +752,27 @@ export function useSourceHealth(): UseSourceHealthReturn {
       setIsRefreshing(false);
       return success;
     },
-    [applyMockData, applyPayload, syncMonitoringState],
+    [applyMockData, applyPayload, getCachedMetrics, getCachedSourceHealth, syncMonitoringState],
   );
 
   useEffect(() => {
+    let cancelled = false;
     isMountedRef.current = true;
     monitoringRef.current.setStatus('initializing');
     syncMonitoringState();
-    fetchStatus();
+
+    const initialise = async () => {
+      const restored = await restoreFromCache();
+      if (cancelled) {
+        return;
+      }
+      await fetchStatus(restored);
+    };
+
+    void initialise();
+
     return () => {
+      cancelled = true;
       isMountedRef.current = false;
       monitoringRef.current.setStatus('offline');
       syncMonitoringState();
@@ -695,7 +785,7 @@ export function useSourceHealth(): UseSourceHealthReturn {
         reconnectTimeoutRef.current = null;
       }
     };
-  }, [fetchStatus, syncMonitoringState]);
+  }, [fetchStatus, restoreFromCache, syncMonitoringState]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -819,18 +909,6 @@ export function useSourceHealth(): UseSourceHealthReturn {
       syncMonitoringState();
     };
   }, [applyMockData, applyPayload, syncMonitoringState]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') {
-      return () => undefined;
-    }
-    const interval = window.setInterval(() => {
-      if (!document.hidden) {
-        fetchStatus(true);
-      }
-    }, refreshIntervalRef.current);
-    return () => window.clearInterval(interval);
-  }, [fetchStatus, lastUpdated]);
 
   const refreshHealth = useCallback(async () => {
     setIsRefreshing(true);

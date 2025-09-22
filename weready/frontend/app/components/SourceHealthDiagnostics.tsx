@@ -2,36 +2,35 @@
 
 import {
   Activity,
-  Bell,
   AlertTriangle,
+  Bell,
   CheckCircle2,
-  CloudFog,
   Download,
-  Gauge,
-  HeartPulse,
-  ServerCrash,
-  SignalHigh,
-  SignalMedium,
-  SignalZero,
+  RefreshCw,
   TimerReset,
-} from "lucide-react";
-import type { UseSourceHealthReturn } from "@/app/types/sources";
+  Wifi,
+} from 'lucide-react';
+import type { UseSourceHealthReturn } from '@/app/types/sources';
 import {
   exportSourceHealthToCsv,
+  formatConnectionQuality,
   formatRelativeTime,
-  getStatusBadgeClasses,
-} from "@/app/utils/sourceHealthUtils";
+  getConnectionQuality,
+  getQualityColor,
+  getSimpleStatus,
+  getSimpleStatusBadgeClasses,
+} from '@/app/utils/sourceHealthUtils';
 
 export interface SourceHealthDiagnosticsProps {
   state: UseSourceHealthReturn;
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  initializing: 'Initializing connection',
-  connecting: 'Connecting to Bailey intelligence backend',
-  connected: 'Streaming live telemetry',
-  reconnecting: 'Reconnecting…',
-  degraded: 'Fallback telemetry in use',
+  initializing: 'Getting ready',
+  connecting: 'Connecting',
+  connected: 'Online',
+  reconnecting: 'Reconnecting',
+  degraded: 'Online with delays',
   offline: 'Offline',
 };
 
@@ -40,16 +39,15 @@ const statusIcon = (status: string) => {
     case 'connected':
       return <CheckCircle2 className="h-4 w-4 text-emerald-600" />;
     case 'reconnecting':
-      return <SignalMedium className="h-4 w-4 text-amber-500" />;
-    case 'degraded':
-      return <AlertTriangle className="h-4 w-4 text-amber-600" />;
     case 'connecting':
     case 'initializing':
-      return <SignalHigh className="h-4 w-4 text-sky-500" />;
+      return <RefreshCw className="h-4 w-4 text-blue-500" />;
+    case 'degraded':
+      return <AlertTriangle className="h-4 w-4 text-amber-600" />;
     case 'offline':
-      return <SignalZero className="h-4 w-4 text-rose-500" />;
+      return <AlertTriangle className="h-4 w-4 text-rose-500" />;
     default:
-      return <CloudFog className="h-4 w-4 text-slate-400" />;
+      return <Wifi className="h-4 w-4 text-slate-400" />;
   }
 };
 
@@ -68,15 +66,25 @@ export default function SourceHealthDiagnostics({
   } = state;
 
   const statusLabel = STATUS_LABELS[connectionState.status] ?? 'Unknown';
-  const latencyLabel =
-    monitoring.performance.averageLatencyMs != null
-      ? `${monitoring.performance.averageLatencyMs} ms`
-      : 'n/a';
+  const connectionQuality = getConnectionQuality(
+    monitoring.performance.averageLatencyMs,
+  );
+  const connectionQualityLabel = formatConnectionQuality(connectionQuality);
 
-  const p95LatencyLabel =
-    monitoring.performance.p95LatencyMs != null
-      ? `${monitoring.performance.p95LatencyMs} ms`
-      : 'n/a';
+  const statusCounts = sourceHealth.reduce(
+    (accumulator, source) => {
+      const simple = getSimpleStatus(source.status);
+      if (simple === 'Online') {
+        accumulator.online += 1;
+      } else if (simple === 'Offline') {
+        accumulator.offline += 1;
+      } else {
+        accumulator.maintenance += 1;
+      }
+      return accumulator;
+    },
+    { online: 0, offline: 0, maintenance: 0 },
+  );
 
   const mostImpactedSources = sourceHealth
     .filter((source) => source.status === 'degraded' || source.status === 'offline')
@@ -88,14 +96,13 @@ export default function SourceHealthDiagnostics({
         <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
           <div className="space-y-1">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
-              Live Telemetry
+              Connection Status
             </p>
             <h2 className="text-xl font-semibold text-slate-900">
-              Bailey Intelligence Source Diagnostics
+              Source Health Overview
             </h2>
             <p className="text-sm text-slate-600">
-              Monitor live connector health, latency, and recovery behaviour for
-              the core sources powering Bailey Intelligence.
+              Check how your data sources are doing at a glance—no technical dashboards required.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
@@ -109,7 +116,7 @@ export default function SourceHealthDiagnostics({
               <TimerReset
                 className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin text-blue-500' : 'text-slate-500'}`}
               />
-              {isRefreshing ? 'Refreshing…' : 'Refresh Telemetry'}
+              {isRefreshing ? 'Refreshing…' : 'Refresh Status'}
             </button>
             <button
               type="button"
@@ -139,59 +146,51 @@ export default function SourceHealthDiagnostics({
             </div>
             <dl className="mt-4 space-y-2 text-xs text-slate-600">
               <div className="flex justify-between">
-                <dt>Using live data</dt>
-                <dd className={usingMockData ? 'text-rose-600' : 'text-emerald-600'}>
-                  {usingMockData ? 'Fallback telemetry active' : 'Live telemetry' }
+                <dt>Live updates</dt>
+                <dd className={usingMockData ? 'text-amber-600' : 'text-emerald-600'}>
+                  {usingMockData ? 'Using sample data' : 'On'}
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt>Consecutive failures</dt>
-                <dd>{connectionState.consecutiveFailures}</dd>
+                <dt>Connection quality</dt>
+                <dd className={`font-semibold ${getQualityColor(connectionQuality)}`}>
+                  {connectionQualityLabel}
+                </dd>
               </div>
               <div className="flex justify-between">
-                <dt>Last success</dt>
-                <dd>{connectionState.lastSuccessAt ? formatRelativeTime(connectionState.lastSuccessAt) : 'n/a'}</dd>
+                <dt>Last checked</dt>
+                <dd>
+                  {connectionState.lastSuccessAt
+                    ? formatRelativeTime(connectionState.lastSuccessAt)
+                    : lastUpdated
+                    ? formatRelativeTime(lastUpdated)
+                    : 'moments ago'}
+                </dd>
               </div>
               <div className="flex justify-between">
-                <dt>Last failure</dt>
-                <dd>{connectionState.lastFailureAt ? formatRelativeTime(connectionState.lastFailureAt) : 'n/a'}</dd>
+                <dt>Next refresh</dt>
+                <dd>{isRefreshing ? 'Refreshing now' : 'Automatic'}</dd>
               </div>
             </dl>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <HeartPulse className="h-4 w-4 text-rose-500" />
-              Performance Metrics
+              <Wifi className="h-4 w-4 text-blue-500" />
+              Connection Summary
             </div>
-            <dl className="mt-4 grid grid-cols-1 gap-3 text-xs text-slate-600">
+            <dl className="mt-4 space-y-3 text-xs text-slate-600">
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <dt className="flex items-center gap-2 font-medium text-slate-700">
-                  <Gauge className="h-3.5 w-3.5 text-slate-500" /> Avg latency
-                </dt>
-                <dd className="font-semibold text-slate-900">{latencyLabel}</dd>
+                <dt className="font-medium text-slate-700">Online sources</dt>
+                <dd className="font-semibold text-emerald-600">{statusCounts.online}</dd>
               </div>
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <dt className="flex items-center gap-2 font-medium text-slate-700">
-                  <Activity className="h-3.5 w-3.5 text-slate-500" /> p95 latency
-                </dt>
-                <dd className="font-semibold text-slate-900">{p95LatencyLabel}</dd>
+                <dt className="font-medium text-slate-700">Offline sources</dt>
+                <dd className="font-semibold text-rose-600">{statusCounts.offline}</dd>
               </div>
               <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <dt className="flex items-center gap-2 font-medium text-slate-700">
-                  <SignalHigh className="h-3.5 w-3.5 text-slate-500" /> Stream reconnects
-                </dt>
-                <dd className="font-semibold text-slate-900">
-                  {monitoring.performance.streamReconnects}
-                </dd>
-              </div>
-              <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-                <dt className="flex items-center gap-2 font-medium text-slate-700">
-                  <ServerCrash className="h-3.5 w-3.5 text-slate-500" /> Timeouts
-                </dt>
-                <dd className="font-semibold text-slate-900">
-                  {monitoring.performance.timeoutCount}
-                </dd>
+                <dt className="font-medium text-slate-700">In maintenance</dt>
+                <dd className="font-semibold text-slate-600">{statusCounts.maintenance}</dd>
               </div>
             </dl>
           </div>
@@ -202,7 +201,7 @@ export default function SourceHealthDiagnostics({
             <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
               <div className="flex items-center gap-2 font-semibold">
                 <AlertTriangle className="h-4 w-4" />
-                Live Source Alert
+                Source Alert
               </div>
               <p className="mt-2 text-xs leading-5">
                 {error || connectionState.lastError}
@@ -222,18 +221,18 @@ export default function SourceHealthDiagnostics({
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-700">
               <div className="flex items-center gap-2 font-semibold">
                 <CheckCircle2 className="h-4 w-4" />
-                Live telemetry stable
+                Live updates look good
               </div>
               <p className="mt-2 text-xs leading-5">
-                Bailey is streaming live source health updates. Last synced{' '}
-                {lastUpdated ? formatRelativeTime(lastUpdated) : 'recently'}.
+                Everything is connected as expected. Last updated{' '}
+                {lastUpdated ? formatRelativeTime(lastUpdated) : 'just now'}.
               </p>
             </div>
           )}
 
           <div className="rounded-2xl border border-slate-200 bg-white p-5">
             <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <SignalHigh className="h-4 w-4 text-blue-500" />
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
               High-Risk Sources
             </div>
             {mostImpactedSources.length === 0 ? (
@@ -251,25 +250,31 @@ export default function SourceHealthDiagnostics({
                       <div className="font-semibold text-slate-800">
                         {source.name}
                       </div>
-                      <span className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${getStatusBadgeClasses(source.status)}`}>
-                        {source.status}
+                      <span
+                        className={`rounded-full px-2 py-1 text-[10px] font-semibold uppercase ${getSimpleStatusBadgeClasses(source.status)}`}
+                      >
+                        {getSimpleStatus(source.status)}
                       </span>
                     </div>
                     <p className="mt-2 text-slate-600">
-                      Depends on {source.dependsOn?.join(', ') || 'core services'}
+                      Supporting systems: {source.dependsOn?.join(', ') || 'core services'}
                     </p>
-                    {source.healthHistory && source.healthHistory.length > 0 && (
-                      <p className="mt-1 text-slate-500">
-                        Recent health trend: {source.healthHistory.slice(-3).join(' → ')}
-                      </p>
-                    )}
+                    <p className="mt-1 text-slate-500">
+                      Trend: {
+                        source.healthTrend === 'improving'
+                          ? 'getting better'
+                          : source.healthTrend === 'degrading'
+                          ? 'needs attention'
+                          : 'steady'
+                      }
+                    </p>
                     {state.triggerSourceTest && (
                       <button
                         type="button"
                         className="mt-3 inline-flex items-center rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 transition hover:bg-slate-100"
                         onClick={() => state.triggerSourceTest?.(source.source_id)}
                       >
-                        <Activity className="mr-1.5 h-3 w-3" /> Run Diagnostics
+                        <Activity className="mr-1.5 h-3 w-3" /> Check Connection
                       </button>
                     )}
                   </li>
@@ -282,31 +287,29 @@ export default function SourceHealthDiagnostics({
         <div className="col-span-1 rounded-2xl border border-slate-200 bg-white p-5">
           <div className="flex items-center gap-2 text-sm font-semibold text-slate-800">
             <Bell className="h-4 w-4 text-slate-500" />
-            Observability Timeline
+            Activity Summary
           </div>
           <dl className="mt-4 space-y-3 text-xs text-slate-600">
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <dt>Total requests</dt>
-              <dd>{monitoring.performance.totalRequests}</dd>
+              <dt>Last updated</dt>
+              <dd>{lastUpdated ? formatRelativeTime(lastUpdated) : 'moments ago'}</dd>
             </div>
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <dt>Successful</dt>
-              <dd>{monitoring.performance.successfulRequests}</dd>
+              <dt>Live updates</dt>
+              <dd className={connectionState.streamConnected ? 'text-emerald-600' : 'text-amber-600'}>
+                {connectionState.streamConnected ? 'Streaming' : 'Reconnecting'}
+              </dd>
             </div>
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <dt>Failed</dt>
-              <dd>{monitoring.performance.failedRequests}</dd>
+              <dt>Alerts</dt>
+              <dd className={error || connectionState.lastError ? 'text-rose-600' : 'text-emerald-600'}>
+                {error || connectionState.lastError ? 'Needs attention' : 'None'}
+              </dd>
             </div>
             <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <dt>Stream heartbeats</dt>
-              <dd>{monitoring.performance.streamEventCount}</dd>
-            </div>
-            <div className="flex justify-between rounded-xl bg-slate-50 px-4 py-3">
-              <dt>Last heartbeat</dt>
-              <dd>
-                {monitoring.performance.lastHeartbeatAt
-                  ? formatRelativeTime(monitoring.performance.lastHeartbeatAt)
-                  : 'n/a'}
+              <dt>Connection quality</dt>
+              <dd className={`font-semibold ${getQualityColor(connectionQuality)}`}>
+                {connectionQualityLabel}
               </dd>
             </div>
           </dl>

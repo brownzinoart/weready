@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import type {
   CategoryCoverage,
+  ConsumerStatus,
   SourceHealthData,
   UseSourceHealthReturn,
 } from '../types/sources';
@@ -24,10 +25,7 @@ import {
   formatServiceReliability,
   getConnectionQuality,
   getConsumerStatus,
-  getConsumerStatusBadgeClasses,
   getQualityColor,
-  getSimpleStatus,
-  type ConsumerStatus,
 } from '../utils/sourceHealthUtils';
 
 interface LiveSourcesMetricsProps {
@@ -308,7 +306,7 @@ export default function LiveSourcesMetrics({
                   </span>
                 </p>
                 <p className="mt-2 text-[11px] text-slate-500">
-                  Updated {formatRelativeTime(source.lastUpdate)}
+                  Updated {formatRelativeTime(source.lastUpdate ?? null)}
                 </p>
                 <p className="text-[11px] text-slate-500">
                   {source.status === 'online' || source.status === 'degraded'
