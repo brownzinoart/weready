@@ -9,6 +9,8 @@ import BusinessTab from './tabs/BusinessTab';
 import InvestmentTab from './tabs/InvestmentTab';
 import DesignTab from './tabs/DesignTab';
 import SourcesTab from './tabs/WeReadySourcesTab';
+import { useSourceHealth } from '../hooks/useSourceHealth';
+import type { UseSourceHealthReturn } from '../types/sources';
 
 interface TabNavigationProps {
   result: any;
@@ -61,6 +63,8 @@ export default function TabNavigation({ result, isFreeTier = true }: TabNavigati
     }
   ];
 
+  const sourceHealthState = useSourceHealth();
+
   return (
     <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
       <Tab.Group>
@@ -102,7 +106,11 @@ export default function TabNavigation({ result, isFreeTier = true }: TabNavigati
               {tab.locked ? (
                 <LockedContent tabName={tab.name} description={tab.description} />
               ) : (
-                <TabContent tabComponent={tab.component} result={result} />
+                <TabContent
+                  tabComponent={tab.component}
+                  result={result}
+                  sourceHealthState={sourceHealthState}
+                />
               )}
             </Tab.Panel>
           ))}
@@ -605,7 +613,11 @@ function OverviewTab({ result }: { result: any }) {
   );
 }
 
-function TabContent({ tabComponent, result }: { tabComponent: string; result: any }) {
+function TabContent({
+  tabComponent,
+  result,
+  sourceHealthState,
+}: { tabComponent: string; result: any; sourceHealthState: UseSourceHealthReturn; }) {
   switch (tabComponent) {
     case 'OverviewTab':
       return <OverviewTab result={result} />;
@@ -618,7 +630,7 @@ function TabContent({ tabComponent, result }: { tabComponent: string; result: an
     case 'DesignTab':
       return <DesignTab result={result} />;
     case 'SourcesTab':
-      return <SourcesTab />;
+      return <SourcesTab sourceHealthState={sourceHealthState} />;
     default:
       return (
         <div className="text-center py-8">

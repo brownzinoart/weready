@@ -18,6 +18,108 @@ export default function BusinessTab({ result }: BusinessTabProps) {
   const technologyInsights = result.technology_trend_intelligence || {};
   const economicInsights = result.economic_context || {};
 
+  function getScoreColor(score: number): string {
+    if (score >= 80) return 'text-green-600';
+    if (score >= 60) return 'text-yellow-600';
+    return 'text-red-600';
+  }
+
+  function formatStatus(status?: string): string {
+    if (!status) return 'Unrated';
+    return status
+      .split('_')
+      .map((fragment) => fragment.charAt(0).toUpperCase() + fragment.slice(1))
+      .join(' ');
+  }
+
+  // Market Analysis Functions (inspired by McKinsey/BCG)
+  function getMarketMaturity(score: number): string {
+    if (score >= 80) return 'Growth';
+    if (score >= 60) return 'Early Growth';
+    return 'Emerging';
+  }
+
+  function getTAMSize(score: number): string {
+    if (score >= 80) return '$10B+';
+    if (score >= 60) return '$1B-10B';
+    return '<$1B';
+  }
+
+  function getSAMSize(score: number): string {
+    if (score >= 80) return '$1B+';
+    if (score >= 60) return '$100M-1B';
+    return '<$100M';
+  }
+
+  function getSOMTarget(score: number): string {
+    if (score >= 80) return '$50M+';
+    if (score >= 60) return '$10M-50M';
+    return '<$10M';
+  }
+
+  // Revenue Model Functions (inspired by SaaS benchmarks)
+  function getMRRGrowth(score: number): string {
+    if (score >= 80) return '15-20%';
+    if (score >= 60) return '10-15%';
+    return '<10%';
+  }
+
+  function getChurnRate(score: number): string {
+    if (score >= 80) return '<2%';
+    if (score >= 60) return '2-5%';
+    return '>5%';
+  }
+
+  function getNRR(score: number): string {
+    if (score >= 80) return '>120%';
+    if (score >= 60) return '100-120%';
+    return '<100%';
+  }
+
+  function getLTVCACRatio(score: number): string {
+    if (score >= 80) return '>3.0';
+    if (score >= 60) return '1.5-3.0';
+    return '<1.5';
+  }
+
+  // Go-to-Market Functions
+  function getGTMStrategy(score: number): string {
+    if (score >= 80) return 'Product-Led Growth';
+    if (score >= 60) return 'Hybrid (PLG + Sales)';
+    return 'Sales-Led';
+  }
+
+  function getSalesVelocity(score: number): string {
+    if (score >= 80) return 'High (< 30 days)';
+    if (score >= 60) return 'Medium (30-60 days)';
+    return 'Low (> 60 days)';
+  }
+
+  function getMarketingROI(score: number): string {
+    if (score >= 80) return '>400%';
+    if (score >= 60) return '200-400%';
+    return '<200%';
+  }
+
+  // Competitive Position Functions (inspired by Porter's Five Forces)
+  function getCompetitiveAdvantage(score: number): string {
+    if (score >= 80) return 'Strong Moat';
+    if (score >= 60) return 'Defensible Position';
+    return 'Building Differentiation';
+  }
+
+  function getMarketPosition(score: number): string {
+    if (score >= 80) return 'Market Leader';
+    if (score >= 60) return 'Challenger';
+    return 'New Entrant';
+  }
+
+  function getThreatLevel(score: number): string {
+    if (score >= 80) return 'Low';
+    if (score >= 60) return 'Medium';
+    return 'High';
+  }
+
   const formationSignals = Array.isArray(formationInsights.signals) ? formationInsights.signals.slice(0, 3) : [];
   const procurementAgencies = Array.isArray(procurementInsights.top_agencies) ? procurementInsights.top_agencies.slice(0, 3) : [];
   const technologyTrends = Array.isArray(technologyInsights.trends) ? technologyInsights.trends.slice(0, 3) : [];
@@ -38,108 +140,6 @@ export default function BusinessTab({ result }: BusinessTabProps) {
     { label: 'Highlights Tracked', value: `${highlightCount}`, accent: 'text-pink-600' },
     { label: 'Action Items', value: `${recommendationCount}`, accent: 'text-blue-600' }
   ];
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'text-green-600';
-    if (score >= 60) return 'text-yellow-600';
-    return 'text-red-600';
-  };
-
-  const formatStatus = (status?: string) => {
-    if (!status) return 'Unrated';
-    return status
-      .split('_')
-      .map((fragment) => fragment.charAt(0).toUpperCase() + fragment.slice(1))
-      .join(' ');
-  };
-
-  // Market Analysis Functions (inspired by McKinsey/BCG)
-  const getMarketMaturity = (score: number) => {
-    if (score >= 80) return 'Growth';
-    if (score >= 60) return 'Early Growth';
-    return 'Emerging';
-  };
-
-  const getTAMSize = (score: number) => {
-    if (score >= 80) return '$10B+';
-    if (score >= 60) return '$1B-10B';
-    return '<$1B';
-  };
-
-  const getSAMSize = (score: number) => {
-    if (score >= 80) return '$1B+';
-    if (score >= 60) return '$100M-1B';
-    return '<$100M';
-  };
-
-  const getSOMTarget = (score: number) => {
-    if (score >= 80) return '$50M+';
-    if (score >= 60) return '$10M-50M';
-    return '<$10M';
-  };
-
-  // Revenue Model Functions (inspired by SaaS benchmarks)
-  const getMRRGrowth = (score: number) => {
-    if (score >= 80) return '15-20%';
-    if (score >= 60) return '10-15%';
-    return '<10%';
-  };
-
-  const getChurnRate = (score: number) => {
-    if (score >= 80) return '<2%';
-    if (score >= 60) return '2-5%';
-    return '>5%';
-  };
-
-  const getNRR = (score: number) => {
-    if (score >= 80) return '>120%';
-    if (score >= 60) return '100-120%';
-    return '<100%';
-  };
-
-  const getLTVCACRatio = (score: number) => {
-    if (score >= 80) return '>3.0';
-    if (score >= 60) return '1.5-3.0';
-    return '<1.5';
-  };
-
-  // Go-to-Market Functions
-  const getGTMStrategy = (score: number) => {
-    if (score >= 80) return 'Product-Led Growth';
-    if (score >= 60) return 'Hybrid (PLG + Sales)';
-    return 'Sales-Led';
-  };
-
-  const getSalesVelocity = (score: number) => {
-    if (score >= 80) return 'High (< 30 days)';
-    if (score >= 60) return 'Medium (30-60 days)';
-    return 'Low (> 60 days)';
-  };
-
-  const getMarketingROI = (score: number) => {
-    if (score >= 80) return '>400%';
-    if (score >= 60) return '200-400%';
-    return '<200%';
-  };
-
-  // Competitive Position Functions (inspired by Porter's Five Forces)
-  const getCompetitiveAdvantage = (score: number) => {
-    if (score >= 80) return 'Strong Moat';
-    if (score >= 60) return 'Defensible Position';
-    return 'Building Differentiation';
-  };
-
-  const getMarketPosition = (score: number) => {
-    if (score >= 80) return 'Market Leader';
-    if (score >= 60) return 'Challenger';
-    return 'New Entrant';
-  };
-
-  const getThreatLevel = (score: number) => {
-    if (score >= 80) return 'Low';
-    if (score >= 60) return 'Medium';
-    return 'High';
-  };
 
   return (
     <div className="space-y-8">

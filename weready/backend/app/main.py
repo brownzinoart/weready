@@ -1,12 +1,24 @@
+import logging
+import platform
+import time
+import copy
+from collections import deque
+
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from pydantic import BaseModel
-from typing import Optional, List, Dict, Any
-from datetime import datetime
+from typing import Optional, List, Dict, Any, Deque, Tuple
+from datetime import datetime, timedelta
 import asyncio
 import os
 from dotenv import load_dotenv
+
+try:
+    import psutil  # type: ignore
+except ImportError:  # pragma: no cover - optional dependency
+    psutil = None
 
 # Pydantic models for semantic search
 class SemanticQueryRequest(BaseModel):
@@ -45,12 +57,80 @@ from app.core.credible_sources import credible_sources
 from app.core.government_data_integrator import government_integrator
 from app.core.academic_research_integrator import academic_integrator
 from app.core.github_intelligence import github_intelligence
-from app.api.analysis import router as analysis_router
+from app.api import register_api_routes
 from app.auth.oauth import router as oauth_router
-from app.api.user import router as user_router
-from app.api.demo import router as demo_router
+from startup_validator import run_startup_validation
 
 app = FastAPI(title="WeReady API", version="0.1.0")
+
+logger = logging.getLogger("app.health")
+EXPECTED_BACKEND_PORT = int(os.getenv("BACKEND_PORT", "8000"))
+SERVER_STARTUP_TIME = datetime.utcnow()
+
+CORS_DEFAULT_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "https://weready.dev",
+]
+additional_cors = os.getenv("CORS_ADDITIONAL_ORIGINS", "")
+if additional_cors:
+    CORS_DEFAULT_ORIGINS.extend([origin.strip() for origin in additional_cors.split(",") if origin.strip()])
+ALLOWED_CORS_ORIGINS = sorted({origin for origin in CORS_DEFAULT_ORIGINS})
+CORS_MAX_AGE_SECONDS = int(os.getenv("CORS_MAX_AGE_SECONDS", "86400"))
+
+class SimpleRateLimiter:
+    """Tiny async-safe rate limiter for hot endpoints like /health."""
+
+    def __init__(self, max_calls: int, period_seconds: float) -> None:
+        self.max_calls = max_calls
+        self.period_seconds = period_seconds
+        self._hits: Deque[float] = deque()
+        self._lock = asyncio.Lock()
+
+    async def allow(self) -> bool:
+        async with self._lock:
+            now = time.monotonic()
+            while self._hits and now - self._hits[0] > self.period_seconds:
+                self._hits.popleft()
+            if len(self._hits) >= self.max_calls:
+                return False
+            self._hits.append(now)
+            return True
+
+    @property
+    def retry_after(self) -> int:
+        return max(1, int(self.period_seconds))
+
+HEALTH_RATE_LIMITER = SimpleRateLimiter(
+    max_calls=int(os.getenv("HEALTH_RATE_LIMIT_MAX_CALLS", "30")),
+    period_seconds=float(os.getenv("HEALTH_RATE_LIMIT_PERIOD_SECONDS", "60")),
+)
+HEALTH_CACHE_TTL_SECONDS = float(os.getenv("HEALTH_CACHE_TTL_SECONDS", "5"))
+_HEALTH_CACHE: Dict[str, Any] = {"expires_at": 0.0, "payload": None}
+_HEALTH_CACHE_LOCK = asyncio.Lock()
+
+try:
+    STARTUP_VALIDATION_BASELINE = run_startup_validation(EXPECTED_BACKEND_PORT)
+except Exception as exc:  # pragma: no cover - defensive
+    logger.warning("Startup validation collection failed during import", exc_info=exc)
+    STARTUP_VALIDATION_BASELINE = {"status": "error", "details": str(exc)}
+
+STARTUP_VALIDATION_CACHE = {"data": STARTUP_VALIDATION_BASELINE, "timestamp": time.time()}
+STARTUP_VALIDATION_TTL_SECONDS = float(os.getenv("STARTUP_VALIDATION_TTL_SECONDS", "300"))
+
+
+async def get_startup_validation_snapshot() -> Dict[str, Any]:
+    """Return cached startup validation, refreshing periodically."""
+    now = time.time()
+    if now - STARTUP_VALIDATION_CACHE["timestamp"] > STARTUP_VALIDATION_TTL_SECONDS:
+        try:
+            refreshed = await asyncio.to_thread(run_startup_validation, EXPECTED_BACKEND_PORT)
+        except Exception as exc:  # pragma: no cover - defensive
+            logger.warning("Startup validation refresh failed", exc_info=exc)
+            refreshed = {"status": "error", "details": str(exc)}
+        STARTUP_VALIDATION_CACHE["data"] = refreshed
+        STARTUP_VALIDATION_CACHE["timestamp"] = now
+    return STARTUP_VALIDATION_CACHE["data"]
 
 # Add session middleware for OAuth
 app.add_middleware(
@@ -60,10 +140,12 @@ app.add_middleware(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:3001", "https://weready.dev"],
+    allow_origins=ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["Retry-After", "X-Request-ID"],
+    max_age=CORS_MAX_AGE_SECONDS,
 )
 
 detector = HallucinationDetector()
@@ -72,10 +154,8 @@ weready_scorer = WeReadyScorer()
 brain = bailey_intelligence
 
 # Include API routers
-app.include_router(analysis_router, prefix="/api", tags=["analysis"])
+register_api_routes(app)
 app.include_router(oauth_router, prefix="/api", tags=["authentication"])
-app.include_router(user_router, prefix="/api", tags=["user"])
-app.include_router(demo_router, tags=["demo"])  # Demo router with its own prefix
 
 class CodeScanRequest(BaseModel):
     code: Optional[str] = None
@@ -1745,11 +1825,251 @@ async def get_github_intelligence_report():
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+
+def _collect_system_metrics() -> Tuple[Optional[Dict[str, Any]], Optional[Dict[str, Any]]]:
+    cpu_info: Optional[Dict[str, Any]] = None
+    memory_info: Optional[Dict[str, Any]] = None
+    if psutil:
+        try:
+            cpu_info = {
+                "percent": psutil.cpu_percent(interval=None),
+                "count": psutil.cpu_count(logical=True),
+                "load_average": list(os.getloadavg()) if hasattr(os, "getloadavg") else None,
+            }
+            virtual_memory = psutil.virtual_memory()
+            memory_info = {
+                "total": virtual_memory.total,
+                "available": virtual_memory.available,
+                "percent": virtual_memory.percent,
+                "used": virtual_memory.used,
+                "free": virtual_memory.free,
+            }
+        except Exception as exc:  # pragma: no cover - defensive metrics path
+            logger.debug("psutil metrics unavailable", exc_info=exc)
+    return cpu_info, memory_info
+
+
+def _collect_dependency_health(errors: List[str]) -> Dict[str, Any]:
+    database_url = os.getenv("DATABASE_URL")
+    dependency_health: Dict[str, Any] = {}
+    try:
+        dependency_health["github_intelligence"] = {
+            "status": "healthy" if github_intelligence.rate_limit_remaining > 0 else "degraded",
+            "rate_limit_remaining": github_intelligence.rate_limit_remaining,
+            "rate_limit_reset": datetime.fromtimestamp(getattr(github_intelligence, "rate_limit_reset", time.time())).isoformat()
+            if getattr(github_intelligence, "rate_limit_reset", None)
+            else None,
+            "repositories_analyzed": github_intelligence.stats.get("repositories_analyzed"),
+        }
+    except Exception as exc:
+        logger.warning("GitHub intelligence snapshot failed", exc_info=exc)
+        errors.append(f"github_intelligence: {exc}")
+        dependency_health["github_intelligence"] = {"status": "error", "error": str(exc)}
+
+    try:
+        dependency_health["credible_sources"] = {
+            "status": "healthy" if credible_sources.sources else "degraded",
+            "count": len(credible_sources.sources),
+        }
+    except Exception as exc:
+        logger.warning("Credible sources snapshot failed", exc_info=exc)
+        errors.append(f"credible_sources: {exc}")
+        dependency_health["credible_sources"] = {"status": "error", "error": str(exc)}
+
+    try:
+        dependency_health["bailey_brain"] = {
+            "status": "healthy" if bailey.knowledge_sources else "initializing",
+            "knowledge_sources": len(bailey.knowledge_sources),
+            "knowledge_points": len(bailey.knowledge_points),
+        }
+    except Exception as exc:
+        logger.warning("Bailey brain snapshot failed", exc_info=exc)
+        errors.append(f"bailey_brain: {exc}")
+        dependency_health["bailey_brain"] = {"status": "error", "error": str(exc)}
+
+    try:
+        dependency_health["academic_integrator"] = {
+            "status": "healthy" if academic_integrator.stats.get("papers_analyzed", 0) >= 0 else "unknown",
+            "papers_analyzed": academic_integrator.stats.get("papers_analyzed"),
+            "insights_generated": academic_integrator.stats.get("insights_generated"),
+        }
+    except Exception as exc:
+        logger.warning("Academic integrator snapshot failed", exc_info=exc)
+        errors.append(f"academic_integrator: {exc}")
+        dependency_health["academic_integrator"] = {"status": "error", "error": str(exc)}
+
+    try:
+        dependency_health["government_integrator"] = {
+            "status": "healthy" if government_integrator.api_config else "initializing",
+            "endpoints_tracked": len(getattr(government_integrator, "api_config", {})),
+        }
+    except Exception as exc:
+        logger.warning("Government integrator snapshot failed", exc_info=exc)
+        errors.append(f"government_integrator: {exc}")
+        dependency_health["government_integrator"] = {"status": "error", "error": str(exc)}
+
+    dependency_health["database"] = {
+        "status": "healthy" if database_url else "not_configured",
+        "url_present": bool(database_url),
+    }
+    return dependency_health
+
+
+def _collect_endpoint_status() -> List[Dict[str, Any]]:
+    endpoint_status: List[Dict[str, Any]] = []
+    for route in app.routes:
+        methods = getattr(route, "methods", None)
+        if not methods:
+            continue
+        endpoint_status.append(
+            {
+                "path": route.path,
+                "name": getattr(route.endpoint, "__name__", route.name),
+                "methods": sorted(methods),
+                "available": True,
+            }
+        )
+    return endpoint_status
+
+
+def _collect_intelligence_overview(errors: List[str]) -> Dict[str, Any]:
+    try:
+        return {
+            "credible_sources": len(brain.credible_sources.sources),
+            "bailey_sources": len(bailey.knowledge_sources),
+            "bailey_knowledge_points": len(bailey.knowledge_points),
+            "learning_records": len(brain.learning_engine.learning_records),
+            "pattern_count": len(brain.learning_engine.patterns),
+            "government_sources": len(government_integrator.api_config),
+            "academic_papers_analyzed": academic_integrator.stats.get("papers_analyzed"),
+            "research_insights_generated": academic_integrator.stats.get("insights_generated"),
+            "github_repositories_analyzed": github_intelligence.stats.get("repositories_analyzed"),
+            "github_api_calls": github_intelligence.stats.get("api_calls_made"),
+            "github_rate_limit_remaining": github_intelligence.rate_limit_remaining,
+        }
+    except Exception as exc:
+        logger.warning("Intelligence overview snapshot failed", exc_info=exc)
+        errors.append(f"intelligence_overview: {exc}")
+        return {"status": "error", "error": str(exc)}
+
+
+def _build_health_headers(cache_hit: bool = False, rate_limited: bool = False) -> Dict[str, str]:
+    base_origin = os.getenv("HEALTH_CHECK_ALLOWED_ORIGIN", "http://localhost:3000")
+    headers = {
+        "Access-Control-Allow-Origin": base_origin,
+        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Headers": "*",
+        "Cache-Control": f"public, max-age={int(HEALTH_CACHE_TTL_SECONDS)}, stale-while-revalidate={int(HEALTH_CACHE_TTL_SECONDS * 2)}",
+        "X-Health-Cache": "hit" if cache_hit else "miss",
+    }
+    if rate_limited:
+        headers["Retry-After"] = str(HEALTH_RATE_LIMITER.retry_after)
+    return headers
+
+
+def _cache_health_payload(payload: Dict[str, Any]) -> None:
+    payload_copy = copy.deepcopy(payload)
+    _HEALTH_CACHE["payload"] = payload_copy
+    _HEALTH_CACHE["expires_at"] = time.monotonic() + HEALTH_CACHE_TTL_SECONDS
+    _HEALTH_CACHE["generated_at"] = payload_copy.get("timestamp")
+
 @app.get("/health")
 async def health_check():
-    """Health check endpoint"""
-    return {
-        "status": "healthy",
+    """Health check endpoint with extended diagnostics for Bailey Intelligence."""
+    if not await HEALTH_RATE_LIMITER.allow():
+        headers = _build_health_headers(rate_limited=True)
+        content = {
+            "status": "rate_limited",
+            "detail": "Too many health check requests. Please retry shortly.",
+            "timestamp": datetime.utcnow().isoformat(),
+        }
+        return JSONResponse(status_code=429, content=content, headers=headers)
+
+    async with _HEALTH_CACHE_LOCK:
+        cached_payload = _HEALTH_CACHE.get("payload")
+        expires_at = _HEALTH_CACHE.get("expires_at", 0.0)
+        if cached_payload and time.monotonic() < expires_at:
+            payload = copy.deepcopy(cached_payload)
+            payload.setdefault("meta", {}).setdefault("cache", {})
+            payload["meta"]["cache"].update(
+                {
+                    "status": "hit",
+                    "generated_at": _HEALTH_CACHE.get("generated_at"),
+                    "ttl_seconds": HEALTH_CACHE_TTL_SECONDS,
+                }
+            )
+            headers = _build_health_headers(cache_hit=True)
+            return JSONResponse(content=payload, headers=headers)
+
+    request_started = time.perf_counter()
+    environment = os.getenv("ENVIRONMENT", "development")
+    api_base_url = os.getenv("API_BASE_URL", f"http://localhost:{EXPECTED_BACKEND_PORT}")
+    frontend_expected_port = int(os.getenv("FRONTEND_API_PORT", "8000"))
+    uptime = datetime.utcnow() - SERVER_STARTUP_TIME
+    errors: List[str] = []
+
+    cpu_info, memory_info = _collect_system_metrics()
+    dependency_health = _collect_dependency_health(errors)
+    endpoint_status = _collect_endpoint_status()
+    intelligence_overview = _collect_intelligence_overview(errors)
+
+    try:
+        startup_validation = await get_startup_validation_snapshot()
+    except Exception as exc:  # pragma: no cover - defensive
+        logger.warning("Startup validation snapshot failed", exc_info=exc)
+        startup_validation = {"status": "error", "details": str(exc)}
+        errors.append(f"startup_validation: {exc}")
+
+    configuration_validation = {
+        "expected_backend_port": EXPECTED_BACKEND_PORT,
+        "frontend_expected_port": frontend_expected_port,
+        "matches_frontend": EXPECTED_BACKEND_PORT == frontend_expected_port,
+        "api_base_url": api_base_url,
+    }
+
+    performance_metrics = {
+        "health_check_processing_ms": round((time.perf_counter() - request_started) * 1000, 2),
+        "github_intelligence_response_ms": github_intelligence.stats.get("avg_response_time_ms"),
+    }
+
+    rate_limiting = {
+        "github": {
+            "remaining": getattr(github_intelligence, "rate_limit_remaining", None),
+            "reset_at": datetime.fromtimestamp(getattr(github_intelligence, "rate_limit_reset", time.time())).isoformat()
+            if getattr(github_intelligence, "rate_limit_reset", None)
+            else None,
+        }
+    }
+
+    debug_info: Dict[str, Any] = {
+        "environment": environment,
+        "platform": platform.platform(),
+        "configuration_validation": configuration_validation,
+    }
+    if environment != "production":
+        debug_info.update(
+            {
+                "api_base_url": api_base_url,
+                "expected_backend_port": EXPECTED_BACKEND_PORT,
+                "server_startup": SERVER_STARTUP_TIME.isoformat(),
+            }
+        )
+    if errors:
+        debug_info["errors"] = errors
+
+    response_payload: Dict[str, Any] = {
+        "status": "healthy" if not errors else "degraded",
+        "timestamp": datetime.utcnow().isoformat(),
+        "server": {
+            "version": app.version,
+            "environment": environment,
+            "host": "0.0.0.0",
+            "port": EXPECTED_BACKEND_PORT,
+            "startup_time": SERVER_STARTUP_TIME.isoformat(),
+            "uptime_seconds": int(uptime.total_seconds()),
+            "uptime": str(timedelta(seconds=int(uptime.total_seconds()))),
+        },
         "detectors": {
             "hallucination": "active",
             "github_analyzer": "active",
@@ -1758,23 +2078,37 @@ async def health_check():
             "bailey_knowledge_engine": "active",
             "government_data_integrator": "active",
             "academic_research_integrator": "active",
-            "github_intelligence": "active"
+            "github_intelligence": "active",
         },
-        "intelligence": {
-            "credible_sources": len(brain.credible_sources.sources),
-            "bailey_sources": len(bailey.knowledge_sources),
-            "bailey_knowledge_points": len(bailey.knowledge_points),
-            "learning_records": len(brain.learning_engine.learning_records),
-            "pattern_count": len(brain.learning_engine.patterns),
-            "government_sources": len(government_integrator.api_config),
-            "academic_papers_analyzed": academic_integrator.stats["papers_analyzed"],
-            "research_insights_generated": academic_integrator.stats["insights_generated"],
-            "github_repositories_analyzed": github_intelligence.stats["repositories_analyzed"],
-            "github_api_calls": github_intelligence.stats["api_calls_made"],
-            "github_rate_limit_remaining": github_intelligence.rate_limit_remaining
-        }
+        "intelligence": intelligence_overview,
+        "dependency_health": dependency_health,
+        "api_endpoints": endpoint_status,
+        "performance": performance_metrics,
+        "rate_limiting": rate_limiting,
+        "system_metrics": {
+            "cpu": cpu_info,
+            "memory": memory_info,
+        },
+        "configuration_validation": configuration_validation,
+        "debug": debug_info,
+        "startup_validation": startup_validation,
+        "meta": {
+            "generated_at": datetime.utcnow().isoformat(),
+            "cache": {"status": "miss", "ttl_seconds": HEALTH_CACHE_TTL_SECONDS},
+        },
     }
+
+    response_payload["performance"]["health_check_processing_ms"] = round(
+        (time.perf_counter() - request_started) * 1000, 2
+    )
+
+    async with _HEALTH_CACHE_LOCK:
+        _cache_health_payload(response_payload)
+
+    headers = _build_health_headers(cache_hit=False)
+    return JSONResponse(content=response_payload, headers=headers)
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=3001, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)

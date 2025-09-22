@@ -2,26 +2,27 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
-import Navigation from "../components/Navigation";
-import OverviewHero from "../components/OverviewHero";
-import PillarOverview from "../components/PillarOverview";
-import CodeIntelligenceTab from "../components/tabs/CodeIntelligenceTab";
-import BusinessIntelligenceTab from "../components/tabs/BusinessIntelligenceTab";
-import InvestmentTab from "../components/tabs/InvestmentTab";
-import DesignTab from "../components/tabs/DesignTab";
-import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
-import SourceHealthDiagnostics from "../components/SourceHealthDiagnostics";
-import ApiConnectionStatus from "../components/ApiConnectionStatus";
-import BaileyIntelligenceDebugPanel from "../components/BaileyIntelligenceDebugPanel";
+import Navigation from "@/app/components/Navigation";
+import OverviewHero from "@/app/components/OverviewHero";
+import PillarOverview from "@/app/components/PillarOverview";
+import CodeIntelligenceTab from "@/app/components/tabs/CodeIntelligenceTab";
+import BusinessIntelligenceTab from "@/app/components/tabs/BusinessIntelligenceTab";
+import InvestmentTab from "@/app/components/tabs/InvestmentTab";
+import DesignTab from "@/app/components/tabs/DesignTab";
+import WeReadySourcesTab from "@/app/components/tabs/WeReadySourcesTab";
+import SourceHealthDiagnostics from "@/app/components/SourceHealthDiagnostics";
+import ApiConnectionStatus from "@/app/components/ApiConnectionStatus";
+import BaileyIntelligenceDebugPanel from "@/app/components/BaileyIntelligenceDebugPanel";
+import type { UseSourceHealthReturn } from "@/app/types/sources";
 import {
   getApiUrl,
   apiCall,
   getApiPerformanceMetrics,
   API_DEBUG_ENABLED,
-} from "../../lib/api-config";
-import { formatRelativeTime } from "../utils/sourceHealthUtils";
-import { useSourceHealth } from "../hooks/useSourceHealth";
-import { useApiHealth } from "../hooks/useApiHealth";
+} from "@/lib/api-config";
+import { formatRelativeTime } from "@/app/utils/sourceHealthUtils";
+import { useSourceHealth } from "@/app/hooks/useSourceHealth";
+import { useApiHealth } from "@/app/hooks/useApiHealth";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -303,7 +304,7 @@ export default function BaileyIntelligence() {
   const [semanticQuery, setSemanticQuery] = useState("");
   const [semanticResults, setSemanticResults] = useState<any>(null);
   const [semanticLoading, setSemanticLoading] = useState(false);
-  const sourceHealthState = useSourceHealth();
+  const sourceHealthState: UseSourceHealthReturn = useSourceHealth();
 
   useEffect(() => {
     initializeBusinessIntelligence();

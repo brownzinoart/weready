@@ -21,9 +21,12 @@ import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 import re
 from urllib.parse import urljoin, urlparse
-import time
 import logging
 from dataclasses import asdict
+import csv
+import io
+import statistics
+from collections import Counter
 
 from .bailey import bailey, KnowledgePoint, DataFreshness
 from .business_formation_tracker import business_formation_tracker
@@ -31,35 +34,45 @@ from .international_market_intelligence import international_market_intelligence
 from .procurement_intelligence import procurement_intelligence
 from .technology_trend_analyzer import technology_trend_analyzer
 from .enhanced_economic_analyzer import enhanced_economic_analyzer
-
-class BaileyConnector:
-    """Base class for Bailey data connectors"""
-    
-    def __init__(self, source_id: str):
-        self.source_id = source_id
-        self.source = bailey.knowledge_sources.get(source_id)
-        if not self.source:
-            raise ValueError(f"Unknown source: {source_id}")
-        self.client = httpx.AsyncClient(timeout=30.0)
-        
-    async def __aenter__(self):
-        return self
-        
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.client.aclose()
-        
-    async def ingest_data(self) -> List[str]:
-        """Ingest data from this source. Returns list of knowledge point IDs"""
-        raise NotImplementedError
-        
-    def _respect_rate_limit(self):
-        """Respect rate limits for this source"""
-        if self.source.rate_limit:
-            # Simple rate limiting - sleep based on rate limit
-            if "second" in self.source.rate_limit.lower():
-                time.sleep(1.1)  # Be conservative
-            elif "minute" in self.source.rate_limit.lower():
-                time.sleep(0.1)
+from .source_connectors.base import BaileyConnector
+from .source_connectors.intelligence_wrappers import (
+    AcademicResearchConnector,
+    DesignIntelligenceConnector,
+    FundingTrackerConnector,
+    GitHubIntelligenceConnector,
+    GovernmentDataIntegratorConnector,
+    MarketTimingConnector,
+)
+from .source_connectors.code_quality_connectors import (
+    SonarQubeConnector,
+    CodeClimateConnector,
+    GitGuardianConnector,
+    SemgrepConnector,
+    VeracodeConnector,
+)
+from .source_connectors.business_intelligence_connectors import (
+    FirstRoundCapitalConnector,
+    AndreessenHorowitzConnector,
+    LeanStartupConnector,
+    ProfitWellConnector,
+    HarvardBusinessSchoolConnector,
+)
+from .source_connectors.investment_readiness_connectors import (
+    SequoiaCapitalConnector,
+    BessemerVenturePartnersConnector,
+    MITEntrepreneurshipConnector,
+    NVCAConnector,
+    CBInsightsConnector,
+    AngelListConnector,
+)
+from .source_connectors.design_experience_connectors import (
+    NielsenNormanGroupConnector,
+    BaymardInstituteConnector,
+    WebAIMConnector,
+    GoogleDesignConnector,
+    AppleHIGConnector,
+    ChromeUXReportConnector,
+)
 
 class GitHubConnector(BaileyConnector):
     """Connector for GitHub API - developer and technology trends"""
@@ -628,285 +641,212 @@ class ArxivConnector(ArxivEnhancedConnector):
     pass
 
 class YCombinatorConnector(BaileyConnector):
-    """Connector for Y Combinator public data - startup outcomes"""
-    
-    def __init__(self):
+    """Connector for Y Combinator public data via CSV export."""
+
+    EXPORT_URL = "https://www.ycombinator.com/companies/export.csv"
+
+    def __init__(self) -> None:
         super().__init__("yc_directory")
-        
+        batches = self.get_env("YC_BATCHES") or "W24,S23,W23,S22"
+        self.batches = [batch.strip() for batch in batches.split(",") if batch.strip()]
+
     async def ingest_data(self) -> List[str]:
-        """Ingest Y Combinator company data by scraping public directory"""
-        
-        knowledge_ids = []
-        
-        # Scrape YC company directory
-        company_data = await self._scrape_yc_directory()
-        for point_id in company_data:
+        knowledge_ids: List[str] = []
+
+        for batch in self.batches:
+            try:
+                companies = await self._fetch_batch(batch)
+            except Exception as exc:  # pragma: no cover - defensive
+                logging.error("Failed to fetch YC batch %s: %s", batch, exc)
+                continue
+
+            if not companies:
+                continue
+
+            metrics = self._summarise_batch(companies)
+
+            content = (
+                f"Y Combinator batch {batch} includes {metrics['company_count']} companies with median funding ${metrics['median_raised']:.2f}M"
+            )
+            point_id = await self._ingest_point(
+                content=content,
+                category="yc_batch_analysis",
+                freshness=DataFreshness.MONTHLY,
+                confidence=0.82,
+                metadata=metrics,
+                numerical_value=float(metrics["company_count"]),
+            )
             knowledge_ids.append(point_id)
-            
-        return knowledge_ids
-        
-    async def _scrape_yc_directory(self) -> List[str]:
-        """Scrape Y Combinator public company directory for outcome data"""
-        
-        knowledge_ids = []
-        
-        try:
-            # YC companies API (if available) or scrape the public directory
-            # Note: This is a simplified version - real implementation would need to handle pagination, etc.
-            
-            # For now, we'll simulate with some known patterns
-            # In production, would scrape or use YC's public API if available
-            
-            # Analyze batch trends (simulated data based on public information)
-            batches = ["W24", "S23", "W23", "S22"]
-            
-            for batch in batches:
-                # Simulate batch analysis - in production would scrape real data
-                simulated_companies = 250  # Typical YC batch size
-                
-                point_id = await bailey.ingest_knowledge_point(
-                    content=f"Y Combinator {batch} batch had approximately {simulated_companies} companies",
-                    source_id=self.source_id,
-                    category="yc_batch_analysis",
-                    numerical_value=float(simulated_companies),
-                    confidence=0.7  # Lower confidence for simulated data
+
+            top_industry = metrics.get("top_industry")
+            if top_industry:
+                point_id = await self._ingest_point(
+                    content=f"YC {batch} leading industry: {top_industry}",
+                    category="yc_industry_insights",
+                    freshness=DataFreshness.MONTHLY,
+                    confidence=0.78,
+                    metadata={"distribution": metrics.get("industry_distribution")},
                 )
                 knowledge_ids.append(point_id)
-                
-        except Exception as e:
-            logging.error(f"YC directory scraping error: {e}")
-            
+
         return knowledge_ids
 
-class StackOverflowConnector(BaileyConnector):
-    """Connector for Stack Overflow Developer Survey and community insights"""
-    
-    def __init__(self):
-        super().__init__("stack_overflow")
-        
-    async def ingest_data(self) -> List[str]:
-        """Ingest Stack Overflow developer survey and community insights"""
-        
-        knowledge_ids = []
-        
-        # Get developer survey insights
-        survey_data = await self._analyze_developer_survey()
-        knowledge_ids.extend(survey_data)
-        
-        # Get technology trend insights
-        tech_trends = await self._analyze_technology_trends()
-        knowledge_ids.extend(tech_trends)
-        
-        # Get developer sentiment insights
-        sentiment_data = await self._analyze_developer_sentiment()
-        knowledge_ids.extend(sentiment_data)
-            
-        return knowledge_ids
-        
-    async def _analyze_developer_survey(self) -> List[str]:
-        """Analyze Stack Overflow Developer Survey data"""
-        
-        knowledge_ids = []
-        
+    async def _fetch_batch(self, batch: str) -> List[Dict[str, Any]]:
+        headers = {"User-Agent": "WeReady Intelligence", "Accept": "text/csv"}
+        response = await self._request("GET", self.EXPORT_URL, params={"batch": batch}, headers=headers)
+        csv_buffer = io.StringIO(response.text)
+        reader = csv.DictReader(csv_buffer)
+        return [row for row in reader]
+
+    def _summarise_batch(self, companies: List[Dict[str, Any]]) -> Dict[str, Any]:
+        industries: Counter = Counter()
+        locations: Counter = Counter()
+        funding_values: List[float] = []
+
+        for company in companies:
+            industry = (company.get("Industry") or company.get("industry") or "Unknown").strip()
+            location = (company.get("Location") or company.get("location") or "Unknown").strip()
+            industries[industry] += 1
+            locations[location] += 1
+
+            total_raised = company.get("Total Raised") or company.get("total_raised") or "0"
+            parsed_amount = self._parse_currency(total_raised)
+            if parsed_amount:
+                funding_values.append(parsed_amount / 1_000_000)  # store in millions
+
+        median_raised = statistics.median(funding_values) if funding_values else 0.0
+        top_industry = industries.most_common(1)[0][0] if industries else None
+
+        return {
+            "company_count": len(companies),
+            "median_raised": median_raised,
+            "top_industry": top_industry,
+            "industry_distribution": dict(industries.most_common(5)),
+            "top_locations": dict(locations.most_common(5)),
+        }
+
+    @staticmethod
+    def _parse_currency(value: Any) -> Optional[float]:
+        if not value:
+            return None
+        text = str(value).strip().replace("$", "").replace(",", "").lower()
+        multiplier = 1.0
+        if text.endswith("m"):
+            multiplier = 1_000_000.0
+            text = text[:-1]
+        elif text.endswith("k"):
+            multiplier = 1_000.0
+            text = text[:-1]
         try:
-            # Most recent Stack Overflow Developer Survey insights (2024)
-            # Based on actual survey data from 90,000+ developers
-            survey_insights = {
-                "most_popular_languages": {
-                    "JavaScript": 63.9,
-                    "Python": 49.3, 
-                    "TypeScript": 38.9,
-                    "Java": 30.3,
-                    "C#": 27.6,
-                    "Rust": 13.0,  # Growing rapidly
-                    "Go": 13.5
-                },
-                "most_loved_languages": {
-                    "Rust": 84.7,
-                    "Python": 68.1,
-                    "TypeScript": 67.1,
-                    "Go": 66.0,
-                    "JavaScript": 58.3
-                },
-                "ai_ml_adoption": {
-                    "using_ai_tools": 76.0,  # % of developers using AI tools
-                    "trust_ai_accuracy": 32.8,  # % who trust AI output
-                    "productivity_boost": 42.0,  # % reporting productivity gains
-                    "concern_about_replacement": 28.5  # % concerned about job replacement
-                },
-                "salary_insights": {
-                    "median_salary_us": 120000,
-                    "ai_ml_premium": 1.25,  # AI/ML developers earn 25% more
-                    "remote_work_preference": 87.2,  # % prefer remote/hybrid
-                    "job_satisfaction": 73.4  # % satisfied with job
-                }
-            }
-            
-            # Process language popularity trends
-            for language, popularity in survey_insights["most_popular_languages"].items():
-                point_id = await bailey.ingest_knowledge_point(
-                    content=f"{language} adoption: {popularity}% of 90K+ developers (Stack Overflow Survey 2024)",
-                    source_id=self.source_id,
-                    category="programming_language_adoption",
-                    numerical_value=popularity,
-                    confidence=0.95
+            return float(text) * multiplier
+        except ValueError:
+            return None
+
+class StackOverflowConnector(BaileyConnector):
+    """Connector for Stack Overflow public API."""
+
+    BASE_URL = "https://api.stackexchange.com/2.3"
+
+    def __init__(self) -> None:
+        super().__init__("stackoverflow")
+        self.api_key = self.get_env("STACKOVERFLOW_API_KEY")
+
+    async def ingest_data(self) -> List[str]:
+        knowledge_ids: List[str] = []
+
+        popular_tags = await self._fetch_popular_tags()
+        knowledge_ids.extend(popular_tags)
+
+        ai_activity = await self._fetch_ai_activity()
+        knowledge_ids.extend(ai_activity)
+
+        sentiment = await self._fetch_developer_sentiment()
+        knowledge_ids.extend(sentiment)
+
+        return knowledge_ids
+
+    async def _stack_request(self, path: str, **params: Any) -> Dict[str, Any]:
+        query = {"site": "stackoverflow", "pagesize": 20, **params}
+        if self.api_key:
+            query["key"] = self.api_key
+        return await self._get_json(f"{self.BASE_URL}{path}", params=query)
+
+    async def _fetch_popular_tags(self) -> List[str]:
+        knowledge_ids: List[str] = []
+        try:
+            data = await self._stack_request("/tags", order="desc", sort="popular", pagesize=5)
+            for tag in data.get("items", []):
+                name = tag.get("name")
+                count = tag.get("count", 0)
+                content = f"Stack Overflow tag {name} has {count:,} questions"
+                point_id = await self._ingest_point(
+                    content=content,
+                    category="technology_trends",
+                    freshness=DataFreshness.DAILY,
+                    confidence=0.8,
+                    metadata={"tag": name, "question_count": count},
+                    numerical_value=float(count),
                 )
                 knowledge_ids.append(point_id)
-            
-            # Process AI adoption insights
-            ai_adoption = survey_insights["ai_ml_adoption"]["using_ai_tools"]
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Developer AI tool adoption: {ai_adoption}% of developers actively using AI coding tools",
-                source_id=self.source_id,
-                category="ai_developer_adoption",
-                numerical_value=ai_adoption,
-                confidence=0.96
-            )
-            knowledge_ids.append(point_id)
-            
-            # Process salary insights for AI/ML developers
-            ai_salary_premium = survey_insights["salary_insights"]["ai_ml_premium"]
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"AI/ML developer salary premium: {(ai_salary_premium - 1) * 100:.0f}% above average developer salary",
-                source_id=self.source_id,
-                category="ai_developer_market_value",
-                numerical_value=ai_salary_premium,
-                confidence=0.90
-            )
-            knowledge_ids.append(point_id)
-                        
-        except Exception as e:
-            logging.error(f"Stack Overflow survey analysis error: {e}")
-            
+        except Exception as exc:  # pragma: no cover
+            logging.error("Stack Overflow popular tags failed: %s", exc)
         return knowledge_ids
-    
-    async def _analyze_technology_trends(self) -> List[str]:
-        """Analyze technology adoption trends from Stack Overflow data"""
-        
-        knowledge_ids = []
-        
+
+    async def _fetch_ai_activity(self) -> List[str]:
+        knowledge_ids: List[str] = []
         try:
-            # Technology trend analysis based on Stack Overflow Trends
-            technology_trends = {
-                "frameworks_growing": {
-                    "React": {"adoption": 40.6, "growth_rate": 1.08},
-                    "Node.js": {"adoption": 42.7, "growth_rate": 1.05},
-                    "Next.js": {"adoption": 13.5, "growth_rate": 1.35},  # Fastest growing
-                    "Express": {"adoption": 22.2, "growth_rate": 1.02},
-                    "Svelte": {"adoption": 4.6, "growth_rate": 1.45}
-                },
-                "databases_trending": {
-                    "PostgreSQL": {"adoption": 45.4, "satisfaction": 73.7},
-                    "MongoDB": {"adoption": 25.7, "satisfaction": 59.4},
-                    "Redis": {"adoption": 20.1, "satisfaction": 70.8},
-                    "SQLite": {"adoption": 32.1, "satisfaction": 71.2}
-                },
-                "cloud_adoption": {
-                    "AWS": 48.7,
-                    "Azure": 23.8,
-                    "Google Cloud": 17.4,
-                    "Vercel": 8.9,  # Growing fast for frontend
-                    "Netlify": 7.2
-                }
-            }
-            
-            # Process framework trends
-            fastest_growing = max(
-                technology_trends["frameworks_growing"].items(),
-                key=lambda x: x[1]["growth_rate"]
+            data = await self._stack_request(
+                "/questions",
+                order="desc",
+                sort="activity",
+                tagged="artificial-intelligence;machine-learning",
+                pagesize=10,
+                filter="default",
             )
-            
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Fastest growing web framework: {fastest_growing[0]} with {(fastest_growing[1]['growth_rate'] - 1) * 100:.0f}% year-over-year growth",
-                source_id=self.source_id,
-                category="web_framework_trends",
-                numerical_value=fastest_growing[1]["growth_rate"],
-                confidence=0.88
+            items = data.get("items", [])
+            total_views = sum(item.get("view_count", 0) for item in items)
+            average_score = statistics.mean([item.get("score", 0) for item in items]) if items else 0.0
+            content = f"Stack Overflow AI/ML questions generated {total_views:,} views in latest activity window"
+            point_id = await self._ingest_point(
+                content=content,
+                category="developer_ai_adoption",
+                freshness=DataFreshness.DAILY,
+                confidence=0.78,
+                metadata={"questions": len(items), "average_score": average_score},
+                numerical_value=float(total_views),
             )
             knowledge_ids.append(point_id)
-            
-            # Process cloud adoption insights
-            total_cloud_adoption = sum(technology_trends["cloud_adoption"].values())
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Cloud platform adoption: {total_cloud_adoption:.1f}% of developers use major cloud platforms, AWS leads at {technology_trends['cloud_adoption']['AWS']:.1f}%",
-                source_id=self.source_id,
-                category="cloud_platform_adoption",
-                numerical_value=total_cloud_adoption,
-                confidence=0.92
-            )
-            knowledge_ids.append(point_id)
-                        
-        except Exception as e:
-            logging.error(f"Stack Overflow technology trends error: {e}")
-            
+        except Exception as exc:  # pragma: no cover
+            logging.error("Stack Overflow AI activity failed: %s", exc)
         return knowledge_ids
-    
-    async def _analyze_developer_sentiment(self) -> List[str]:
-        """Analyze developer community sentiment and preferences"""
-        
-        knowledge_ids = []
-        
+
+    async def _fetch_developer_sentiment(self) -> List[str]:
+        knowledge_ids: List[str] = []
         try:
-            # Developer sentiment analysis from Stack Overflow Insights
-            sentiment_data = {
-                "work_preferences": {
-                    "remote_work_preference": 87.2,  # % prefer remote/hybrid
-                    "job_satisfaction": 73.4,       # % satisfied with current job
-                    "career_growth_priority": 68.9,  # % prioritize learning/growth
-                    "work_life_balance": 82.1       # % value work-life balance
-                },
-                "technology_sentiment": {
-                    "ai_optimism": 58.3,            # % optimistic about AI impact
-                    "ai_concerns": 41.7,            # % concerned about AI replacing jobs
-                    "open_source_contribution": 34.6, # % actively contribute to OSS
-                    "learning_new_tech": 79.4       # % actively learning new technologies
-                },
-                "startup_sentiment": {
-                    "startup_interest": 42.8,       # % interested in working at startups
-                    "entrepreneurship_interest": 28.5, # % interested in starting companies
-                    "risk_tolerance": 35.7,         # % comfortable with startup risk
-                    "equity_over_salary": 31.2      # % prefer equity compensation
-                }
-            }
-            
-            # Process work preference insights
-            remote_preference = sentiment_data["work_preferences"]["remote_work_preference"]
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Developer remote work preference: {remote_preference}% prefer remote/hybrid work arrangements",
-                source_id=self.source_id,
-                category="developer_work_preferences",
-                numerical_value=remote_preference,
-                confidence=0.94
+            data = await self._stack_request(
+                "/questions",
+                order="desc",
+                sort="votes",
+                tagged="career-development;founders",
+                pagesize=10,
+            )
+            items = data.get("items", [])
+            average_score = statistics.mean([item.get("score", 0) for item in items]) if items else 0.0
+            accepted = sum(1 for item in items if item.get("is_answered"))
+            content = (
+                f"Stack Overflow founder/career conversations average score {average_score:.1f} with {accepted} answered questions"
+            )
+            point_id = await self._ingest_point(
+                content=content,
+                category="developer_sentiment",
+                freshness=DataFreshness.DAILY,
+                confidence=0.76,
+                metadata={"question_count": len(items), "answered": accepted},
+                numerical_value=float(average_score),
             )
             knowledge_ids.append(point_id)
-            
-            # Process AI sentiment
-            ai_optimism = sentiment_data["technology_sentiment"]["ai_optimism"]
-            ai_concerns = sentiment_data["technology_sentiment"]["ai_concerns"]
-            
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Developer AI sentiment: {ai_optimism}% optimistic vs {ai_concerns}% concerned about AI impact on careers",
-                source_id=self.source_id,
-                category="developer_ai_sentiment",
-                numerical_value=ai_optimism - ai_concerns,  # Net sentiment
-                confidence=0.91
-            )
-            knowledge_ids.append(point_id)
-            
-            # Process startup sentiment
-            startup_interest = sentiment_data["startup_sentiment"]["startup_interest"]
-            point_id = await bailey.ingest_knowledge_point(
-                content=f"Developer startup interest: {startup_interest}% interested in startup opportunities, {sentiment_data['startup_sentiment']['entrepreneurship_interest']}% interested in founding companies",
-                source_id=self.source_id,
-                category="developer_startup_sentiment",
-                numerical_value=startup_interest,
-                confidence=0.89
-            )
-            knowledge_ids.append(point_id)
-                        
-        except Exception as e:
-            logging.error(f"Stack Overflow sentiment analysis error: {e}")
-            
+        except Exception as exc:  # pragma: no cover
+            logging.error("Stack Overflow sentiment fetch failed: %s", exc)
         return knowledge_ids
 
 class RedditConnector(BaileyConnector):
@@ -1168,17 +1108,66 @@ class BaileyDataPipeline:
     """Main data pipeline for Bailey to ingest from all sources"""
     
     def __init__(self):
-        self.connectors = {
-            "github": GitHubConnector,
-            "arxiv": ArxivConnector,
-            "yc": YCombinatorConnector,
-            "reddit": RedditConnector,
-            "census": CensusBusinessFormationConnector,
-            "international": InternationalMarketConnector,
-            "procurement": ProcurementConnector,
-            "technology_trends": TechnologyMomentumConnector,
-            "economic_context": EconomicContextConnector
+        self.connector_groups: Dict[str, Dict[str, type[BaileyConnector]]] = {
+            "core_sources": {
+                "github": GitHubConnector,
+                "arxiv": ArxivConnector,
+                "yc": YCombinatorConnector,
+                "stackoverflow": StackOverflowConnector,
+                "reddit": RedditConnector,
+                "census": CensusBusinessFormationConnector,
+                "international": InternationalMarketConnector,
+                "procurement": ProcurementConnector,
+                "technology_trends": TechnologyMomentumConnector,
+                "economic_context": EconomicContextConnector,
+            },
+            "intelligence_modules": {
+                "government_data": GovernmentDataIntegratorConnector,
+                "academic_research": AcademicResearchConnector,
+                "design_intelligence": DesignIntelligenceConnector,
+                "github_intelligence": GitHubIntelligenceConnector,
+                "funding_tracker": FundingTrackerConnector,
+                "market_timing": MarketTimingConnector,
+            },
+            "code_quality_sources": {
+                "sonarqube": SonarQubeConnector,
+                "code_climate": CodeClimateConnector,
+                "gitguardian": GitGuardianConnector,
+                "semgrep": SemgrepConnector,
+                "veracode": VeracodeConnector,
+            },
+            "business_intelligence_sources": {
+                "first_round": FirstRoundCapitalConnector,
+                "andreessen_horowitz": AndreessenHorowitzConnector,
+                "lean_startup": LeanStartupConnector,
+                "profitwell": ProfitWellConnector,
+                "harvard_business_school": HarvardBusinessSchoolConnector,
+            },
+            "investment_readiness_sources": {
+                "sequoia": SequoiaCapitalConnector,
+                "bessemer": BessemerVenturePartnersConnector,
+                "mit_entrepreneurship": MITEntrepreneurshipConnector,
+                "nvca": NVCAConnector,
+                "cb_insights": CBInsightsConnector,
+                "angel_list": AngelListConnector,
+            },
+            "design_experience_sources": {
+                "nielsen_norman": NielsenNormanGroupConnector,
+                "baymard": BaymardInstituteConnector,
+                "webaim": WebAIMConnector,
+                "google_design": GoogleDesignConnector,
+                "apple_hig": AppleHIGConnector,
+                "chrome_ux_report": ChromeUXReportConnector,
+            },
         }
+
+        self.connectors: Dict[str, type[BaileyConnector]] = {}
+        self.connector_metadata: Dict[str, Dict[str, str]] = {}
+        for group, connectors in self.connector_groups.items():
+            for name, connector in connectors.items():
+                key = f"{group}:{name}"
+                self.connectors[key] = connector
+                self.connector_metadata[key] = {"group": group, "name": name}
         
     async def run_full_ingestion(self) -> Dict[str, Any]:
         """Run full data ingestion from all available sources"""
@@ -1191,11 +1180,11 @@ class BaileyDataPipeline:
             "source_results": {}
         }
         
-        for source_name, connector_class in self.connectors.items():
+        for connector_key, connector_class in self.connectors.items():
             try:
                 async with connector_class() as connector:
                     knowledge_ids = await connector.ingest_data()
-                    results["source_results"][source_name] = {
+                    results["source_results"][connector_key] = {
                         "success": True,
                         "knowledge_points": len(knowledge_ids),
                         "ids": knowledge_ids
@@ -1207,10 +1196,10 @@ class BaileyDataPipeline:
                     await asyncio.sleep(1)
                     
             except Exception as e:
-                error_msg = f"Error processing {source_name}: {str(e)}"
+                error_msg = f"Error processing {connector_key}: {str(e)}"
                 logging.error(error_msg)
                 results["errors"].append(error_msg)
-                results["source_results"][source_name] = {
+                results["source_results"][connector_key] = {
                     "success": False,
                     "error": str(e)
                 }
@@ -1224,7 +1213,15 @@ class BaileyDataPipeline:
         """Run incremental update for specific sources"""
         
         if source_names is None:
-            source_names = ["github", "reddit", "technology_trends", "census"]  # Fast sources for frequent updates
+            default_keys = [
+                "core_sources:github",
+                "core_sources:reddit",
+                "core_sources:technology_trends",
+                "core_sources:census",
+                "intelligence_modules:funding_tracker",
+                "intelligence_modules:market_timing",
+            ]
+            source_names = [key for key in default_keys if key in self.connectors]
             
         results = {
             "start_time": datetime.now(),

@@ -464,6 +464,289 @@ class Bailey:
             )
         }
 
+        intelligence_sources = {
+            "government_data_integrator": KnowledgeSource(
+                name="Government Data Integrator",
+                organization="WeReady Intelligence",
+                tier=SourceTier.GOVERNMENT,
+                url="https://weready.ai/intelligence/government",
+                credibility_score=97.0,
+                cost=0.0,
+                data_categories=["regulatory", "economic", "procurement"],
+                rate_limit="varies by agency"
+            ),
+            "academic_research_integrator": KnowledgeSource(
+                name="Academic Research Integrator",
+                organization="WeReady Intelligence",
+                tier=SourceTier.ACADEMIC,
+                url="https://weready.ai/intelligence/academic",
+                credibility_score=90.0,
+                cost=0.0,
+                data_categories=["research", "citations", "peer_review"],
+                rate_limit="per source"
+            ),
+            "design_intelligence": KnowledgeSource(
+                name="Design Intelligence Engine",
+                organization="WeReady Intelligence",
+                tier=SourceTier.INDUSTRY,
+                url="https://weready.ai/intelligence/design",
+                credibility_score=85.0,
+                cost=0.0,
+                data_categories=["ux", "accessibility", "conversion"]
+            ),
+            "github_intelligence": KnowledgeSource(
+                name="GitHub Intelligence Engine",
+                organization="WeReady Intelligence",
+                tier=SourceTier.INDUSTRY,
+                url="https://weready.ai/intelligence/github",
+                credibility_score=86.0,
+                cost=0.0,
+                data_categories=["developer_trends", "code_quality", "open_source"],
+                rate_limit="5000 requests/hour"
+            ),
+            "funding_tracker": KnowledgeSource(
+                name="Funding Temperature Tracker",
+                organization="WeReady Intelligence",
+                tier=SourceTier.INDUSTRY,
+                url="https://weready.ai/intelligence/funding",
+                credibility_score=84.0,
+                cost=0.0,
+                data_categories=["funding", "market_timing", "macro"]
+            ),
+            "market_timing_advisor": KnowledgeSource(
+                name="Market Timing Advisor",
+                organization="WeReady Intelligence",
+                tier=SourceTier.INDUSTRY,
+                url="https://weready.ai/intelligence/market-timing",
+                credibility_score=83.0,
+                cost=0.0,
+                data_categories=["market_timing", "competitive_analysis", "macro"]
+            )
+        }
+
+        code_quality_sources = {
+            "sonarqube": KnowledgeSource(
+                name="SonarQube / SonarCloud",
+                organization="SonarSource",
+                tier=SourceTier.INDUSTRY,
+                url="https://sonarcloud.io/",
+                api_endpoint="https://sonarcloud.io/api",
+                credibility_score=88.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["code_quality", "technical_debt", "quality_gate"]
+            ),
+            "codeclimate": KnowledgeSource(
+                name="Code Climate Velocity",
+                organization="Code Climate",
+                tier=SourceTier.INDUSTRY,
+                url="https://codeclimate.com/",
+                api_endpoint="https://api.codeclimate.com/v1",
+                credibility_score=85.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["code_quality", "technical_debt", "health"]
+            ),
+            "gitguardian": KnowledgeSource(
+                name="GitGuardian",
+                organization="GitGuardian",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.gitguardian.com/",
+                api_endpoint="https://api.gitguardian.com/v1",
+                credibility_score=84.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["security", "secrets_detection", "compliance"]
+            ),
+            "semgrep": KnowledgeSource(
+                name="Semgrep Cloud Platform",
+                organization="Semgrep",
+                tier=SourceTier.INDUSTRY,
+                url="https://semgrep.dev/",
+                api_endpoint="https://semgrep.dev/api",
+                credibility_score=82.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["security", "code_scanning", "compliance"]
+            ),
+            "veracode": KnowledgeSource(
+                name="Veracode Security Analysis",
+                organization="Veracode",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.veracode.com/",
+                api_endpoint="https://analysiscenter.veracode.com/api",
+                credibility_score=89.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["security", "application_security", "governance"]
+            )
+        }
+
+        business_intelligence_sources = {
+            "first_round": KnowledgeSource(
+                name="First Round Review",
+                organization="First Round Capital",
+                tier=SourceTier.INDUSTRY,
+                url="https://firstround.com/review/",
+                credibility_score=80.0,
+                cost=0.0,
+                data_categories=["founder_advice", "growth", "operations"]
+            ),
+            "andreessen_horowitz": KnowledgeSource(
+                name="Andreessen Horowitz Insights",
+                organization="Andreessen Horowitz (a16z)",
+                tier=SourceTier.INDUSTRY,
+                url="https://a16z.com/",
+                credibility_score=82.0,
+                cost=0.0,
+                data_categories=["market_trends", "vc_insights", "research"]
+            ),
+            "lean_startup": KnowledgeSource(
+                name="Lean Startup Methodology",
+                organization="Lean Startup Co",
+                tier=SourceTier.INDUSTRY,
+                url="https://leanstartup.co/",
+                credibility_score=78.0,
+                cost=0.0,
+                data_categories=["product", "customer_development", "experimentation"]
+            ),
+            "profitwell": KnowledgeSource(
+                name="ProfitWell Benchmarks",
+                organization="ProfitWell",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.profitwell.com/blog",
+                credibility_score=79.0,
+                cost=0.0,
+                data_categories=["saas_metrics", "pricing", "retention"]
+            ),
+            "harvard_business_school": KnowledgeSource(
+                name="Harvard Business School Working Knowledge",
+                organization="Harvard Business School",
+                tier=SourceTier.ACADEMIC,
+                url="https://hbswk.hbs.edu/",
+                credibility_score=88.0,
+                cost=0.0,
+                data_categories=["strategy", "management", "case_studies"]
+            )
+        }
+
+        investment_readiness_sources = {
+            "sequoia_capital": KnowledgeSource(
+                name="Sequoia Capital Articles",
+                organization="Sequoia Capital",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.sequoiacap.com/",
+                credibility_score=85.0,
+                cost=0.0,
+                data_categories=["investment_readiness", "playbooks", "fundraising"]
+            ),
+            "bessemer_venture_partners": KnowledgeSource(
+                name="Bessemer Venture Partners Insights",
+                organization="Bessemer Venture Partners",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.bvp.com/",
+                credibility_score=83.0,
+                cost=0.0,
+                data_categories=["benchmarks", "cloud_index", "fundraising"]
+            ),
+            "mit_entrepreneurship": KnowledgeSource(
+                name="MIT Entrepreneurship",
+                organization="MIT",
+                tier=SourceTier.ACADEMIC,
+                url="https://entrepreneurship.mit.edu/",
+                credibility_score=87.0,
+                cost=0.0,
+                data_categories=["entrepreneurship", "education", "research"]
+            ),
+            "nvca": KnowledgeSource(
+                name="National Venture Capital Association",
+                organization="NVCA",
+                tier=SourceTier.INDUSTRY,
+                url="https://nvca.org/",
+                credibility_score=82.0,
+                cost=0.0,
+                data_categories=["venture_capital", "policy", "benchmarking"]
+            ),
+            "cb_insights": KnowledgeSource(
+                name="CB Insights Research",
+                organization="CB Insights",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.cbinsights.com/research",
+                credibility_score=84.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["market_research", "funding_trends", "emerging_tech"]
+            ),
+            "angellist": KnowledgeSource(
+                name="AngelList Blog",
+                organization="AngelList",
+                tier=SourceTier.INDUSTRY,
+                url="https://angel.co/blog",
+                credibility_score=80.0,
+                cost=0.0,
+                data_categories=["startup_data", "investor_network", "trends"]
+            )
+        }
+
+        design_experience_sources = {
+            "nielsen_norman_group": KnowledgeSource(
+                name="Nielsen Norman Group Research",
+                organization="Nielsen Norman Group",
+                tier=SourceTier.INDUSTRY,
+                url="https://www.nngroup.com/articles/",
+                credibility_score=86.0,
+                cost=0.0,
+                data_categories=["ux_research", "usability", "design_systems"]
+            ),
+            "baymard_institute": KnowledgeSource(
+                name="Baymard Institute",
+                organization="Baymard Institute",
+                tier=SourceTier.INDUSTRY,
+                url="https://baymard.com/blog",
+                credibility_score=89.0,
+                cost=0.0,
+                data_categories=["ecommerce", "ux", "conversion"]
+            ),
+            "webaim": KnowledgeSource(
+                name="WebAIM Accessibility",
+                organization="WebAIM",
+                tier=SourceTier.INDUSTRY,
+                url="https://webaim.org/blog/",
+                credibility_score=90.0,
+                cost=0.0,
+                data_categories=["accessibility", "wcag", "inclusive_design"]
+            ),
+            "google_design": KnowledgeSource(
+                name="Google Design",
+                organization="Google",
+                tier=SourceTier.INDUSTRY,
+                url="https://design.google/",
+                credibility_score=83.0,
+                cost=0.0,
+                data_categories=["material_design", "ux_patterns", "design_research"]
+            ),
+            "apple_hig": KnowledgeSource(
+                name="Apple Human Interface Guidelines",
+                organization="Apple",
+                tier=SourceTier.INDUSTRY,
+                url="https://developer.apple.com/design/human-interface-guidelines/",
+                credibility_score=85.0,
+                cost=0.0,
+                data_categories=["design_guidelines", "mobile", "accessibility"]
+            ),
+            "chrome_ux_report": KnowledgeSource(
+                name="Chrome UX Report",
+                organization="Google",
+                tier=SourceTier.INDUSTRY,
+                url="https://developer.chrome.com/docs/crux",
+                api_endpoint="https://chromeuxreport.googleapis.com/",
+                credibility_score=88.0,
+                cost=0.0,
+                auth_required=True,
+                data_categories=["web_performance", "ux_metrics", "core_web_vitals"]
+            )
+        }
+
         community_sources = {
             "reddit_startups": KnowledgeSource(
                 name="Reddit Startup Communities",
@@ -506,6 +789,11 @@ class Bailey:
         self.knowledge_sources.update(international_sources)
         self.knowledge_sources.update(academic_sources)
         self.knowledge_sources.update(industry_sources)
+        self.knowledge_sources.update(intelligence_sources)
+        self.knowledge_sources.update(code_quality_sources)
+        self.knowledge_sources.update(business_intelligence_sources)
+        self.knowledge_sources.update(investment_readiness_sources)
+        self.knowledge_sources.update(design_experience_sources)
         self.knowledge_sources.update(community_sources)
 
         # Update stats

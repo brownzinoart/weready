@@ -65,24 +65,24 @@ class IntelligentBaileyScore:
     economic_context: Dict[str, Any] = field(default_factory=dict)
 
     # Intelligent recommendations from Bailey
-    brain_recommendations: List[BaileyRecommendation]
-    success_probability: float  # 0-1 based on similar patterns
-    funding_timeline_prediction: str
-    key_risks: List[str]
-    competitive_moats: List[str]
+    brain_recommendations: List[BaileyRecommendation] = field(default_factory=list)
+    success_probability: float = 0.0  # 0-1 based on similar patterns
+    funding_timeline_prediction: str = ""
+    key_risks: List[str] = field(default_factory=list)
+    competitive_moats: List[str] = field(default_factory=list)
 
     # Learning integration
-    similar_success_stories: List[Dict[str, Any]]
-    pattern_matches: List[str]
-    learning_confidence: float
+    similar_success_stories: List[Dict[str, Any]] = field(default_factory=list)
+    pattern_matches: List[str] = field(default_factory=list)
+    learning_confidence: float = 0.0
 
     # Evidence and credibility
-    score_evidence: List[Dict[str, Any]] = None
-    credibility_methodology: Dict[str, Any] = None
+    score_evidence: Optional[List[Dict[str, Any]]] = None
+    credibility_methodology: Optional[Dict[str, Any]] = None
     evidence_count: int = 0
 
     # Intelligent roadmap
-    intelligent_roadmap: Dict[str, List[Dict[str, Any]]] = None
+    intelligent_roadmap: Optional[Dict[str, List[Dict[str, Any]]]] = None
 
 class BaileyIntelligence:
     """The central intelligence engine that powers all WeReady analysis and recommendations"""
