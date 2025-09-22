@@ -757,11 +757,13 @@ export default function BaileyIntelligence() {
             {/* Overview Hero */}
             {activeTab === "overview" && <OverviewHero healthData={healthData} />}
 
-            <PillarOverview
-              healthData={healthData}
-              activeTab={activeTab}
-              onPillarClick={(pillar) => setActiveTab(pillar)}
-            />
+            {activeTab === "overview" && (
+              <PillarOverview
+                healthData={healthData}
+                activeTab={activeTab}
+                onPillarClick={(pillar) => setActiveTab(pillar)}
+              />
+            )}
 
             {/* Code Intelligence Tab */}
             {activeTab === "code" && (
