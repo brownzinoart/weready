@@ -23,52 +23,51 @@ import type {
 } from '../../types/sources';
 import {
   calculateCategorySummary,
+  calculateConsumerHealthScore,
   calculateOverallHealthScore,
   exportSourceHealthToCsv,
   formatRelativeTime,
+  formatServiceReliability,
+  getConsumerStatus,
+  getConsumerStatusBadgeClasses,
+  getDataSourceIndicator,
+  getServiceContinuityMessage,
   getStatusBadgeClasses,
   getStatusPulseClasses,
+  type ConsumerStatus,
 } from '../../utils/sourceHealthUtils';
 
 const STATUS_LEGEND = [
   {
-    key: 'implemented',
-    label: 'Fully Implemented & Active',
+    key: 'on',
+    label: 'ON',
     description:
-      'Live connector connected to real data sources with production ingestion.',
+      'Actively providing real-time insights for your business intelligence',
     icon: <CheckCircle2 className="h-4 w-4 text-emerald-600" />,
     badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   },
   {
-    key: 'mock',
-    label: 'Implemented with Mock Data',
+    key: 'not-responding',
+    label: 'NOT RESPONDING',
     description:
-      'Connector exists but currently serves curated data while API credentials finalize.',
-    icon: <Clock className="h-4 w-4 text-blue-600" />,
-    badgeClass: 'bg-blue-50 text-blue-700 border-blue-200',
-  },
-  {
-    key: 'planned',
-    label: 'Planned / In Progress',
-    description:
-      'Source is on the roadmap and tracked for completion in integrated dashboards.',
-    icon: <AlertTriangle className="h-4 w-4 text-amber-600" />,
+      'Temporarily unavailable - your historical data remains accessible',
+    icon: <Clock className="h-4 w-4 text-amber-600" />,
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-200',
   },
   {
-    key: 'missing',
-    label: 'Displayed but Missing Implementation',
+    key: 'offline',
+    label: 'OFFLINE',
     description:
-      'Highlighted to keep frontend transparent when backend coverage is pending.',
+      'Currently offline - we\'re working to restore service',
     icon: <XCircle className="h-4 w-4 text-rose-600" />,
     badgeClass: 'bg-rose-50 text-rose-700 border-rose-200',
   },
   {
-    key: 'maintenance',
-    label: 'Maintenance Window',
+    key: 'sunset',
+    label: 'SUNSET',
     description:
-      'Connector is temporarily paused for scheduled maintenance or credential rotation.',
-    icon: <Sparkles className="h-4 w-4 text-purple-600" />,
+      'This source is being deprecated - consider alternative sources',
+    icon: <AlertTriangle className="h-4 w-4 text-purple-600" />,
     badgeClass: 'bg-purple-50 text-purple-700 border-purple-200',
   },
 ];
@@ -116,29 +115,43 @@ export default function WeReadySourcesTab({
     return calculateOverallHealthScore(sourceHealth);
   }, [metrics?.system_health_score, sourceHealth]);
 
+  const consumerHealthScore = useMemo(() => {
+    return calculateConsumerHealthScore(sourceHealth);
+  }, [sourceHealth]);
+
+  const dataSourceIndicator = useMemo(() => {
+    return getDataSourceIndicator(loading, !!error, sourceHealth);
+  }, [loading, error, sourceHealth]);
+
+  const serviceMessage = useMemo(() => {
+    return getServiceContinuityMessage(dataSourceIndicator);
+  }, [dataSourceIndicator]);
+
   return (
     <div className="space-y-10">
       <section className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-blue-500">
-              Source Transparency
+              Your Data Coverage
             </p>
             <h2 className="mt-2 text-3xl font-semibold text-slate-900">
-              Live Data Sources That Power WeReady
+              All Intelligence Sources Available
             </h2>
             <p className="mt-3 max-w-3xl text-sm text-slate-600">
-              End-to-end visibility into production connectors, their health, and
-              real-time data ingestion. Every source displayed below is backed by
-              an active integration or intentionally flagged with roadmap
-              context so founders can trust exactly where insights originate.
+              Complete visibility into all data sources powering your WeReady insights.
+              Every connector is shown with real-time status, so you always know exactly
+              what intelligence is available for your business decisions.
             </p>
             {error && (
-              <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
-                <p className="font-semibold">We hit a snag loading live data.</p>
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                <p className="font-semibold">Using cached data while we restore connections</p>
                 <p className="mt-1">
-                  {error}. We are showing cached intelligence while the backend
-                  recovers.
+                  Your insights remain available. We're actively working to restore
+                  real-time updates.
+                </p>
+                <p className="mt-2 text-xs text-amber-600">
+                  {serviceMessage}
                 </p>
               </div>
             )}
@@ -147,17 +160,16 @@ export default function WeReadySourcesTab({
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-blue-700">
               <p className="flex items-center text-sm font-semibold">
-                <ShieldCheck className="mr-2 h-4 w-4" /> Bailey Data Integrity
+                <ShieldCheck className="mr-2 h-4 w-4" /> Service Reliability
               </p>
               <p className="mt-2 text-xs leading-relaxed">
-                Connectors stream real-time intelligence across code quality,
-                business, investment, and design ecosystems. Maintenance windows
-                and credential rotations auto-surface with live health signals.
+                Your business intelligence is powered by multiple data sources.
+                {' '}{consumerHealthScore.description}
               </p>
-              <div className="mt-3 flex items-center gap-2 text-xs">
-                <span className={`flex items-center gap-1 ${getStatusPulseClasses('online')}`}>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  Auto-refresh {metrics?.refresh_interval_seconds ?? 30}s
+              <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                <span className={`flex items-center gap-1 ${dataSourceIndicator === 'live' ? 'text-emerald-600' : 'text-amber-600'}`}>
+                  <span className={`h-2 w-2 rounded-full ${dataSourceIndicator === 'live' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                  {dataSourceIndicator === 'live' ? 'Real-time updates' : 'Cached data'}
                 </span>
                 <span className="text-blue-600">
                   Last update {formatRelativeTime(lastUpdated)}
@@ -184,16 +196,15 @@ export default function WeReadySourcesTab({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h3 className="text-lg font-semibold text-slate-900">
-                System Health Overview
+                Service Health Overview
               </h3>
               <p className="text-sm text-slate-600">
-                Aggregated metrics, uptime guarantees, and ingestion throughput
-                for the entire Bailey intelligence pipeline.
+                Overall reliability and availability of your business intelligence sources
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">
               <div className="flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 font-semibold text-emerald-600">
-                <span className="text-sm">Health {overallHealthScore}%</span>
+                <span className="text-sm">{formatServiceReliability(overallHealthScore)}</span>
               </div>
               <div className={`flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${getStatusBadgeClasses('online')}`}>
                 <span className="text-sm">{metrics?.active_sources ?? filteredSources.length} Active Sources</span>
@@ -224,12 +235,12 @@ export default function WeReadySourcesTab({
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <h3 className="text-lg font-semibold text-slate-900">
-              Real-Time Source Health
+              Individual Source Status
             </h3>
             <p className="text-sm text-slate-600">
-              Live uptime, latency, quota, and data freshness signals across all
-              connectors. Automatic refresh keeps this dashboard synchronized
-              with the backend health checks.
+              Current status and availability for each intelligence source.
+              All configured sources are displayed, showing exactly what data
+              is available for your business insights.
             </p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -273,7 +284,7 @@ export default function WeReadySourcesTab({
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-lg font-semibold text-slate-900">Status Legend</h3>
+        <h3 className="text-lg font-semibold text-slate-900">Understanding Source Status</h3>
         <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           {STATUS_LEGEND.map((item) => (
             <div key={item.key} className={`rounded-xl border ${item.badgeClass} p-4`}>
@@ -356,9 +367,9 @@ export default function WeReadySourcesTab({
             </p>
             <p className="mt-2">
               Planned sources remain visible but explicitly labeled so founders
-              never assume nonexistent integrations. Manual and automated refresh
-              capabilities validate credentials, ingestion pipelines, and
-              credibility scoring in real time.
+              never assume nonexistent integrations. Manual refresh controls
+              validate credentials, ingestion pipelines, and credibility scoring
+              while real-time streaming keeps telemetry current.
             </p>
           </details>
         </div>
@@ -367,14 +378,14 @@ export default function WeReadySourcesTab({
       {loading && (
         <div className="flex items-center justify-center rounded-2xl border border-dashed border-blue-200 bg-blue-50/40 p-6 text-sm text-blue-600">
           <div className="mr-3 h-3 w-3 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
-          Syncing live source telemetry…
+          Loading your data sources…
         </div>
       )}
 
       {!loading && sourceHealth.length === 0 && (
         <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-sm text-amber-700">
           <Bell className="h-4 w-4" />
-          No live sources detected yet. Confirm backend connectors and refresh.
+          Setting up your data sources. Please check back in a moment.
         </div>
       )}
     </div>

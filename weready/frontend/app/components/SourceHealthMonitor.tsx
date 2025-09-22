@@ -9,7 +9,6 @@ import {
   PauseCircle,
   PlayCircle,
   RefreshCw,
-  Signal,
   Wifi,
 } from 'lucide-react';
 import type {
@@ -17,11 +16,20 @@ import type {
   UseSourceHealthReturn,
 } from '../types/sources';
 import {
+  formatDataFreshness,
   formatRelativeTime,
+  formatServiceReliability,
   formatUptime,
-  getLatencyColor,
-  getStatusBadgeClasses,
-  getStatusPulseClasses,
+  formatConnectionQuality,
+  getBusinessImpactDescription,
+  getConnectionQuality,
+  getConsumerStatus,
+  getConsumerStatusBadgeClasses,
+  getConsumerStatusDescription,
+  getQualityColor,
+  getSimpleStatus,
+  getSimpleStatusBadgeClasses,
+  type ConsumerStatus,
 } from '../utils/sourceHealthUtils';
 
 interface SourceHealthMonitorProps {
@@ -36,9 +44,20 @@ const getTrendIcon = (trend: SourceHealthData['healthTrend']) => {
     case 'improving':
       return <ArrowUpRight className="h-4 w-4 text-emerald-500" />;
     case 'degrading':
-      return <ArrowDownRight className="h-4 w-4 text-rose-500" />;
+      return <ArrowDownRight className="h-4 w-4 text-amber-500" />;
     default:
       return <ArrowRight className="h-4 w-4 text-slate-400" />;
+  }
+};
+
+const getTrendDescription = (trend: SourceHealthData['healthTrend']) => {
+  switch (trend) {
+    case 'improving':
+      return 'Service improving';
+    case 'degrading':
+      return 'Needs attention';
+    default:
+      return 'Service stable';
   }
 };
 
@@ -56,7 +75,6 @@ export default function SourceHealthMonitor({
     resumeMonitoring,
     isRefreshing,
     isStreaming,
-    metrics,
   } = sourceHealthState;
   const [localPaused, setLocalPaused] = useState<Record<string, boolean>>({});
 
@@ -93,20 +111,17 @@ export default function SourceHealthMonitor({
                 {degradedSources.length > 0
                   ? `${degradedSources.length} source${
                       degradedSources.length === 1 ? '' : 's'
-                    } require attention`
-                  : 'Realtime stream unavailable – falling back to polling'}
+                    } temporarily unavailable`
+                  : 'Reconnecting to real-time updates'}
               </p>
               {degradedSources.length > 0 && (
                 <p className="mt-1 text-xs">
-                  We automatically escalated degraded connectors. Trigger a
-                  manual refresh or diagnostics to validate remediation.
+                  Your historical data remains accessible. We're actively restoring these connections.
                 </p>
               )}
               {!isStreaming && (
                 <p className="mt-1 text-xs">
-                  Live updates are reconnecting using server-sent events. Metrics
-                  continue to refresh every {metrics?.refresh_interval_seconds ?? 30}
-                  s.
+                  Your data is safe. We're reconnecting to provide real-time updates.
                 </p>
               )}
             </div>
@@ -124,11 +139,17 @@ export default function SourceHealthMonitor({
           <RefreshCw
             className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin text-blue-500' : 'text-slate-500'}`}
           />
-          Bulk Refresh
+          Refresh All
         </button>
-        <div className={`flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${getStatusBadgeClasses('online')}`}>
+        <div
+          className={`flex items-center gap-2 rounded-full px-3 py-1 font-semibold ${
+            isStreaming
+              ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+              : 'border border-amber-200 bg-amber-50 text-amber-700'
+          }`}
+        >
           <Wifi className="h-3.5 w-3.5" />
-          {isStreaming ? 'Live Stream Active' : 'Streaming Reconnecting'}
+          {isStreaming ? 'Real-time updates active' : 'Using cached data'}
         </div>
         {selectedCategory && (
           <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-700">
@@ -146,9 +167,18 @@ export default function SourceHealthMonitor({
 
       <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {sources.map((source) => {
-          const quotaUsed = source.apiQuotaLimit
-            ? 1 - (source.apiQuotaRemaining ?? 0) / source.apiQuotaLimit
-            : null;
+          const connectionQuality = getConnectionQuality(source.responseTime);
+          const recentSummary =
+            source.healthHistory && source.healthHistory.length > 1
+              ? source.healthHistory
+                  .slice(-3)
+                  .map((value) => {
+                    if (value >= 85) return 'Good';
+                    if (value >= 60) return 'Fair';
+                    return 'Offline';
+                  })
+                  .join(' • ')
+              : null;
           const paused = localPaused[source.source_id] === true;
 
           return (
@@ -165,14 +195,13 @@ export default function SourceHealthMonitor({
                 </div>
                 <div className="flex items-center gap-2">
                   <span
-                    className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${getStatusBadgeClasses(source.status)}`}
+                    className={`flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${getConsumerStatusBadgeClasses(getConsumerStatus(source.status))}`}
                   >
-                    <span className={`${getStatusPulseClasses(source.status)} h-2 w-2 rounded-full`} />
-                    {paused ? 'paused' : source.status}
+                    {paused ? 'PAUSED' : getConsumerStatus(source.status)}
                   </span>
-                  <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium uppercase tracking-wide text-slate-500">
+                  <span className="flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-600">
                     {getTrendIcon(source.healthTrend)}
-                    {source.healthTrend}
+                    {getTrendDescription(source.healthTrend)}
                   </span>
                 </div>
               </div>
@@ -181,15 +210,15 @@ export default function SourceHealthMonitor({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-xl bg-slate-50 p-3">
                     <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                      Response Time
+                      Response Speed
                     </p>
-                    <p className={`mt-1 text-lg font-semibold ${getLatencyColor(source.responseTime)}`}>
-                      {source.responseTime} ms
+                    <p className={`mt-1 text-lg font-semibold ${getQualityColor(connectionQuality)}`}>
+                      {formatConnectionQuality(connectionQuality)}
                     </p>
                   </div>
                   <div className="rounded-xl bg-slate-50 p-3">
                     <p className="text-[11px] uppercase tracking-wide text-slate-400">
-                      Uptime
+                      Reliability
                     </p>
                     <p className="mt-1 text-lg font-semibold text-emerald-600">
                       {formatUptime(source.uptime)}
@@ -199,7 +228,7 @@ export default function SourceHealthMonitor({
 
                 <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                   <div className="flex items-center justify-between text-xs text-slate-500">
-                    <span>Credibility</span>
+                    <span>Data Quality Score</span>
                     <span className="font-semibold text-emerald-600">
                       {source.credibility}%
                     </span>
@@ -214,50 +243,24 @@ export default function SourceHealthMonitor({
 
                 <div className="grid gap-3 text-xs text-slate-500 md:grid-cols-2">
                   <div>
-                    <p className="font-medium text-slate-600">Last Updated</p>
+                    <p className="font-medium text-slate-600">Last refresh</p>
                     <p>{formatRelativeTime(source.lastUpdate)}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-slate-600">Data Freshness</p>
-                    <p>{formatRelativeTime(source.dataFreshness)}</p>
+                    <p className="font-medium text-slate-600">Data freshness</p>
+                    <p>{formatDataFreshness(source.lastUpdate)}</p>
                   </div>
-                  <div>
-                    <p className="font-medium text-slate-600">Error Rate</p>
-                    <p className={source.errorRate > 5 ? 'text-rose-500' : ''}>
-                      {source.errorRate.toFixed(2)}%
+                  <div className="md:col-span-2">
+                    <p className="font-medium text-slate-600">Business impact</p>
+                    <p>
+                      {getBusinessImpactDescription(getConsumerStatus(source.status)).split(' - ')[0]}
                     </p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-slate-600">SLA Status</p>
-                    <p>{source.slaCompliance ?? 'Within thresholds'}</p>
                   </div>
                 </div>
 
-                {quotaUsed != null && (
-                  <div className="rounded-xl border border-slate-100 bg-white p-3 text-xs text-slate-500">
-                    <div className="flex items-center justify-between">
-                      <span>API Quota</span>
-                      <span className="font-semibold text-slate-700">
-                        {source.apiQuotaRemaining ?? 0}/{source.apiQuotaLimit}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-2 rounded-full bg-slate-200">
-                      <div
-                        className={`h-2 rounded-full ${quotaUsed > 0.8 ? 'bg-rose-500' : 'bg-blue-500'}`}
-                        style={{ width: `${Math.min(quotaUsed * 100, 100)}%` }}
-                      />
-                    </div>
-                    <p className="mt-1 text-[11px]">
-                      {quotaUsed > 0.8
-                        ? 'Approaching limit – consider rate-limit backoff'
-                        : 'Quota healthy'}
-                    </p>
-                  </div>
-                )}
-
                 {source.dependsOn && source.dependsOn.length > 0 && (
                   <div className="rounded-xl border border-slate-100 bg-slate-50 p-3 text-xs text-slate-500">
-                    <p className="font-medium text-slate-600">Dependencies</p>
+                    <p className="font-medium text-slate-600">Related data sources</p>
                     <div className="mt-2 flex flex-wrap gap-2">
                       {source.dependsOn.map((dependency) => (
                         <span
@@ -271,31 +274,10 @@ export default function SourceHealthMonitor({
                   </div>
                 )}
 
-                {source.healthHistory && source.healthHistory.length > 1 && (
-                  <div className="rounded-xl border border-slate-100 bg-white p-3">
-                    <p className="text-xs font-medium text-slate-600">
-                      24h Health Trend
-                    </p>
-                    <svg viewBox="0 0 120 40" className="mt-2 h-16 w-full">
-                      <polyline
-                        fill="none"
-                        stroke={
-                          source.healthTrend === 'degrading'
-                            ? '#f43f5e'
-                            : source.healthTrend === 'improving'
-                            ? '#10b981'
-                            : '#6366f1'
-                        }
-                        strokeWidth="2"
-                        points={source.healthHistory
-                          .map((point, index) => {
-                            const x = (index / (source.healthHistory!.length - 1)) * 120;
-                            const y = 40 - (point / 100) * 32 - 4;
-                            return `${x},${y}`;
-                          })
-                          .join(' ')}
-                      />
-                    </svg>
+                {recentSummary && (
+                  <div className="rounded-xl border border-slate-100 bg-white p-3 text-xs text-slate-500">
+                    <p className="font-medium text-slate-600">Service history</p>
+                    <p className="mt-1">{recentSummary}</p>
                   </div>
                 )}
               </div>
@@ -307,7 +289,7 @@ export default function SourceHealthMonitor({
                   className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-1 font-semibold text-slate-700 transition hover:bg-slate-50"
                 >
                   <RefreshCw className="h-3.5 w-3.5 text-slate-500" />
-                  Refresh
+                  Update
                 </button>
                 {triggerSourceTest && (
                   <button
@@ -315,8 +297,8 @@ export default function SourceHealthMonitor({
                     onClick={() => triggerSourceTest(source.source_id)}
                     className="inline-flex items-center gap-1 rounded-full border border-blue-200 bg-blue-50 px-3 py-1 font-semibold text-blue-700 transition hover:bg-blue-100"
                   >
-                    <Signal className="h-3.5 w-3.5" />
-                    Run Diagnostics
+                    <Wifi className="h-3.5 w-3.5" />
+                    Test Source
                   </button>
                 )}
                 <button
@@ -329,12 +311,12 @@ export default function SourceHealthMonitor({
                   {paused ? (
                     <>
                       <PlayCircle className="h-3.5 w-3.5 text-emerald-500" />
-                      Resume
+                      Activate
                     </>
                   ) : (
                     <>
                       <PauseCircle className="h-3.5 w-3.5 text-amber-500" />
-                      Pause
+                      Pause Updates
                     </>
                   )}
                 </button>

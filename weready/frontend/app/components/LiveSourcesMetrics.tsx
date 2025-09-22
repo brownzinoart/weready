@@ -6,11 +6,10 @@ import {
   BarChart3,
   Clock,
   Database,
-  Gauge,
   GaugeCircle,
   Layers,
   PieChart,
-  Zap,
+  Wifi,
 } from 'lucide-react';
 import type {
   CategoryCoverage,
@@ -18,11 +17,17 @@ import type {
   UseSourceHealthReturn,
 } from '../types/sources';
 import {
-  calculateCategoryHealthDistribution,
   calculateKnowledgePoints,
+  formatConnectionQuality,
   formatLargeNumber,
   formatRelativeTime,
-  formatResponseTime,
+  formatServiceReliability,
+  getConnectionQuality,
+  getConsumerStatus,
+  getConsumerStatusBadgeClasses,
+  getQualityColor,
+  getSimpleStatus,
+  type ConsumerStatus,
 } from '../utils/sourceHealthUtils';
 
 interface LiveSourcesMetricsProps {
@@ -48,26 +53,64 @@ export default function LiveSourcesMetrics({
       metrics?.average_response_time ??
       (sourceHealth.reduce((acc, item) => acc + item.responseTime, 0) /
         Math.max(sourceHealth.length, 1));
-    const avgUptime =
-      metrics?.average_uptime ??
-      sourceHealth.reduce((acc, item) => acc + item.uptime, 0) /
-        Math.max(sourceHealth.length, 1);
     const totalKnowledgePoints = calculateKnowledgePoints(sourceHealth);
+    const connectionQuality = getConnectionQuality(avgResponseTime);
 
     return {
       activeSources,
       totalSources,
       systemHealth,
-      avgResponseTime,
-      avgUptime,
       totalKnowledgePoints,
+      connectionQuality,
     };
   }, [metrics, sourceHealth]);
 
-  const distribution = useMemo(
-    () => calculateCategoryHealthDistribution(sourceHealth),
-    [sourceHealth],
-  );
+  const statusOverview = useMemo(() => {
+    const totals = {
+      ON: 0,
+      'NOT RESPONDING': 0,
+      OFFLINE: 0,
+      SUNSET: 0,
+    } as Record<ConsumerStatus, number>;
+
+    sourceHealth.forEach((source) => {
+      const consumerStatus = getConsumerStatus(source.status);
+      totals[consumerStatus] += 1;
+    });
+
+    const baseline = Math.max(sourceHealth.length, 1);
+
+    return [
+      {
+        label: 'ON',
+        count: totals.ON,
+        percentage: Math.round((totals.ON / baseline) * 100),
+        colorClass: 'bg-emerald-500',
+        helper: 'Actively providing business insights',
+      },
+      {
+        label: 'NOT RESPONDING',
+        count: totals['NOT RESPONDING'],
+        percentage: Math.round((totals['NOT RESPONDING'] / baseline) * 100),
+        colorClass: 'bg-amber-500',
+        helper: 'Historical data available, new updates paused',
+      },
+      {
+        label: 'OFFLINE',
+        count: totals.OFFLINE,
+        percentage: Math.round((totals.OFFLINE / baseline) * 100),
+        colorClass: 'bg-rose-500',
+        helper: 'Currently unavailable',
+      },
+      {
+        label: 'SUNSET',
+        count: totals.SUNSET,
+        percentage: Math.round((totals.SUNSET / baseline) * 100),
+        colorClass: 'bg-purple-500',
+        helper: 'Being replaced with newer sources',
+      },
+    ].filter(item => item.count > 0); // Only show statuses that have sources
+  }, [sourceHealth]);
 
   return (
     <div className="space-y-6">
@@ -75,7 +118,7 @@ export default function LiveSourcesMetrics({
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
           <div className="flex items-center justify-between text-emerald-700">
             <span className="text-xs font-semibold uppercase tracking-wide">
-              Overall Health
+              Service Reliability
             </span>
             <GaugeCircle className="h-5 w-5" />
           </div>
@@ -83,14 +126,14 @@ export default function LiveSourcesMetrics({
             {aggregate.systemHealth.toFixed(1)}%
           </p>
           <p className="mt-1 text-xs text-emerald-600">
-            Weighted health score across all live connectors
+            {formatServiceReliability(aggregate.systemHealth)}
           </p>
         </div>
 
         <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4">
           <div className="flex items-center justify-between text-blue-700">
             <span className="text-xs font-semibold uppercase tracking-wide">
-              Active Sources
+              Available Sources
             </span>
             <Database className="h-5 w-5" />
           </div>
@@ -98,29 +141,31 @@ export default function LiveSourcesMetrics({
             {aggregate.activeSources}/{aggregate.totalSources}
           </p>
           <p className="mt-1 text-xs text-blue-600">
-            {formatRelativeTime(lastUpdated)} • real-time sync
+            Providing insights for your business decisions
           </p>
         </div>
 
         <div className="rounded-2xl border border-purple-200 bg-purple-50 p-4">
           <div className="flex items-center justify-between text-purple-700">
             <span className="text-xs font-semibold uppercase tracking-wide">
-              Avg Response Time
+              Data Speed
             </span>
-            <Clock className="h-5 w-5" />
+            <Wifi className="h-5 w-5" />
           </div>
-          <p className="mt-3 text-3xl font-semibold text-purple-700">
-            {formatResponseTime(aggregate.avgResponseTime)}
+          <p
+            className={`mt-3 text-3xl font-semibold ${getQualityColor(aggregate.connectionQuality)}`}
+          >
+            {formatConnectionQuality(aggregate.connectionQuality)}
           </p>
           <p className="mt-1 text-xs text-purple-600">
-            SLA target: {metrics?.sla_target_ms ?? 400}ms
+            How quickly we're receiving your business data
           </p>
         </div>
 
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
           <div className="flex items-center justify-between text-amber-700">
             <span className="text-xs font-semibold uppercase tracking-wide">
-              Knowledge Points (24h)
+              Data Points Today
             </span>
             <Activity className="h-5 w-5" />
           </div>
@@ -128,7 +173,7 @@ export default function LiveSourcesMetrics({
             {formatLargeNumber(aggregate.totalKnowledgePoints)}
           </p>
           <p className="mt-1 text-xs text-amber-600">
-            Across all ingest pipelines in the last 24 hours
+            Business insights generated in the last 24 hours
           </p>
         </div>
       </div>
@@ -137,10 +182,10 @@ export default function LiveSourcesMetrics({
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
             <h4 className="text-sm font-semibold text-slate-900">
-              Category Coverage & Reliability
+              Intelligence Categories
             </h4>
             <p className="text-xs text-slate-500">
-              Select a category to inspect detailed health metrics below.
+              Select a category to see available data sources
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -193,8 +238,8 @@ export default function LiveSourcesMetrics({
                     {category}
                   </p>
                   <p className="text-xs text-slate-500">
-                    {summary.implemented}/{summary.total} implemented •{' '}
-                    {summary.health_score.toFixed(1)} health
+                    {summary.implemented}/{summary.total} available •{' '}
+                    {summary.health_score.toFixed(1)}% reliable
                   </p>
                 </div>
                 <PieChart className="h-5 w-5 text-slate-400" />
@@ -217,46 +262,35 @@ export default function LiveSourcesMetrics({
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-semibold text-slate-900">
-              Performance Benchmarks
+              Current Source Status
             </h4>
-            <Gauge className="h-4 w-4 text-slate-400" />
+            <GaugeCircle className="h-4 w-4 text-slate-400" />
           </div>
           <div className="mt-4 space-y-3 text-xs text-slate-500">
-            {distribution.map((bucket) => {
-              const colorClass =
-                bucket.status === 'online'
-                  ? 'bg-emerald-500'
-                  : bucket.status === 'degraded'
-                  ? 'bg-amber-500'
-                  : bucket.status === 'maintenance'
-                  ? 'bg-purple-500'
-                  : 'bg-rose-500';
-              return (
-              <div key={bucket.label}>
+            {statusOverview.map((item) => (
+              <div key={item.label}>
                 <div className="flex items-center justify-between">
-                  <span>{bucket.label}</span>
-                  <span className="font-semibold text-slate-700">
-                    {bucket.count} sources
+                  <span className="font-medium text-slate-600">{item.label}</span>
+                  <span className="font-semibold text-slate-800">
+                    {item.count} {item.count === 1 ? 'source' : 'sources'}
                   </span>
                 </div>
                 <div className="mt-2 h-2 rounded-full bg-slate-200">
                   <div
-                    className={`h-2 rounded-full ${colorClass}`}
-                    style={{ width: `${bucket.percentage}%` }}
+                    className={`h-2 rounded-full ${item.colorClass}`}
+                    style={{ width: `${item.percentage}%` }}
                   />
                 </div>
+                <p className="mt-1 text-[11px] text-slate-500">{item.helper}</p>
               </div>
-            );
-            })}
+            ))}
           </div>
         </div>
 
         <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-semibold text-slate-900">
-              Data Freshness & Throughput
-            </h4>
-            <Zap className="h-4 w-4 text-slate-400" />
+            <h4 className="text-sm font-semibold text-slate-900">Recent Updates</h4>
+            <Clock className="h-4 w-4 text-slate-400" />
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             {sourceHealth.slice(0, 6).map((source: SourceHealthData) => (
@@ -267,21 +301,20 @@ export default function LiveSourcesMetrics({
                 <p className="text-xs font-semibold text-slate-700">
                   {source.name}
                 </p>
-                <p className="text-[11px] text-slate-500">
-                  Freshness: {formatRelativeTime(source.dataFreshness)}
-                </p>
-                <div className="mt-2 flex items-center justify-between text-[10px] uppercase text-slate-500">
-                  <span>Throughput</span>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  Status:{' '}
                   <span className="font-semibold text-slate-700">
-                    {formatLargeNumber(source.ingestionRate ?? 0)} / min
+                    {getConsumerStatus(source.status)}
                   </span>
-                </div>
-                <div className="mt-1 h-1.5 rounded-full bg-slate-200">
-                  <div
-                    className="h-1.5 rounded-full bg-blue-500"
-                    style={{ width: `${Math.min((source.ingestionRate ?? 0) / 100 * 100, 100)}%` }}
-                  />
-                </div>
+                </p>
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Updated {formatRelativeTime(source.lastUpdate)}
+                </p>
+                <p className="text-[11px] text-slate-500">
+                  {source.status === 'online' || source.status === 'degraded'
+                    ? 'Providing real-time insights'
+                    : 'Historical data available'}
+                </p>
               </div>
             ))}
           </div>
