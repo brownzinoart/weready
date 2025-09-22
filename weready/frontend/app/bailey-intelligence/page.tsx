@@ -23,6 +23,7 @@ import {
 import { formatRelativeTime } from "@/app/utils/sourceHealthUtils";
 import { useSourceHealth } from "@/app/hooks/useSourceHealth";
 import { useApiHealth } from "@/app/hooks/useApiHealth";
+import type { ApiHealthStatus } from "@/app/hooks/useApiHealth";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -77,6 +78,76 @@ const classifyFriendlyMessage = (classification: string | null, fallback: string
       return fallback ? fallback : null;
   }
 };
+
+const consumerStatusDescriptors: Record<ApiHealthStatus, {
+  label: string;
+  description: string;
+  tone: string;
+  border: string;
+  icon: typeof CheckCircle;
+}> = {
+  checking: {
+    label: 'Connecting',
+    description: "We're warming up the service. Data will appear shortly.",
+    tone: 'text-sky-600',
+    border: 'border-sky-200',
+    icon: AlertTriangle,
+  },
+  online: {
+    label: 'Connected',
+    description: 'Live insights are available and up to date.',
+    tone: 'text-emerald-600',
+    border: 'border-emerald-200',
+    icon: CheckCircle,
+  },
+  degraded: {
+    label: 'Connected',
+    description: "We're serving the latest answers while we smooth out a few hiccups.",
+    tone: 'text-amber-600',
+    border: 'border-amber-200',
+    icon: AlertTriangle,
+  },
+  offline: {
+    label: 'Service Unavailable',
+    description: "We'll keep watching for the service to come back online and refresh automatically.",
+    tone: 'text-rose-600',
+    border: 'border-rose-200',
+    icon: XCircle,
+  },
+};
+
+function ConsumerStatusIndicator({
+  status,
+  lastChecked,
+  usingFallback,
+}: {
+  status: ApiHealthStatus;
+  lastChecked: number | null;
+  usingFallback: boolean;
+}) {
+  const descriptor = consumerStatusDescriptors[status] ?? consumerStatusDescriptors.checking;
+  const Icon = descriptor.icon;
+
+  const message = usingFallback
+    ? "We're showing saved insights while we reconnect to live data."
+    : descriptor.description;
+  const timestampMessage = lastChecked
+    ? `Updated ${formatRelativeTime(lastChecked)}`
+    : 'Waiting for the latest update';
+
+  return (
+    <div className={`mb-6 rounded-lg border ${descriptor.border} bg-white p-4 shadow-sm`}>
+      <div className="flex items-start gap-3">
+        <Icon className={`mt-1 h-5 w-5 ${descriptor.tone}`} aria-hidden />
+        <div>
+          <p className={`text-sm font-semibold ${descriptor.tone}`}>{descriptor.label}</p>
+          <p className="mt-1 text-sm text-slate-600">{message}</p>
+          <p className="mt-2 text-xs text-slate-500">{timestampMessage}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function BaileyIntelligence() {
   const router = useRouter();
@@ -632,7 +703,7 @@ export default function BaileyIntelligence() {
           </div>
         )}
 
-        {(API_DEBUG_ENABLED || process.env.NODE_ENV !== 'production' || usingFallbackData || consecutiveFailures > 0) && (
+        {API_DEBUG_ENABLED ? (
           <BaileyIntelligenceDebugPanel
             status={healthStatus}
             latencyMs={latencyMs}
@@ -653,6 +724,12 @@ export default function BaileyIntelligence() {
             onRetry={handleManualRetry}
             isRetrying={retryingHealth || apiHealth.isChecking}
             loadingDeadlineReached={loadingDeadlineReached}
+          />
+        ) : (
+          <ConsumerStatusIndicator
+            status={healthStatus}
+            lastChecked={healthLastChecked}
+            usingFallback={usingFallbackData || apiHealth.fallbackActive}
           />
         )}
 

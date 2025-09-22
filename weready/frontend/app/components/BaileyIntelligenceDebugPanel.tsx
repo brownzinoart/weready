@@ -17,6 +17,7 @@ import type {
   ApiTelemetrySnapshot,
 } from "@/app/hooks/useApiHealth";
 import { formatRelativeTime } from "@/app/utils/sourceHealthUtils";
+import { API_DEBUG_ENABLED } from "@/lib/api-config";
 
 type ApiPerformanceSample = {
   endpoint: string;
@@ -124,6 +125,10 @@ const BaileyIntelligenceDebugPanel = ({
   isRetrying,
   loadingDeadlineReached,
 }: BaileyIntelligenceDebugPanelProps) => {
+  if (!API_DEBUG_ENABLED) {
+    return null;
+  }
+
   const tone = statusTone[status] ?? statusTone.checking;
   const notes = connectionNotes.filter(Boolean);
 
