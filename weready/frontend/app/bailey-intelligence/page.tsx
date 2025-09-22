@@ -1,14 +1,27 @@
 "use client";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, AlertTriangle, XCircle, Github, Award, TrendingUp, Users, Star, ArrowRight, Brain, Zap, Shield, BarChart3, GitBranch, BookOpen, Home, Database, Search, Globe, GraduationCap, Building, Code, DollarSign, Palette } from "lucide-react";
 import Navigation from "../components/Navigation";
+import OverviewHero from "../components/OverviewHero";
+import PillarOverview from "../components/PillarOverview";
 import CodeIntelligenceTab from "../components/tabs/CodeIntelligenceTab";
 import BusinessIntelligenceTab from "../components/tabs/BusinessIntelligenceTab";
 import InvestmentTab from "../components/tabs/InvestmentTab";
 import DesignTab from "../components/tabs/DesignTab";
 import WeReadySourcesTab from "../components/tabs/WeReadySourcesTab";
-import { getApiUrl, apiCall } from "../../lib/api-config";
+import SourceHealthDiagnostics from "../components/SourceHealthDiagnostics";
+import ApiConnectionStatus from "../components/ApiConnectionStatus";
+import BaileyIntelligenceDebugPanel from "../components/BaileyIntelligenceDebugPanel";
+import {
+  getApiUrl,
+  apiCall,
+  getApiPerformanceMetrics,
+  API_DEBUG_ENABLED,
+} from "../../lib/api-config";
+import { formatRelativeTime } from "../utils/sourceHealthUtils";
+import { useSourceHealth } from "../hooks/useSourceHealth";
+import { useApiHealth } from "../hooks/useApiHealth";
 
 interface IntelligenceMetrics {
   repositories_analyzed: number;
@@ -29,6 +42,41 @@ interface TechnologyIntelligence {
   };
 }
 
+const classifyErrorFromMessage = (error: any): string | null => {
+  if (!error) {
+    return null;
+  }
+  if (error.name === 'TimeoutError') {
+    return 'timeout';
+  }
+  if (error.name === 'AbortError') {
+    return 'abort';
+  }
+  if (typeof error.status === 'number' || typeof error?.response?.status === 'number') {
+    return 'http';
+  }
+  const message: string | undefined = error.message || error?.toString?.();
+  if (message && /Failed to fetch|NetworkError|ECONNREFUSED/i.test(message)) {
+    return 'network';
+  }
+  return null;
+};
+
+const classifyFriendlyMessage = (classification: string | null, fallback: string): string | null => {
+  switch (classification) {
+    case 'timeout':
+      return 'Bailey Intelligence did not respond within the timeout window. We will keep retrying automatically.';
+    case 'network':
+      return 'Network connectivity to the Bailey Intelligence backend appears unavailable. Check that the backend service is running on port 8000.';
+    case 'http':
+      return 'Bailey Intelligence responded with an unexpected status. Showing demo data until the service recovers.';
+    case 'abort':
+      return 'The health check was interrupted before it completed. Retrying shortly.';
+    default:
+      return fallback ? fallback : null;
+  }
+};
+
 export default function BaileyIntelligence() {
   const router = useRouter();
   const [healthData, setHealthData] = useState<any>(null);
@@ -39,6 +87,178 @@ export default function BaileyIntelligence() {
   const [activeTab, setActiveTab] = useState("overview");
   const [businessIntelLoading, setBusinessIntelLoading] = useState(true);
   const [businessIntelError, setBusinessIntelError] = useState<string | null>(null);
+  const [intelligenceError, setIntelligenceError] = useState<string | null>(null);
+  const [usingFallbackData, setUsingFallbackData] = useState(false);
+  const [debugDetails, setDebugDetails] = useState<any>(null);
+  const [connectionNotes, setConnectionNotes] = useState<string[]>([]);
+  const [performanceSnapshot, setPerformanceSnapshot] = useState(getApiPerformanceMetrics());
+
+  const apiHealth = useApiHealth({
+    pollIntervalMs: 30000,
+    timeoutMs: 10000,
+    retryAttempts: 2,
+    historySize: 40,
+  });
+  const {
+    refresh: refreshHealth,
+    diagnostics: existingDiagnostics,
+    latencyMs,
+    latencyAvgMs,
+    status: healthStatus,
+    error: healthError,
+    errorType: healthErrorType,
+    consecutiveFailures,
+    lastFailureAt,
+    lastSuccessAt,
+    telemetry: apiTelemetry,
+    lastChecked: healthLastChecked,
+  } = apiHealth;
+
+  const healthEndpointUrl = useMemo(() => getApiUrl("/health"), []);
+  const fallbackHealthTemplate = useMemo(
+    () => ({
+      status: "degraded",
+      detectors: {
+        hallucination: "active",
+        github_analyzer: "active",
+        bailey_intelligence: "active",
+        learning_engine: "active",
+        bailey_knowledge_engine: "active",
+        government_data_integrator: "active",
+        academic_research_integrator: "active",
+        github_intelligence: "active",
+      },
+      intelligence: {
+        government_sources: 47,
+        academic_papers_analyzed: 2847,
+        github_repositories_analyzed: 156789,
+        credible_sources: 94,
+        bailey_sources: 38,
+        github_api_calls: 3271,
+      },
+    }),
+    [],
+  );
+
+  const fallbackTrendingTemplate = useMemo(
+    () => ({
+      javascript: {
+        adoption_rate: 0.89,
+        growth_rate: 0.23,
+        startup_adoption: 0.76,
+        innovation_index: 0.84,
+        trending_libraries: ["Next.js", "React", "TypeScript", "Tailwind"],
+      },
+      python: {
+        adoption_rate: 0.82,
+        growth_rate: 0.31,
+        startup_adoption: 0.68,
+        innovation_index: 0.91,
+        trending_libraries: ["FastAPI", "Pydantic", "Streamlit", "LangChain"],
+      },
+      ai_ml: {
+        adoption_rate: 0.73,
+        growth_rate: 0.47,
+        startup_adoption: 0.84,
+        innovation_index: 0.96,
+        trending_libraries: ["Transformers", "OpenAI", "Anthropic", "LangChain"],
+      },
+    }),
+    [],
+  );
+  const isMountedRef = useRef(true);
+  const diagnosticsRef = useRef(existingDiagnostics);
+  const latencyRef = useRef(latencyMs);
+
+  useEffect(() => {
+    if (!healthData) {
+      setHealthData({
+        ...fallbackHealthTemplate,
+        meta: {
+          source: 'fallback',
+          message: 'Initializing Bailey Intelligence with resilient demo data while we connect to live telemetry.',
+          lastChecked: Date.now(),
+          diagnostics: diagnosticsRef.current,
+          endpoint: healthEndpointUrl,
+        },
+      });
+      setTrendingData(fallbackTrendingTemplate);
+      setUsingFallbackData(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const [loadingDeadlineReached, setLoadingDeadlineReached] = useState(false);
+  const [retryingHealth, setRetryingHealth] = useState(false);
+  const loadingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    diagnosticsRef.current = existingDiagnostics;
+  }, [existingDiagnostics]);
+
+  useEffect(() => {
+    latencyRef.current = latencyMs;
+  }, [latencyMs]);
+
+  useEffect(() => {
+    if (healthData) {
+      setLoadingDeadlineReached(false);
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    if (loadingTimeoutRef.current) {
+      return () => {};
+    }
+
+    loadingTimeoutRef.current = setTimeout(() => {
+      if (!isMountedRef.current || healthData) {
+        return;
+      }
+      setLoadingDeadlineReached(true);
+      setHealthData((previous: any) => {
+        if (previous) {
+          return previous;
+        }
+        return {
+          ...fallbackHealthTemplate,
+          meta: {
+            source: "fallback",
+            message: "Timed out waiting for live health data",
+            lastChecked: Date.now(),
+            diagnostics: diagnosticsRef.current,
+            endpoint: healthEndpointUrl,
+          },
+        };
+      });
+      setTrendingData((previous: TechnologyIntelligence | null) => previous ?? fallbackTrendingTemplate);
+      setUsingFallbackData(true);
+      setIntelligenceError(
+        "We couldn't reach Bailey Intelligence within 30 seconds. Showing resilient demo data while we keep retrying.",
+      );
+      setPerformanceSnapshot(getApiPerformanceMetrics());
+      setConnectionNotes((previous: string[]) => [
+        ...previous,
+        'Health check timed out after 30 seconds. Automatic retries continue.',
+      ]);
+    }, 30000);
+
+    return () => {
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+    };
+  }, [healthData, fallbackHealthTemplate, fallbackTrendingTemplate, healthEndpointUrl]);
 
   const initializeBusinessIntelligence = useCallback(async () => {
     setBusinessIntelLoading(true);
@@ -83,109 +303,182 @@ export default function BaileyIntelligence() {
   const [semanticQuery, setSemanticQuery] = useState("");
   const [semanticResults, setSemanticResults] = useState<any>(null);
   const [semanticLoading, setSemanticLoading] = useState(false);
-  const [sourceHealth, setSourceHealth] = useState<any>(null);
-  const [lastUpdated, setLastUpdated] = useState<string>("");
-  const [contradictions, setContradictions] = useState<any[]>([]);
+  const sourceHealthState = useSourceHealth();
 
   useEffect(() => {
     initializeBusinessIntelligence();
   }, [initializeBusinessIntelligence]);
 
-  // Load Bailey intelligence overview
-  useEffect(() => {
-    const loadIntelligenceOverview = async () => {
-      try {
-        const [healthResponse, trendingResponse] = await Promise.all([
-          apiCall('/health'),
-          apiCall('/github/trending-intelligence')
+  const loadIntelligenceOverview = useCallback(async () => {
+    const errors: string[] = [];
+    let healthResult: any;
+    setConnectionNotes([]);
+
+    try {
+      healthResult = await refreshHealth({ immediate: true });
+      const healthPayload = healthResult?.data || healthResult?.raw || null;
+
+      if (!healthPayload) {
+        throw new Error("Health payload was empty");
+      }
+
+      const computedLatency = healthResult?.duration ?? healthResult?.latency ?? latencyRef.current ?? null;
+
+      const enrichedHealth = {
+        ...healthPayload,
+        meta: {
+          ...(healthPayload.meta || {}),
+          source: "live",
+          latencyMs: computedLatency,
+          lastChecked: healthResult?.timestamp ?? Date.now(),
+          diagnostics: healthResult?.diagnostics,
+        },
+      };
+
+      if (healthResult?.diagnostics && healthResult.diagnostics.portMatches === false) {
+        setConnectionNotes([
+          `Frontend expects backend on port ${healthResult.diagnostics.configuredPort} but detected ${healthResult.diagnostics.detectedPort ?? 'unknown'}.`,
         ]);
-        
-        const health = await healthResponse.json();
-        const trending = await trendingResponse.json();
-        
-        setHealthData(health);
-        setTrendingData(trending.trending_intelligence?.technology_landscape || null);
-      } catch (error) {
-        console.error("Failed to load Bailey intelligence, using demo data:", error);
-        
-        // Use mock data for demo purposes when backend is not available
-        setHealthData({
-          intelligence: {
-            government_sources: 47,
-            academic_papers_analyzed: 2847,
-            github_repositories_analyzed: 156789,
-            credible_sources: 94
-          },
-          detectors: {
-            hallucination_detector: 'active',
-            credibility_engine: 'active',
-            market_timing_advisor: 'active',
-            bailey_brain: 'active',
-            github_intelligence: 'active',
-            government_data_integrator: 'active'
-          }
-        });
+      }
 
-        // Mock source health data with real-time indicators
-        setSourceHealth({
-          sec_edgar: { status: 'online', uptime: 99.7, lastUpdate: '2 minutes ago', responseTime: 234, credibility: 98 },
-          github_api: { status: 'online', uptime: 99.9, lastUpdate: '30 seconds ago', responseTime: 145, credibility: 95 },
-          arxiv: { status: 'online', uptime: 98.2, lastUpdate: '5 minutes ago', responseTime: 312, credibility: 92 },
-          federal_reserve: { status: 'online', uptime: 99.5, lastUpdate: '1 hour ago', responseTime: 567, credibility: 97 },
-          uspto_patents: { status: 'degraded', uptime: 97.1, lastUpdate: '15 minutes ago', responseTime: 890, credibility: 95 },
-          mit_research: { status: 'online', uptime: 98.8, lastUpdate: '10 minutes ago', responseTime: 423, credibility: 94 }
-        });
-
-        setLastUpdated(new Date().toLocaleString());
-
-        // Mock contradiction detection
-        setContradictions([
-          {
-            topic: 'AI Startup Funding',
-            sources: ['MIT Research', 'CB Insights'],
-            conflict: 'MIT suggests 34% growth while CB Insights reports 28% growth',
-            confidence: 85,
-            resolution: 'Methodology differences - MIT includes pre-seed, CB Insights starts at seed'
-          }
-        ]);
-        
-        setTrendingData({
-          javascript: {
-            adoption_rate: 0.89,
-            growth_rate: 0.23,
-            startup_adoption: 0.76,
-            innovation_index: 0.84,
-            trending_libraries: ["Next.js", "React", "TypeScript", "Tailwind"]
-          },
-          python: {
-            adoption_rate: 0.82,
-            growth_rate: 0.31,
-            startup_adoption: 0.68,
-            innovation_index: 0.91,
-            trending_libraries: ["FastAPI", "Pydantic", "Streamlit", "Langchain"]
-          },
-          ai_ml: {
-            adoption_rate: 0.73,
-            growth_rate: 0.47,
-            startup_adoption: 0.84,
-            innovation_index: 0.96,
-            trending_libraries: ["Transformers", "OpenAI", "Anthropic", "LangChain"]
-          }
+      if (isMountedRef.current) {
+        setHealthData(enrichedHealth);
+        setUsingFallbackData(false);
+        setIntelligenceError(null);
+        setDebugDetails({
+          endpoint: healthEndpointUrl,
+          diagnostics: healthResult?.diagnostics ?? diagnosticsRef.current,
+          telemetry: apiTelemetry,
+          errors: [],
+          performance: getApiPerformanceMetrics(),
         });
       }
-    };
-    
+
+      const trendingResponse = await apiCall(
+        '/github/trending-intelligence',
+        {
+          timeoutMs: 10000,
+          retry: { attempts: 2, backoffMs: 600, maxBackoffMs: 2800 },
+          connectionLabel: 'github-trending-intelligence',
+        },
+      );
+
+      if (!trendingResponse.ok) {
+        const payload = await trendingResponse.text();
+        throw new Error(`Trending intelligence responded with ${trendingResponse.status}: ${payload.slice(0, 120)}`);
+      }
+
+      const trending = await trendingResponse.json();
+
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+
+      if (isMountedRef.current) {
+        setTrendingData(trending.trending_intelligence?.technology_landscape || null);
+        setPerformanceSnapshot(getApiPerformanceMetrics());
+        setLoadingDeadlineReached(false);
+        setConnectionNotes([]);
+      }
+    } catch (error: any) {
+      const message = error?.message || 'Unknown API error';
+      const classification = healthResult?.errorType || healthErrorType || classifyErrorFromMessage(error);
+      const friendlyMessage = classifyFriendlyMessage(classification, message);
+      errors.push(message);
+      if (friendlyMessage && friendlyMessage !== message) {
+        errors.push(friendlyMessage);
+      }
+      console.error("Failed to load Bailey intelligence, using demo data:", error);
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      const fallbackHealth = {
+        ...fallbackHealthTemplate,
+        meta: {
+          source: "fallback",
+          message: friendlyMessage || message,
+          lastChecked: Date.now(),
+          diagnostics: healthResult?.diagnostics ?? diagnosticsRef.current,
+          endpoint: healthEndpointUrl,
+        },
+      };
+
+      const trendingFallback = Object.fromEntries(
+        Object.entries(fallbackTrendingTemplate).map(([key, value]) => [
+          key,
+          { ...value, trending_libraries: [...value.trending_libraries] },
+        ]),
+      );
+
+      if (loadingTimeoutRef.current) {
+        clearTimeout(loadingTimeoutRef.current);
+        loadingTimeoutRef.current = null;
+      }
+
+      setHealthData(fallbackHealth);
+      setTrendingData(trendingFallback);
+      setUsingFallbackData(true);
+      setIntelligenceError(
+        friendlyMessage || "We couldn't reach the live Bailey Intelligence services. You're viewing resilient demo data while we reconnect.",
+      );
+      setPerformanceSnapshot(getApiPerformanceMetrics());
+      setLoadingDeadlineReached(true);
+      setConnectionNotes((previous: string[]) => {
+        const next = [...previous, friendlyMessage, message].filter(Boolean) as string[];
+        return Array.from(new Set(next));
+      });
+
+      if (API_DEBUG_ENABLED || process.env.NODE_ENV !== 'production') {
+        setDebugDetails({
+          errors: Array.from(new Set(errors)),
+          endpoint: healthEndpointUrl,
+          diagnostics: diagnosticsRef.current,
+          performance: getApiPerformanceMetrics(),
+          telemetry: apiTelemetry,
+          classification,
+        });
+      } else {
+        setDebugDetails(null);
+      }
+    }
+  }, [fallbackHealthTemplate, fallbackTrendingTemplate, healthEndpointUrl, refreshHealth]);
+
+  const handleManualRetry = useCallback(async () => {
+    setRetryingHealth(true);
+    try {
+      await loadIntelligenceOverview();
+    } finally {
+      setRetryingHealth(false);
+    }
+  }, [loadIntelligenceOverview]);
+
+  useEffect(() => {
     loadIntelligenceOverview();
-  }, []);
+  }, [loadIntelligenceOverview]);
 
   const analyzeRepository = async () => {
     if (!repositoryUrl) return;
     
     setLoading(true);
     try {
-      const response = await apiCall('/github/repository-analysis', {}, { repo_url: repositoryUrl });
+      const response = await apiCall(
+        '/github/repository-analysis',
+        {
+          timeoutMs: 10000,
+          retry: { attempts: 1, backoffMs: 600, maxBackoffMs: 2500 },
+          connectionLabel: 'github-repository-analysis',
+        },
+        { repo_url: repositoryUrl },
+      );
+      if (!response.ok) {
+        throw new Error(`Repository analysis responded with ${response.status}`);
+      }
       const data = await response.json();
       setRepoAnalysis(data);
+      setPerformanceSnapshot(getApiPerformanceMetrics());
     } catch (error) {
       console.error("Repository analysis failed, using demo data:", error);
       
@@ -216,6 +509,7 @@ export default function BaileyIntelligence() {
           ]
         }
       });
+      setPerformanceSnapshot(getApiPerformanceMetrics());
     } finally {
       setLoading(false);
     }
@@ -232,6 +526,51 @@ export default function BaileyIntelligence() {
     if (score >= 60) return <AlertTriangle className="w-5 h-5 text-yellow-600" />;
     return <XCircle className="w-5 h-5 text-red-600" />;
   };
+
+  const connectionStatusMeta = () => {
+    const status = sourceHealthState.connectionState.status;
+    switch (status) {
+      case 'connected':
+        return {
+          label: 'Live telemetry streaming',
+          tone: 'text-emerald-600',
+          background: 'bg-emerald-50 border-emerald-200',
+          icon: <CheckCircle className="w-4 h-4 text-emerald-600" />,
+        };
+      case 'reconnecting':
+      case 'connecting':
+      case 'initializing':
+        return {
+          label: 'Reconnecting to live telemetry…',
+          tone: 'text-amber-600',
+          background: 'bg-amber-50 border-amber-200',
+          icon: <AlertTriangle className="w-4 h-4 text-amber-600" />,
+        };
+      case 'degraded':
+        return {
+          label: 'Using fallback telemetry while service recovers',
+          tone: 'text-blue-600',
+          background: 'bg-blue-50 border-blue-200',
+          icon: <AlertTriangle className="w-4 h-4 text-blue-600" />,
+        };
+      case 'offline':
+        return {
+          label: 'Live telemetry offline',
+          tone: 'text-rose-600',
+          background: 'bg-rose-50 border-rose-200',
+          icon: <XCircle className="w-4 h-4 text-rose-600" />,
+        };
+      default:
+        return {
+          label: 'Telemetry status unknown',
+          tone: 'text-slate-600',
+          background: 'bg-slate-100 border-slate-200',
+          icon: <AlertTriangle className="w-4 h-4 text-slate-500" />,
+        };
+    }
+  };
+
+  const statusMeta = connectionStatusMeta();
 
   if (!healthData) {
     return (
@@ -264,6 +603,58 @@ export default function BaileyIntelligence() {
 
       {/* Intelligence Metrics Overview */}
       <div className="container mx-auto px-4 py-6 md:py-8">
+        <div className="mb-6 md:mb-8">
+          <ApiConnectionStatus
+            status={healthStatus}
+            lastChecked={healthLastChecked}
+            latencyMs={latencyMs}
+            error={healthError}
+            usingFallback={usingFallbackData || apiHealth.fallbackActive}
+            notes={connectionNotes}
+            diagnostics={existingDiagnostics}
+            onRetry={handleManualRetry}
+            retrying={retryingHealth || apiHealth.isChecking}
+            healthEndpoint={healthEndpointUrl}
+            debugDetails={debugDetails}
+            performance={performanceSnapshot}
+          />
+        </div>
+
+        {intelligenceError && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700" role="status" aria-live="polite">
+            <p className="font-medium">{intelligenceError}</p>
+            {usingFallbackData && (
+              <p className="mt-1 text-amber-600">
+                We&apos;ll automatically refresh once the backend responds. You can also retry manually above.
+              </p>
+            )}
+          </div>
+        )}
+
+        {(API_DEBUG_ENABLED || process.env.NODE_ENV !== 'production' || usingFallbackData || consecutiveFailures > 0) && (
+          <BaileyIntelligenceDebugPanel
+            status={healthStatus}
+            latencyMs={latencyMs}
+            latencyAvgMs={latencyAvgMs}
+            consecutiveFailures={consecutiveFailures}
+            fallbackActive={usingFallbackData || apiHealth.fallbackActive}
+            lastChecked={healthLastChecked}
+            lastSuccessAt={lastSuccessAt}
+            lastFailureAt={lastFailureAt}
+            error={healthError}
+            errorType={healthErrorType}
+            diagnostics={existingDiagnostics}
+            telemetry={apiTelemetry}
+            connectionNotes={connectionNotes}
+            debugDetails={debugDetails}
+            performanceSnapshot={performanceSnapshot}
+            endpoint={healthEndpointUrl}
+            onRetry={handleManualRetry}
+            isRetrying={retryingHealth || apiHealth.isChecking}
+            loadingDeadlineReached={loadingDeadlineReached}
+          />
+        )}
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-6 md:mb-8">
           <div className="bg-white p-4 md:p-6 rounded-lg shadow-lg border border-green-200">
             <div className="flex items-center">
@@ -342,34 +733,34 @@ export default function BaileyIntelligence() {
             </nav>
           </div>
 
-          <div className="p-6">
-            {/* Overview Tab */}
-            {activeTab === "overview" && (
-              <div className="space-y-6">
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">Bailey Intelligence Status</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {Object.entries(healthData.detectors || {}).map(([detector, status]) => (
-                      <div key={detector} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="font-medium capitalize">{detector.replace(/_/g, ' ')}</span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {String(status)}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="text-lg font-semibold mb-4">WeReady Sources</h3>
-                  <div className="mt-4">
-                    <WeReadySourcesTab />
-                  </div>
-                </div>
+          <div className="border-b border-gray-100 bg-gray-50 px-6 py-4">
+            <div
+              className={`flex items-center gap-3 rounded-xl border px-4 py-3 text-xs font-medium ${statusMeta.background}`}
+              aria-live="polite"
+            >
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white shadow-sm">
+                {statusMeta.icon}
+              </span>
+              <div className={`flex flex-col ${statusMeta.tone}`}>
+                <span>{statusMeta.label}</span>
+                <span className="text-[11px] text-slate-500">
+                  Last sync {sourceHealthState.lastUpdated ? formatRelativeTime(sourceHealthState.lastUpdated) : 'unknown'} •
+                  {' '}
+                  Consecutive failures {sourceHealthState.connectionState.consecutiveFailures}
+                </span>
               </div>
-            )}
+            </div>
+          </div>
+
+          <div className="p-6 space-y-8">
+            {/* Overview Hero */}
+            {activeTab === "overview" && <OverviewHero healthData={healthData} />}
+
+            <PillarOverview
+              healthData={healthData}
+              activeTab={activeTab}
+              onPillarClick={(pillar) => setActiveTab(pillar)}
+            />
 
             {/* Code Intelligence Tab */}
             {activeTab === "code" && (
@@ -999,167 +1390,12 @@ export default function BaileyIntelligence() {
             )}
 
             {/* Live Sources Tab */}
-            {activeTab === "sources" && sourceHealth && (
-              <div className="space-y-6">
-                <div>
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-lg font-semibold">Real-Time Source Status</h3>
-                    <div className="flex items-center space-x-2 text-sm text-gray-500">
-                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                      <span>Live • Updated {lastUpdated}</span>
-                    </div>
-                  </div>
-
-                  {/* Source Health Grid */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    {Object.entries(sourceHealth).map(([source, health]: [string, any]) => {
-                      const getStatusColor = (status: string) => {
-                        switch (status) {
-                          case 'online': return 'text-green-600';
-                          case 'degraded': return 'text-yellow-600';
-                          case 'offline': return 'text-red-600';
-                          default: return 'text-gray-600';
-                        }
-                      };
-
-                      const getStatusBg = (status: string) => {
-                        switch (status) {
-                          case 'online': return 'bg-green-50 border-green-200';
-                          case 'degraded': return 'bg-yellow-50 border-yellow-200';
-                          case 'offline': return 'bg-red-50 border-red-200';
-                          default: return 'bg-gray-50 border-gray-200';
-                        }
-                      };
-
-                      return (
-                        <div key={source} className={`border rounded-lg p-4 ${getStatusBg(health.status)}`}>
-                          <div className="flex items-center justify-between mb-3">
-                            <h4 className="font-semibold text-gray-900 capitalize">
-                              {source.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                            </h4>
-                            <div className="flex items-center space-x-2">
-                              <div className={`w-2 h-2 rounded-full ${health.status === 'online' ? 'bg-green-500' : health.status === 'degraded' ? 'bg-yellow-500' : 'bg-red-500'}`}></div>
-                              <span className={`text-xs font-medium capitalize ${getStatusColor(health.status)}`}>
-                                {health.status}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Uptime:</span>
-                              <span className="font-medium">{health.uptime}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Response Time:</span>
-                              <span className="font-medium">{health.responseTime}ms</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Credibility:</span>
-                              <span className="font-medium text-green-600">{health.credibility}%</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-gray-600">Last Update:</span>
-                              <span className="font-medium text-blue-600">{health.lastUpdate}</span>
-                            </div>
-                          </div>
-
-                          {/* Confidence Interval Indicator */}
-                          <div className="mt-3 pt-3 border-t border-gray-200">
-                            <div className="flex items-center justify-between text-xs">
-                              <span className="text-gray-500">Confidence Range</span>
-                              <span className="font-medium">±{(100 - health.credibility) / 2}%</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
-                              <div 
-                                className="bg-green-500 h-1.5 rounded-full transition-all duration-1000"
-                                style={{ width: `${health.credibility}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {/* Contradiction Detection Alert */}
-                  {contradictions.length > 0 && (
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
-                      <div className="flex items-center space-x-2 mb-3">
-                        <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                        <h4 className="font-semibold text-yellow-800">Source Contradiction Detected</h4>
-                      </div>
-                      {contradictions.map((contradiction, idx) => (
-                        <div key={idx} className="bg-white border border-yellow-200 rounded p-3">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="font-medium text-gray-900">{contradiction.topic}</span>
-                            <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">
-                              {contradiction.confidence}% confidence
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700 mb-2">{contradiction.conflict}</p>
-                          <div className="text-xs text-gray-600">
-                            <strong>Resolution:</strong> {contradiction.resolution}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Enhanced Performance Metrics */}
-                  <div className="bg-white border border-gray-200 rounded-lg p-6">
-                    <h4 className="text-lg font-semibold mb-4">Source Performance Metrics</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-green-600 mb-1">
-                          {Object.keys(sourceHealth).length}
-                        </div>
-                        <div className="text-sm text-gray-600">Active Sources</div>
-                        <div className="text-xs text-green-600 mt-1">Real-time monitoring</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-blue-600 mb-1">
-                          {Math.round(Object.values(sourceHealth).reduce((acc: number, health: any) => acc + health.credibility, 0) / Object.keys(sourceHealth).length)}%
-                        </div>
-                        <div className="text-sm text-gray-600">Avg Credibility</div>
-                        <div className="text-xs text-blue-600 mt-1">With confidence intervals</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-purple-600 mb-1">
-                          {Math.round(Object.values(sourceHealth).reduce((acc: number, health: any) => acc + health.responseTime, 0) / Object.keys(sourceHealth).length)}ms
-                        </div>
-                        <div className="text-sm text-gray-600">Avg Response Time</div>
-                        <div className="text-xs text-purple-600 mt-1">Sub-second queries</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-3xl font-bold text-orange-600 mb-1">
-                          {Math.round(Object.values(sourceHealth).reduce((acc: number, health: any) => acc + health.uptime, 0) / Object.keys(sourceHealth).length * 10) / 10}%
-                        </div>
-                        <div className="text-sm text-gray-600">Uptime SLA</div>
-                        <div className="text-xs text-orange-600 mt-1">Industry-leading reliability</div>
-                      </div>
-                    </div>
-
-                    {/* Real-time Methodology Transparency */}
-                    <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-                      <h5 className="font-medium text-gray-900 mb-2">Transparency Guarantee</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-gray-700">Source attribution for every data point</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-gray-700">Real-time contradiction detection</span>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <CheckCircle className="w-4 h-4 text-green-600" />
-                          <span className="text-gray-700">Confidence intervals for all metrics</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+            {activeTab === "sources" && (
+              <div className="space-y-8">
+                <SourceHealthDiagnostics state={sourceHealthState} />
+                <WeReadySourcesTab
+                  sourceHealthState={sourceHealthState}
+                />
               </div>
             )}
 
