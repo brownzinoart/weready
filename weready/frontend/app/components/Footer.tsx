@@ -1,5 +1,5 @@
 "use client";
-import { Award, Mail, Github, Twitter, Linkedin, ExternalLink } from "lucide-react";
+import { Award, Mail, Github, Twitter, Linkedin } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -17,8 +17,7 @@ export default function Footer() {
               </span>
             </div>
             <p className="text-slate-300 text-lg mb-6 max-w-md">
-              Evidence-based startup intelligence powered by Bailey. Get actionable insights 
-              backed by research from YC, MIT, and leading VCs.
+              Evidence-based startup intelligence powered by Bailey. Currently in beta with production-grade research.
             </p>
             <div className="flex space-x-4">
               <a href="#" className="text-slate-400 hover:text-white transition-colors">
@@ -107,37 +106,6 @@ export default function Footer() {
             </div>
             <div className="text-sm text-slate-400">
               © 2024 WeReady. All rights reserved.
-            </div>
-          </div>
-        </div>
-
-        {/* Research Credits */}
-        <div className="mt-8 pt-8 border-t border-slate-700">
-          <div className="text-center">
-            <p className="text-sm text-slate-400 mb-4">
-              Powered by research from leading institutions and organizations
-            </p>
-            <div className="flex flex-wrap justify-center items-center space-x-6 text-xs text-slate-500">
-              <span className="flex items-center space-x-1">
-                <ExternalLink className="w-3 h-3" />
-                <span>MIT Startup Genome</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <ExternalLink className="w-3 h-3" />
-                <span>Y Combinator Research</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <ExternalLink className="w-3 h-3" />
-                <span>Bessemer Cloud</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <ExternalLink className="w-3 h-3" />
-                <span>First Round Review</span>
-              </span>
-              <span className="flex items-center space-x-1">
-                <ExternalLink className="w-3 h-3" />
-                <span>CISQ</span>
-              </span>
             </div>
           </div>
         </div>
