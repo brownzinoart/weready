@@ -58,6 +58,7 @@ export interface SourceHealthData {
   apiQuotaLimit?: number;
   dependsOn?: string[];
   healthTrend: HealthTrend;
+  paused?: boolean;
   slaCompliance?: string;
   ingestionRate?: number;
   dataPointsLast24h?: number;
