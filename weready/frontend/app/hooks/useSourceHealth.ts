@@ -532,8 +532,8 @@ export function useSourceHealth(): UseSourceHealthReturn {
   const isMountedRef = useRef(true);
   const lastFailureMessageRef = useRef<string | null>(null);
   const hasRestoredCacheRef = useRef(false);
-  const autoRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const manualCooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoRefreshTimerRef = useRef<number | null>(null);
+  const manualCooldownTimeoutRef = useRef<number | null>(null);
   const lastManualRefreshRef = useRef<number | null>(null);
   const nextAutoRefreshAtRef = useRef<number | null>(null);
   const fetchInFlightRef = useRef(false);
@@ -543,6 +543,23 @@ export function useSourceHealth(): UseSourceHealthReturn {
     setMonitoringSnapshot(snapshot);
     setConnectionState(snapshot.connection);
   }, []);
+
+  const applyMockData = useCallback(
+    (reason: string | null = null) => {
+      if (!isMountedRef.current) return;
+      setSourceHealth(MOCK_SOURCE_HEALTH);
+      const mockMetrics = buildMockMetrics();
+      setMetrics(mockMetrics);
+      setLastUpdated(mockMetrics.last_updated);
+      setUsingMockData(true);
+      fallbackUsedRef.current = true;
+      monitoringRef.current.setUsingMockData(true);
+      monitoringRef.current.setStatus('degraded');
+      monitoringRef.current.recordFallback(reason ?? 'Switched to telemetry fallback.');
+      syncMonitoringState();
+    },
+    [syncMonitoringState],
+  );
 
   const restoreFromCache = useCallback(async () => {
     if (hasRestoredCacheRef.current || typeof window === 'undefined') {
@@ -613,8 +630,8 @@ export function useSourceHealth(): UseSourceHealthReturn {
         return;
       }
 
-      if (manualCooldownTimeoutRef.current) {
-        clearTimeout(manualCooldownTimeoutRef.current);
+      if (manualCooldownTimeoutRef.current !== null) {
+        window.clearTimeout(manualCooldownTimeoutRef.current);
         manualCooldownTimeoutRef.current = null;
       }
 
@@ -681,23 +698,6 @@ export function useSourceHealth(): UseSourceHealthReturn {
       }
     },
     [cacheMetrics, cacheSourceHealth, syncMonitoringState, updateAutoRefreshTarget],
-  );
-
-  const applyMockData = useCallback(
-    (reason: string | null = null) => {
-      if (!isMountedRef.current) return;
-      setSourceHealth(MOCK_SOURCE_HEALTH);
-      const mockMetrics = buildMockMetrics();
-      setMetrics(mockMetrics);
-      setLastUpdated(mockMetrics.last_updated);
-      setUsingMockData(true);
-      fallbackUsedRef.current = true;
-      monitoringRef.current.setUsingMockData(true);
-      monitoringRef.current.setStatus('degraded');
-      monitoringRef.current.recordFallback(reason ?? 'Switched to telemetry fallback.');
-      syncMonitoringState();
-    },
-    [syncMonitoringState],
   );
 
   const fetchStatus = useCallback(
@@ -884,12 +884,12 @@ export function useSourceHealth(): UseSourceHealthReturn {
       isMountedRef.current = false;
       monitoringRef.current.setStatus('offline');
       syncMonitoringState();
-      if (autoRefreshTimerRef.current) {
-        clearInterval(autoRefreshTimerRef.current);
+      if (autoRefreshTimerRef.current !== null) {
+        window.clearInterval(autoRefreshTimerRef.current);
         autoRefreshTimerRef.current = null;
       }
-      if (manualCooldownTimeoutRef.current) {
-        clearTimeout(manualCooldownTimeoutRef.current);
+      if (manualCooldownTimeoutRef.current !== null) {
+        window.clearTimeout(manualCooldownTimeoutRef.current);
         manualCooldownTimeoutRef.current = null;
       }
       nextAutoRefreshAtRef.current = null;
@@ -903,8 +903,8 @@ export function useSourceHealth(): UseSourceHealthReturn {
 
     updateAutoRefreshTarget();
 
-    if (autoRefreshTimerRef.current) {
-      clearInterval(autoRefreshTimerRef.current);
+    if (autoRefreshTimerRef.current !== null) {
+      window.clearInterval(autoRefreshTimerRef.current);
     }
 
     autoRefreshTimerRef.current = window.setInterval(() => {
@@ -913,8 +913,8 @@ export function useSourceHealth(): UseSourceHealthReturn {
     }, AUTO_REFRESH_INTERVAL_MS);
 
     return () => {
-      if (autoRefreshTimerRef.current) {
-        clearInterval(autoRefreshTimerRef.current);
+      if (autoRefreshTimerRef.current !== null) {
+        window.clearInterval(autoRefreshTimerRef.current);
         autoRefreshTimerRef.current = null;
       }
     };

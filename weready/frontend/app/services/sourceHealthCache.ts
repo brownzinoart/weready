@@ -294,6 +294,12 @@ export async function getCacheInfo(): Promise<CacheInfo> {
       lastCacheTime: null,
       cacheSize: 0,
       isExpired: true,
+      ageMs: null,
+      expiredForMs: 0,
+      refreshMode: null,
+      recommendedRefreshIntervalMs: RECOMMENDED_REFRESH_MS,
+      nextRefreshDueInMs: null,
+      metadataVersion: null,
     };
   }
 

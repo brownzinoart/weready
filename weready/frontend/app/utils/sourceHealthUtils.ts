@@ -1005,7 +1005,7 @@ export function buildSourceAccessibilityMetadata(args: {
   };
 }
 
-export type NotificationTone = 'positive' | 'caution' | 'warning' | 'info';
+export type NotificationTone = 'positive' | 'caution' | 'warning' | 'info' | 'neutral';
 
 export interface StatusNotification {
   tone: NotificationTone;
