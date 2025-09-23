@@ -109,9 +109,13 @@ class SourceInventoryItem(BaseModel):
     credibility_score: Optional[float] = None
     connector_key: Optional[str] = None
     implementation_notes: Optional[str] = None
+    sunset_date: Optional[datetime] = None
+    replacement_source_id: Optional[str] = None
+    migration_guidance: Optional[str] = None
 
     class Config:
         use_enum_values = True
+        json_encoders = {datetime: lambda value: value.isoformat()}
 
 
 class SourceStatusItem(BaseModel):
@@ -187,6 +191,10 @@ class SourceHealthPayload(BaseModel):
     knowledge_points: Optional[int] = Field(None, alias="knowledgePoints")
     maintenance_window: Optional[str] = Field(None, alias="maintenanceWindow")
     health_history: Optional[List[float]] = Field(None, alias="healthHistory")
+    sunset_date: Optional[datetime] = Field(None, alias="sunsetDate")
+    replacement_source: Optional[str] = Field(None, alias="replacementSource")
+    migration_guidance: Optional[str] = Field(None, alias="migrationGuidance")
+    deprecation_notice: Optional[str] = Field(None, alias="deprecationNotice")
 
     model_config = ConfigDict(
         populate_by_name=True, json_encoders={datetime: lambda value: value.isoformat()}
@@ -594,7 +602,320 @@ SOURCE_BASELINES: Dict[str, Dict[str, Any]] = {
         "knowledge_points": 2_600,
         "health_history": [92, 92, 93, 94, 95, 96, 97, 97.5],
     },
+    "stackoverflow": {
+        "name": "Stack Overflow",
+        "category": "Community",
+        "status": "online",
+        "uptime": 99.1,
+        "response_time": 182,
+        "credibility": 93,
+        "error_rate": 0.6,
+        "health_trend": "stable",
+        "depends_on": ["developer_qa_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 72,
+        "data_points_last_24h": 24_600,
+        "knowledge_points": 6_900,
+        "api_quota_remaining": 18_000,
+        "api_quota_limit": 25_000,
+        "health_history": [94, 94, 95, 95, 95, 95.5, 96, 96],
+    },
+    "reddit_startups": {
+        "name": "Reddit Startups",
+        "category": "Community",
+        "status": "degraded",
+        "uptime": 95.4,
+        "response_time": 410,
+        "credibility": 82,
+        "error_rate": 3.4,
+        "health_trend": "volatile",
+        "depends_on": ["community_aggregation_pipeline"],
+        "sla": "Signal quality watch",
+        "ingestion_rate": 44,
+        "data_points_last_24h": 12_300,
+        "knowledge_points": 2_200,
+        "health_history": [80, 81, 82, 81, 80, 79, 78, 78],
+    },
+    "veracode": {
+        "name": "Veracode Application Security",
+        "category": "Security",
+        "status": "maintenance",
+        "uptime": 94.7,
+        "response_time": 520,
+        "credibility": 90,
+        "error_rate": 2.8,
+        "health_trend": "maintenance",
+        "depends_on": ["security_pipeline"],
+        "sla": "Connector upgrade in progress",
+        "ingestion_rate": 21,
+        "data_points_last_24h": 4_900,
+        "knowledge_points": 1_600,
+        "maintenance_window": "Agent rollout through Friday",
+        "health_history": [84, 84, 84, 83, 82, 81, 81, 80],
+    },
+    "snyk": {
+        "name": "Snyk Vulnerability Feed",
+        "category": "Security",
+        "status": "maintenance",
+        "uptime": 96.8,
+        "response_time": 340,
+        "credibility": 91,
+        "error_rate": 1.9,
+        "health_trend": "improving",
+        "depends_on": ["security_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 39,
+        "data_points_last_24h": 8_700,
+        "knowledge_points": 2_700,
+        "health_history": [86, 87, 88, 88, 89, 90, 91, 92],
+    },
+    "datadog": {
+        "name": "Datadog Observability",
+        "category": "Operations",
+        "status": "online",
+        "uptime": 99.0,
+        "response_time": 230,
+        "credibility": 95,
+        "error_rate": 0.7,
+        "health_trend": "improving",
+        "depends_on": ["operations_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 58,
+        "data_points_last_24h": 16_400,
+        "knowledge_points": 3_900,
+        "health_history": [92, 93, 93, 94, 95, 95, 96, 96],
+    },
+    "pagerduty": {
+        "name": "PagerDuty Incident Feed",
+        "category": "Operations",
+        "status": "sunset",
+        "uptime": 91.2,
+        "response_time": 620,
+        "credibility": 88,
+        "error_rate": 4.6,
+        "health_trend": "declining",
+        "depends_on": ["operations_pipeline"],
+        "sla": "Sunsetting connector",
+        "ingestion_rate": 17,
+        "data_points_last_24h": 3_100,
+        "knowledge_points": 950,
+        "sunset_date": datetime(2025, 1, 15),
+        "replacement_source": "datadog",
+        "migration_guidance": "Move alerting automations to Datadog incidents.",
+        "deprecation_notice": "PagerDuty integration retires on January 15, 2025.",
+        "health_history": [78, 77, 76, 75, 74, 73, 72, 70],
+    },
+    "lean_startup": {
+        "name": "The Lean Startup",
+        "category": "Business Intelligence",
+        "status": "sunset",
+        "uptime": 88.0,
+        "response_time": 840,
+        "credibility": 85,
+        "error_rate": 5.2,
+        "health_trend": "retiring",
+        "depends_on": ["venture_insights_pipeline"],
+        "sla": "Content archive",
+        "ingestion_rate": 8,
+        "data_points_last_24h": 600,
+        "knowledge_points": 240,
+        "sunset_date": datetime(2024, 6, 30),
+        "replacement_source": "first_round",
+        "migration_guidance": "Lean Startup library is archived – rely on First Round Review playbooks.",
+        "deprecation_notice": "Historical summaries remain available in read-only mode.",
+        "health_history": [72, 71, 70, 68, 66, 64, 62, 60],
+    },
+    "profitwell": {
+        "name": "ProfitWell Benchmarks",
+        "category": "Business Intelligence",
+        "status": "deprecated",
+        "uptime": 87.4,
+        "response_time": 910,
+        "credibility": 86,
+        "error_rate": 6.0,
+        "health_trend": "retiring",
+        "depends_on": ["subscription_metrics_pipeline"],
+        "sla": "Deprecated – data merging into Paddle",
+        "ingestion_rate": 12,
+        "data_points_last_24h": 1_200,
+        "knowledge_points": 420,
+        "sunset_date": datetime(2024, 9, 30),
+        "replacement_source": "cb_insights",
+        "migration_guidance": "Adopt CB Insights SaaS benchmarks to replace ProfitWell panels.",
+        "deprecation_notice": "ProfitWell dashboards retire September 30, 2024.",
+        "health_history": [70, 69, 68, 66, 65, 63, 61, 60],
+    },
+    "harvard_business_school": {
+        "name": "Harvard Business School",
+        "category": "Business Intelligence",
+        "status": "online",
+        "uptime": 97.0,
+        "response_time": 360,
+        "credibility": 95,
+        "error_rate": 1.0,
+        "health_trend": "stable",
+        "depends_on": ["academic_ingestion_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 24,
+        "data_points_last_24h": 5_400,
+        "knowledge_points": 1_900,
+        "health_history": [90, 90, 91, 92, 92, 93, 93, 94],
+    },
+    "nvca": {
+        "name": "NVCA Research",
+        "category": "Investment Readiness",
+        "status": "online",
+        "uptime": 96.4,
+        "response_time": 410,
+        "credibility": 91,
+        "error_rate": 1.6,
+        "health_trend": "stable",
+        "depends_on": ["investment_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 16,
+        "data_points_last_24h": 3_700,
+        "knowledge_points": 1_250,
+        "health_history": [86, 87, 88, 88, 89, 90, 90, 91],
+    },
+    "mit_entrepreneurship": {
+        "name": "MIT Entrepreneurship",
+        "category": "Investment Readiness",
+        "status": "planned",
+        "uptime": 0.0,
+        "response_time": 0,
+        "credibility": 0.0,
+        "error_rate": 0.0,
+        "health_trend": "planned",
+        "depends_on": ["venture_insights_pipeline"],
+        "sla": "Implementation backlog",
+        "ingestion_rate": 0,
+        "data_points_last_24h": 0,
+        "knowledge_points": 0,
+        "health_history": [0, 0, 0, 0, 0, 0, 0, 0],
+    },
+    "angellist": {
+        "name": "AngelList",
+        "category": "Investment Readiness",
+        "status": "online",
+        "uptime": 98.2,
+        "response_time": 280,
+        "credibility": 92,
+        "error_rate": 1.3,
+        "health_trend": "stable",
+        "depends_on": ["investment_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 32,
+        "data_points_last_24h": 7_800,
+        "knowledge_points": 2_300,
+        "health_history": [88, 88, 89, 90, 91, 91, 92, 93],
+    },
+    "google_design": {
+        "name": "Google Design",
+        "category": "Design Experience",
+        "status": "online",
+        "uptime": 97.6,
+        "response_time": 260,
+        "credibility": 94,
+        "error_rate": 0.8,
+        "health_trend": "improving",
+        "depends_on": ["design_insights_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 29,
+        "data_points_last_24h": 6_200,
+        "knowledge_points": 2_050,
+        "health_history": [90, 90, 91, 92, 93, 93, 94, 95],
+    },
+    "apple_hig": {
+        "name": "Apple Human Interface Guidelines",
+        "category": "Design Experience",
+        "status": "online",
+        "uptime": 99.3,
+        "response_time": 190,
+        "credibility": 97,
+        "error_rate": 0.5,
+        "health_trend": "stable",
+        "depends_on": ["design_insights_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 31,
+        "data_points_last_24h": 6_600,
+        "knowledge_points": 2_200,
+        "health_history": [92, 92, 93, 94, 95, 95, 96, 97],
+    },
+    "chrome_ux_report": {
+        "name": "Chrome UX Report",
+        "category": "Design Experience",
+        "status": "degraded",
+        "uptime": 94.1,
+        "response_time": 520,
+        "credibility": 90,
+        "error_rate": 2.9,
+        "health_trend": "volatile",
+        "depends_on": ["performance_pipeline"],
+        "sla": "High latency due to provider backlog",
+        "ingestion_rate": 23,
+        "data_points_last_24h": 5_200,
+        "knowledge_points": 1_700,
+        "health_history": [85, 84, 83, 82, 82, 81, 80, 79],
+    },
+    "product_hunt": {
+        "name": "Product Hunt",
+        "category": "Discovery",
+        "status": "online",
+        "uptime": 98.6,
+        "response_time": 275,
+        "credibility": 89,
+        "error_rate": 1.7,
+        "health_trend": "stable",
+        "depends_on": ["market_signal_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 47,
+        "data_points_last_24h": 11_900,
+        "knowledge_points": 2_900,
+        "health_history": [86, 87, 88, 89, 90, 90, 91, 92],
+    },
+    "census_bfs": {
+        "name": "US Census Business Formation",
+        "category": "Government",
+        "status": "online",
+        "uptime": 97.9,
+        "response_time": 380,
+        "credibility": 96,
+        "error_rate": 1.1,
+        "health_trend": "stable",
+        "depends_on": ["government_economic_pipeline"],
+        "sla": "On track",
+        "ingestion_rate": 26,
+        "data_points_last_24h": 4_200,
+        "knowledge_points": 1_500,
+        "health_history": [88, 88, 89, 90, 91, 91, 92, 93],
+    },
 }
+
+
+def _generate_mock_baseline(
+    source_id: str,
+    *,
+    name: Optional[str] = None,
+    category: Optional[str] = None,
+) -> Dict[str, Any]:
+    display_name = name or source_id.replace("_", " ").title()
+    resolved_category = category or "Uncategorized"
+    return {
+        "name": display_name,
+        "category": resolved_category,
+        "status": "offline",
+        "uptime": 90.0,
+        "response_time": 450,
+        "credibility": 75.0,
+        "error_rate": 4.5,
+        "health_trend": "unknown",
+        "depends_on": [],
+        "sla": "Awaiting baseline data",
+        "ingestion_rate": 0,
+        "data_points_last_24h": 0,
+        "knowledge_points": 0,
+        "health_history": [0, 0, 0, 0, 0, 0, 0, 0],
+    }
 
 
 DEPENDENCY_GRAPH: Dict[str, List[str]] = {
@@ -663,19 +984,21 @@ CONTRADICTION_LOG: List[ContradictionRecord] = [
 ]
 
 
+STATUS_TO_HEALTH_STATE = {
+    "implemented": "online",
+    "mock": "maintenance",
+    "planned": "offline",
+    "missing": "offline",
+    "sunset": "sunset",
+    "deprecated": "deprecated",
+}
+
+
 def _map_status(status: Optional[str]) -> str:
     if status is None:
         return "offline"
-    status = status.lower()
-    if status == "implemented":
-        return "online"
-    if status == "mock":
-        return "maintenance"
-    if status == "planned":
-        return "offline"
-    if status == "missing":
-        return "offline"
-    return status
+    normalized = status.lower()
+    return STATUS_TO_HEALTH_STATE.get(normalized, normalized)
 
 
 def _jitter(value: float, magnitude: float = 0.3) -> float:
@@ -708,28 +1031,80 @@ async def _build_health_snapshot(
             logger.debug("Using cached source health snapshot after lock check")
             return _health_cache
 
-        snapshot = service.get_status_snapshot()
-        union_ids = set(snapshot.keys()) | set(SOURCE_BASELINES.keys())
+        try:
+            snapshot = service.get_status_snapshot()
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.exception("Failed to collect live status snapshot", exc_info=exc)
+            snapshot = {}
+
+        try:
+            sunset_records = {
+                record.source_id: record for record in service.get_sunset_sources()
+            }
+        except Exception as exc:  # pragma: no cover - defensive fallback
+            logger.exception("Unable to collect sunset registry", exc_info=exc)
+            sunset_records = {}
+
+        catalog_entries = getattr(service, "frontend_catalog", [])
+        catalog_lookup = {entry["id"]: entry for entry in catalog_entries}
+        union_ids = (
+            set(snapshot.keys())
+            | set(SOURCE_BASELINES.keys())
+            | set(catalog_lookup.keys())
+        )
+
         sources_payload: Dict[str, SourceHealthPayload] = {}
 
         for source_id in sorted(union_ids):
-            baseline = SOURCE_BASELINES.get(source_id, {})
-            snapshot_entry = snapshot.get(source_id, {})
+            baseline = SOURCE_BASELINES.get(source_id)
+            catalog_entry = catalog_lookup.get(source_id)
+            if baseline is None:
+                baseline = _generate_mock_baseline(
+                    source_id,
+                    name=catalog_entry.get("name") if catalog_entry else None,
+                    category=catalog_entry.get("category") if catalog_entry else None,
+                )
 
-            name = baseline.get("name") or snapshot_entry.get("name") or source_id
-            category = baseline.get("category") or snapshot_entry.get("category") or "Uncategorized"
-            status = baseline.get("status") or _map_status(snapshot_entry.get("status"))
-            knowledge_points = baseline.get("knowledge_points") or snapshot_entry.get("knowledge_points", 0)
+            snapshot_entry = snapshot.get(source_id, {})
+            name = (
+                baseline.get("name")
+                or snapshot_entry.get("name")
+                or (catalog_entry.get("name") if catalog_entry else source_id)
+            )
+            category = (
+                baseline.get("category")
+                or snapshot_entry.get("category")
+                or (catalog_entry.get("category") if catalog_entry else "Uncategorized")
+            )
+
+            status_source: Optional[str] = baseline.get("status") or snapshot_entry.get("status")
+            sunset_record = sunset_records.get(source_id)
+            if status_source is None and sunset_record:
+                status_source = sunset_record.status.value
+            if isinstance(status_source, SourceImplementationStatus):
+                status_source = status_source.value
+            if sunset_record and status_source not in {"sunset", "deprecated"}:
+                status_source = sunset_record.status.value
+            status = _map_status(status_source)
+
+            knowledge_points = snapshot_entry.get("knowledge_points")
+            if knowledge_points is None:
+                knowledge_points = baseline.get("knowledge_points", 0)
 
             uptime = baseline.get("uptime", 96.5)
             uptime = min(100.0, _jitter(uptime, 0.4))
             response_time = int(max(120, _jitter(baseline.get("response_time", 320), 40)))
             credibility = min(100.0, _jitter(baseline.get("credibility", 92.0), 1.5))
             error_rate = max(0.0, _jitter(baseline.get("error_rate", 1.2), 0.8))
-            data_points_last_24h = int(
-                max(0, baseline.get("data_points_last_24h", knowledge_points * 4))
+
+            baseline_data_points = baseline.get("data_points_last_24h")
+            if baseline_data_points is None and knowledge_points is not None:
+                baseline_data_points = knowledge_points * 4
+            data_points_last_24h = int(max(0, baseline_data_points or 0))
+            ingestion_rate = baseline.get(
+                "ingestion_rate",
+                round(data_points_last_24h / 60, 2) if data_points_last_24h else 0,
             )
-            ingestion_rate = baseline.get("ingestion_rate", round(data_points_last_24h / 60, 2))
             api_quota_remaining = baseline.get("api_quota_remaining")
             api_quota_limit = baseline.get("api_quota_limit")
             depends_on = baseline.get("depends_on", [])
@@ -737,6 +1112,17 @@ async def _build_health_snapshot(
             sla = baseline.get("sla")
             maintenance_window = baseline.get("maintenance_window")
             health_history = baseline.get("health_history")
+
+            sunset_date = baseline.get("sunset_date")
+            if sunset_date is None and sunset_record:
+                sunset_date = sunset_record.sunset_date
+            replacement_source = baseline.get("replacement_source")
+            if replacement_source is None and sunset_record:
+                replacement_source = sunset_record.replacement_source_id
+            migration_guidance = baseline.get("migration_guidance")
+            if migration_guidance is None and sunset_record:
+                migration_guidance = sunset_record.migration_guidance
+            deprecation_notice = baseline.get("deprecation_notice")
 
             now_dt = datetime.utcnow()
             payload = SourceHealthPayload(
@@ -760,11 +1146,17 @@ async def _build_health_snapshot(
                 knowledge_points=knowledge_points,
                 maintenance_window=maintenance_window,
                 health_history=health_history,
+                sunset_date=sunset_date,
+                replacement_source=replacement_source,
+                migration_guidance=migration_guidance,
+                deprecation_notice=deprecation_notice,
             )
             sources_payload[source_id] = payload
 
         total_sources = len(sources_payload)
-        active_sources = len([p for p in sources_payload.values() if p.status != "offline"])
+        active_sources = len(
+            [p for p in sources_payload.values() if p.status not in {"offline", "sunset", "deprecated"}]
+        )
         average_uptime = (
             sum(p.uptime for p in sources_payload.values()) / total_sources if total_sources else 0.0
         )
@@ -879,18 +1271,114 @@ def _build_contradiction_stats(records: Iterable[ContradictionRecord]) -> Contra
 async def get_inventory(
     service: SourceInventoryService = Depends(get_service),
 ) -> List[SourceInventoryItem]:
-    return [
-        SourceInventoryItem(**record.__dict__)
-        for record in service.get_inventory()
-    ]
+    try:
+        records = service.get_inventory()
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.exception("Falling back to catalog-backed inventory", exc_info=exc)
+        fallback: List[SourceInventoryItem] = []
+        for entry in getattr(service, "frontend_catalog", []):
+            fallback.append(
+                SourceInventoryItem(
+                    source_id=entry["id"],
+                    name=entry["name"],
+                    category=entry.get("category", "uncategorized"),
+                    organization=None,
+                    status=SourceImplementationStatus.MISSING,
+                )
+            )
+        return fallback
+
+    inventory_items: List[SourceInventoryItem] = []
+    for record in records:
+        inventory_items.append(SourceInventoryItem(**record.__dict__))
+    return inventory_items
 
 
 @router.get("/status", response_model=Dict[str, SourceStatusItem])
 async def get_status(
     service: SourceInventoryService = Depends(get_service),
 ) -> Dict[str, SourceStatusItem]:
-    snapshot = service.get_status_snapshot()
-    return {key: SourceStatusItem(**value) for key, value in snapshot.items()}
+    try:
+        raw_inventory = service.get_inventory()
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.exception("Inventory lookup failed for status snapshot", exc_info=exc)
+        raw_inventory = []
+
+    try:
+        snapshot = service.get_status_snapshot()
+    except Exception as exc:  # pragma: no cover - defensive fallback
+        logger.exception("Status snapshot lookup failed", exc_info=exc)
+        snapshot = {}
+
+    catalog_entries = getattr(service, "frontend_catalog", [])
+    catalog_lookup = {entry["id"]: entry for entry in catalog_entries}
+    inventory_lookup = {record.source_id: record for record in raw_inventory}
+
+    union_ids = (
+        set(inventory_lookup.keys())
+        | set(snapshot.keys())
+        | set(catalog_lookup.keys())
+        | set(SOURCE_BASELINES.keys())
+    )
+
+    status_payload: Dict[str, SourceStatusItem] = {}
+
+    for source_id in sorted(union_ids):
+        record = inventory_lookup.get(source_id)
+        baseline = SOURCE_BASELINES.get(source_id, {})
+        catalog_entry = catalog_lookup.get(source_id)
+
+        name = (
+            record.name if record else baseline.get("name") or (catalog_entry["name"] if catalog_entry else source_id)
+        )
+        category = (
+            record.category
+            if record
+            else baseline.get("category")
+            or (catalog_entry.get("category") if catalog_entry else "uncategorized")
+        )
+
+        knowledge_points = snapshot.get(source_id, {}).get(
+            "knowledge_points",
+            baseline.get("knowledge_points", 0),
+        )
+
+        status_value: SourceImplementationStatus
+        if record:
+            status_value = record.status
+        else:
+            baseline_status = baseline.get("status")
+            if isinstance(baseline_status, SourceImplementationStatus):
+                baseline_status = baseline_status.value
+            if baseline_status == "sunset":
+                status_value = SourceImplementationStatus.SUNSET
+            elif baseline_status == "deprecated":
+                status_value = SourceImplementationStatus.DEPRECATED
+            else:
+                status_value = SourceImplementationStatus.MISSING
+
+        if source_id in snapshot:
+            snapshot_status = snapshot[source_id].get("status")
+            if snapshot_status:
+                normalized = snapshot_status.lower()
+                if normalized == "sunset":
+                    status_value = SourceImplementationStatus.SUNSET
+                elif normalized == "deprecated":
+                    status_value = SourceImplementationStatus.DEPRECATED
+                else:
+                    try:
+                        status_value = SourceImplementationStatus(snapshot_status)
+                    except ValueError:
+                        pass
+
+        status_payload[source_id] = SourceStatusItem(
+            name=name,
+            category=category,
+            status=status_value,
+            knowledge_points=knowledge_points,
+        )
+
+    return status_payload
 
 
 @router.get("/coverage", response_model=Dict[str, CoverageItem])
@@ -938,6 +1426,14 @@ async def validate_sources(
 ) -> SourceValidationResponse:
     result = service.validate_sources(payload.source_ids)
     return SourceValidationResponse(**result)
+
+
+@router.get("/all", response_model=List[SourceHealthPayload])
+async def get_all_sources(
+    service: SourceInventoryService = Depends(get_service),
+) -> List[SourceHealthPayload]:
+    snapshot = await _build_health_snapshot(service)
+    return list(snapshot.sources.values())
 
 
 @router.get("/health", response_model=SourceHealthResponse)

@@ -140,12 +140,16 @@ export interface CacheMetadata {
   version: string;
   expiresAt: string;
   dataSource: CacheDataSource;
+  refreshMode?: 'initial' | 'manual' | 'auto';
 }
 
 export interface CachedSourceData {
   data: SourceHealthData[];
   metadata: CacheMetadata;
   isExpired: boolean;
+  ageMs: number | null;
+  expiredForMs: number;
+  expiresAtMs: number | null;
 }
 
 export interface CacheInfo {
@@ -153,6 +157,12 @@ export interface CacheInfo {
   lastCacheTime: string | null;
   cacheSize: number;
   isExpired: boolean;
+  ageMs: number | null;
+  expiredForMs: number;
+  refreshMode: CacheMetadata['refreshMode'] | null;
+  recommendedRefreshIntervalMs: number;
+  nextRefreshDueInMs: number | null;
+  metadataVersion: string | null;
 }
 
 export interface SourceStatusStreamEvent {
@@ -189,7 +199,11 @@ export interface UseSourceHealthReturn {
   refreshSource: (sourceId: string) => Promise<void>;
   isRefreshing: boolean;
   metrics?: SourceMetrics;
-  isStreaming: boolean;
+  lastUpdatedLabel: string;
+  manualRefreshAllowed: boolean;
+  manualRefreshMessage: string | null;
+  nextAutoRefreshAt: number | null;
+  nextAutoRefreshLabel: string;
   triggerSourceTest?: (sourceId: string) => Promise<void>;
   pauseMonitoring?: (sourceId: string) => Promise<void>;
   resumeMonitoring?: (sourceId: string) => Promise<void>;

@@ -1,7 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { apiCall, getApiUrl } from '@/lib/api-config';
+import { apiCall } from '@/lib/api-config';
+import { CACHE_TTL_MS } from '@/app/constants/cache';
 import { sourceHealthCache } from '@/app/services/sourceHealthCache';
 import type {
   SourceConnectionState,
@@ -11,11 +12,17 @@ import type {
   SourceStatusResponse,
   UseSourceHealthReturn,
 } from '@/app/types/sources';
-import { calculateOverallHealthScore } from '@/app/utils/sourceHealthUtils';
+import {
+  calculateOverallHealthScore,
+  evaluateManualRefreshCooldown,
+  formatLastUpdatedLabel,
+  formatNextAutoRefreshLabel,
+  formatRefreshCooldownMessage,
+  describeCacheFreshness,
+} from '@/app/utils/sourceHealthUtils';
 import { createSourceMonitoringTracker } from '@/app/utils/sourceHealthMonitoring';
 
 const HEALTH_ENDPOINT = '/api/sources/health';
-const STREAM_ENDPOINT = '/api/sources/status/stream';
 const TEST_ENDPOINT = (sourceId: string) => `/api/sources/${sourceId}/test`;
 const DIAGNOSTICS_ENDPOINT = (sourceId: string) => `/api/sources/${sourceId}/diagnostics`;
 const PAUSE_ENDPOINT = (sourceId: string) => `/api/sources/${sourceId}/pause`;
@@ -25,10 +32,8 @@ const REQUEST_TIMEOUT_MS = 15_000;
 const MAX_FETCH_RETRIES = 3;
 const INITIAL_BACKOFF_MS = 1_000;
 const MAX_BACKOFF_MS = 20_000;
-const STREAM_INITIAL_BACKOFF_MS = 2_000;
-const STREAM_MAX_BACKOFF_MS = 60_000;
-const STREAM_FAILURE_THRESHOLD = 3;
-const MIN_CACHE_TTL_MS = 60_000;
+const AUTO_REFRESH_INTERVAL_MS = 30 * 60_000;
+const MANUAL_REFRESH_COOLDOWN_MS = 2 * 60_000;
 const STALE_CACHE_MESSAGE =
   'Cached telemetry restored while we refresh live source health data.';
 
@@ -519,14 +524,19 @@ export function useSourceHealth(): UseSourceHealthReturn {
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string>('');
-  const [isStreaming, setIsStreaming] = useState(false);
-  const streamFailureCountRef = useRef(0);
+  const [manualRefreshAllowed, setManualRefreshAllowed] = useState(true);
+  const [manualRefreshMessage, setManualRefreshMessage] = useState<string | null>(null);
+  const [nextAutoRefreshAt, setNextAutoRefreshAt] = useState<number | null>(null);
+  const [autoRefreshSeed, setAutoRefreshSeed] = useState(0);
   const fallbackUsedRef = useRef(false);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const isMountedRef = useRef(true);
-  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastFailureMessageRef = useRef<string | null>(null);
   const hasRestoredCacheRef = useRef(false);
+  const autoRefreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const manualCooldownTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastManualRefreshRef = useRef<number | null>(null);
+  const nextAutoRefreshAtRef = useRef<number | null>(null);
+  const fetchInFlightRef = useRef(false);
 
   const syncMonitoringState = useCallback(() => {
     const snapshot = monitoringRef.current.getSnapshot();
@@ -555,8 +565,14 @@ export function useSourceHealth(): UseSourceHealthReturn {
         setUsingMockData(false);
         setLoading(false);
         restored = true;
-        if (cachedHealth.isExpired) {
-          setError((previous) => previous ?? STALE_CACHE_MESSAGE);
+        const freshness = describeCacheFreshness(
+          cachedHealth.metadata,
+          cachedHealth.ageMs,
+          cachedHealth.expiredForMs,
+          AUTO_REFRESH_INTERVAL_MS,
+        );
+        if (freshness.status !== 'fresh') {
+          setError((previous) => previous ?? freshness.description);
         }
       }
 
@@ -567,43 +583,104 @@ export function useSourceHealth(): UseSourceHealthReturn {
         }
       }
 
+      if (!restored && isMountedRef.current) {
+        const fallbackReason =
+          'Live telemetry not yet available. Displaying representative sample data while we fetch the latest metrics.';
+        applyMockData(fallbackReason);
+        setError((previous) => previous ?? fallbackReason);
+        setLoading(false);
+        restored = true;
+      }
+
       return restored;
     } catch (err) {
       console.warn('Failed to restore cached source health data.', err);
       return false;
     }
-  }, [getCachedMetrics, getCachedSourceHealth]);
+  }, [applyMockData, getCachedMetrics, getCachedSourceHealth]);
+
+  const updateAutoRefreshTarget = useCallback(() => {
+    const next = Date.now() + AUTO_REFRESH_INTERVAL_MS;
+    nextAutoRefreshAtRef.current = next;
+    setNextAutoRefreshAt(next);
+  }, []);
+
+  const scheduleManualCooldown = useCallback(
+    (triggerAt: number) => {
+      if (typeof window === 'undefined') {
+        setManualRefreshAllowed(true);
+        setManualRefreshMessage(null);
+        return;
+      }
+
+      if (manualCooldownTimeoutRef.current) {
+        clearTimeout(manualCooldownTimeoutRef.current);
+        manualCooldownTimeoutRef.current = null;
+      }
+
+      const { allowed, remainingMs } = evaluateManualRefreshCooldown(
+        triggerAt,
+        MANUAL_REFRESH_COOLDOWN_MS,
+        Date.now(),
+      );
+
+      if (allowed) {
+        setManualRefreshAllowed(true);
+        setManualRefreshMessage(null);
+        return;
+      }
+
+      setManualRefreshAllowed(false);
+      setManualRefreshMessage(formatRefreshCooldownMessage(remainingMs));
+
+      manualCooldownTimeoutRef.current = window.setTimeout(() => {
+        setManualRefreshAllowed(true);
+        setManualRefreshMessage(null);
+        manualCooldownTimeoutRef.current = null;
+      }, remainingMs);
+    },
+    [],
+  );
 
   const applyPayload = useCallback(
-    (payload: SourceStatusResponse, context: 'fetch' | 'stream' = 'fetch') => {
+    (payload: SourceStatusResponse, context: 'initial' | 'manual' | 'auto' = 'initial') => {
       const { sources, metrics: computedMetrics } = normalizeSourceResponse(payload);
       if (!isMountedRef.current) return;
       setSourceHealth(sources);
       setMetrics(computedMetrics);
       setLastUpdated(computedMetrics.last_updated);
-      const cacheTtl = MIN_CACHE_TTL_MS;
-      const cacheSource = context === 'stream' ? 'stream' : 'network';
+      const cacheTtl = CACHE_TTL_MS;
+      const cacheSource = 'network';
+      updateAutoRefreshTarget();
+      if (context !== 'auto') {
+        setAutoRefreshSeed((seed) => seed + 1);
+      }
       void cacheSourceHealth(sources, {
         dataSource: cacheSource,
         lastUpdated: computedMetrics.last_updated,
         expiresInMs: cacheTtl,
+        refreshMode: context,
       });
       void cacheMetrics(computedMetrics, {
         dataSource: cacheSource,
         lastUpdated: computedMetrics.last_updated,
         expiresInMs: cacheTtl,
+        refreshMode: context,
       });
       fallbackUsedRef.current = false;
       setUsingMockData(false);
       monitoringRef.current.resetRetries();
       monitoringRef.current.setUsingMockData(false);
       monitoringRef.current.setStatus('connected');
-      monitoringRef.current.recordRecovery(context);
+      monitoringRef.current.recordRecovery('fetch');
       syncMonitoringState();
       lastFailureMessageRef.current = null;
       setError(null);
+      if (context === 'manual') {
+        setManualRefreshMessage(null);
+      }
     },
-    [cacheMetrics, cacheSourceHealth, syncMonitoringState],
+    [cacheMetrics, cacheSourceHealth, syncMonitoringState, updateAutoRefreshTarget],
   );
 
   const applyMockData = useCallback(
@@ -624,7 +701,21 @@ export function useSourceHealth(): UseSourceHealthReturn {
   );
 
   const fetchStatus = useCallback(
-    async (suppressLoading = false) => {
+    async (options?: {
+      suppressLoading?: boolean;
+      context?: 'initial' | 'manual' | 'auto';
+      force?: boolean;
+    }) => {
+      const suppressLoading = options?.suppressLoading ?? false;
+      const context = options?.context ?? 'initial';
+      const forceFetch = options?.force ?? false;
+
+      if (fetchInFlightRef.current && !forceFetch) {
+        return null;
+      }
+
+      fetchInFlightRef.current = true;
+
       if (!suppressLoading) {
         setLoading(true);
       }
@@ -638,121 +729,138 @@ export function useSourceHealth(): UseSourceHealthReturn {
       let lastErrorMessage = '';
       let finalReason: FailureReason = 'unknown';
 
-      while (attempt <= MAX_FETCH_RETRIES) {
-        const startedAt = now();
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+      try {
+        while (attempt <= MAX_FETCH_RETRIES) {
+          const startedAt = now();
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
-        try {
-          const response = await apiCall(HEALTH_ENDPOINT, {
-            signal: controller.signal,
-            headers: {
-              Accept: 'application/json',
-            },
-          });
+          try {
+            const response = await apiCall(HEALTH_ENDPOINT, {
+              signal: controller.signal,
+              headers: {
+                Accept: 'application/json',
+              },
+            });
 
-          const duration = now() - startedAt;
+            const duration = now() - startedAt;
 
-          if (!response.ok) {
-            const message = `Source health request failed with status ${response.status}.`;
-            const errorWithStatus = new Error(message) as Error & { status?: number };
-            errorWithStatus.status = response.status;
-            throw errorWithStatus;
-          }
+            if (!response.ok) {
+              const message = `Source health request failed with status ${response.status}.`;
+              const errorWithStatus = new Error(message) as Error & { status?: number };
+              errorWithStatus.status = response.status;
+              throw errorWithStatus;
+            }
 
-          const payload = (await response.json()) as SourceStatusResponse;
-          monitoringRef.current.recordSuccess(duration, HEALTH_ENDPOINT);
-          monitoringRef.current.resetRetries();
-          monitoringRef.current.setUsingMockData(false);
-          monitoringRef.current.setStatus('connected');
-          syncMonitoringState();
-          applyPayload(payload, 'fetch');
-          success = true;
-          break;
-        } catch (err) {
-          const duration = now() - startedAt;
-          const { message, reason, status } = describeError(err);
-          lastErrorMessage = message;
-          finalReason = reason;
-          const isTimeout = reason === 'timeout';
-
-          monitoringRef.current.recordFailure(
-            duration,
-            HEALTH_ENDPOINT,
-            message,
-            status,
-            isTimeout,
-          );
-          monitoringRef.current.incrementRetries();
-          monitoringRef.current.setStatus('reconnecting');
-          syncMonitoringState();
-
-          if (attempt >= MAX_FETCH_RETRIES) {
+            const payload = (await response.json()) as SourceStatusResponse;
+            monitoringRef.current.recordSuccess(duration, HEALTH_ENDPOINT);
+            monitoringRef.current.resetRetries();
+            monitoringRef.current.setUsingMockData(false);
+            monitoringRef.current.setStatus('connected');
+            syncMonitoringState();
+            applyPayload(payload, context);
+            success = true;
             break;
+          } catch (err) {
+            const duration = now() - startedAt;
+            const { message, reason, status } = describeError(err);
+            lastErrorMessage = message;
+            finalReason = reason;
+            const isTimeout = reason === 'timeout';
+
+            monitoringRef.current.recordFailure(
+              duration,
+              HEALTH_ENDPOINT,
+              message,
+              status,
+              isTimeout,
+            );
+            monitoringRef.current.incrementRetries();
+            monitoringRef.current.setStatus('reconnecting');
+            syncMonitoringState();
+
+            if (attempt >= MAX_FETCH_RETRIES) {
+              break;
+            }
+
+            const jitter = Math.random() * 0.3 * delay;
+            await sleep(delay + jitter);
+            delay = Math.min(delay * 2, MAX_BACKOFF_MS);
+          } finally {
+            clearTimeout(timeoutId);
           }
 
-          const jitter = Math.random() * 0.3 * delay;
-          await sleep(delay + jitter);
-          delay = Math.min(delay * 2, MAX_BACKOFF_MS);
-        } finally {
-          clearTimeout(timeoutId);
+          attempt += 1;
         }
 
-        attempt += 1;
-      }
+        if (!success) {
+          const friendlyMessage = (() => {
+            switch (finalReason) {
+              case 'timeout':
+                return 'The source health service is taking longer than expected. Showing cached telemetry while we reconnect.';
+              case 'network':
+                return 'Unable to reach the source health service. Showing cached telemetry while the connection recovers.';
+              case 'http':
+                return 'The source health service responded with an error. Showing cached telemetry until service recovers.';
+              default:
+                return 'Live source telemetry is temporarily unavailable. Showing cached telemetry while we attempt to recover.';
+            }
+          })();
 
-      if (!success) {
-        const friendlyMessage = (() => {
-          switch (finalReason) {
-            case 'timeout':
-              return 'The source health service is taking longer than expected. Showing cached telemetry while we reconnect.';
-            case 'network':
-              return 'Unable to reach the source health service. Showing cached telemetry while the connection recovers.';
-            case 'http':
-              return 'The source health service responded with an error. Showing cached telemetry until service recovers.';
-            default:
-              return 'Live source telemetry is temporarily unavailable. Showing cached telemetry while we attempt to recover.';
+          setError(friendlyMessage);
+          lastFailureMessageRef.current = lastErrorMessage || friendlyMessage;
+          monitoringRef.current.setStatus('degraded');
+
+          const cachedHealth = await getCachedSourceHealth();
+
+          if (cachedHealth?.data?.length && isMountedRef.current) {
+            monitoringRef.current.setUsingMockData(false);
+            setSourceHealth(cachedHealth.data);
+            setLastUpdated(cachedHealth.metadata.lastUpdated);
+            setUsingMockData(false);
+            fallbackUsedRef.current = false;
+
+            const cachedMetrics = await getCachedMetrics();
+            if (cachedMetrics?.data) {
+              setMetrics(cachedMetrics.data);
+            }
+
+            if (cachedHealth.isExpired) {
+              const freshness = describeCacheFreshness(
+                cachedHealth.metadata,
+                cachedHealth.ageMs,
+                cachedHealth.expiredForMs,
+                AUTO_REFRESH_INTERVAL_MS,
+              );
+              setError((previous) => previous ?? freshness.description);
+            }
+          } else {
+            monitoringRef.current.setUsingMockData(true);
+            applyMockData(lastErrorMessage);
           }
-        })();
 
-        setError(friendlyMessage);
-        lastFailureMessageRef.current = lastErrorMessage || friendlyMessage;
-        monitoringRef.current.setStatus('degraded');
-
-        const cachedHealth = await getCachedSourceHealth();
-
-        if (cachedHealth?.data?.length && isMountedRef.current) {
-          monitoringRef.current.setUsingMockData(false);
-          setSourceHealth(cachedHealth.data);
-          setLastUpdated(cachedHealth.metadata.lastUpdated);
-          setUsingMockData(false);
-          fallbackUsedRef.current = false;
-
-          const cachedMetrics = await getCachedMetrics();
-          if (cachedMetrics?.data) {
-            setMetrics(cachedMetrics.data);
-          }
-
-          if (cachedHealth.isExpired) {
-            setError((previous) => previous ?? friendlyMessage);
-          }
+          syncMonitoringState();
         } else {
-          monitoringRef.current.setUsingMockData(true);
-          applyMockData(lastErrorMessage);
+          setError(null);
         }
 
-        syncMonitoringState();
-      } else {
-        setError(null);
+        return success;
+      } finally {
+        if (!suppressLoading) {
+          setLoading(false);
+        }
+        setIsRefreshing(false);
+        fetchInFlightRef.current = false;
       }
-
-      if (!suppressLoading) {
-        setLoading(false);
-      }
-      setIsRefreshing(false);
-      return success;
     },
-    [applyMockData, applyPayload, getCachedMetrics, getCachedSourceHealth, syncMonitoringState],
+    [
+      applyMockData,
+      applyPayload,
+      fetchInFlightRef,
+      getCachedMetrics,
+      getCachedSourceHealth,
+      syncMonitoringState,
+    ],
   );
 
   useEffect(() => {
@@ -766,7 +874,7 @@ export function useSourceHealth(): UseSourceHealthReturn {
       if (cancelled) {
         return;
       }
-      await fetchStatus(restored);
+      await fetchStatus({ suppressLoading: restored, context: 'initial' });
     };
 
     void initialise();
@@ -776,14 +884,15 @@ export function useSourceHealth(): UseSourceHealthReturn {
       isMountedRef.current = false;
       monitoringRef.current.setStatus('offline');
       syncMonitoringState();
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        eventSourceRef.current = null;
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
       }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
+      if (manualCooldownTimeoutRef.current) {
+        clearTimeout(manualCooldownTimeoutRef.current);
+        manualCooldownTimeoutRef.current = null;
       }
+      nextAutoRefreshAtRef.current = null;
     };
   }, [fetchStatus, restoreFromCache, syncMonitoringState]);
 
@@ -792,128 +901,63 @@ export function useSourceHealth(): UseSourceHealthReturn {
       return () => undefined;
     }
 
-    let cancelled = false;
-    let backoff = STREAM_INITIAL_BACKOFF_MS;
+    updateAutoRefreshTarget();
 
-    const openStream = () => {
-      if (cancelled) {
-        return;
-      }
+    if (autoRefreshTimerRef.current) {
+      clearInterval(autoRefreshTimerRef.current);
+    }
 
-      try {
-        const url = getApiUrl(STREAM_ENDPOINT);
-        const eventSource = new EventSource(url);
-        eventSourceRef.current = eventSource;
-        monitoringRef.current.recordStreamEvent('open-attempt');
-        monitoringRef.current.setStatus('connecting');
-        syncMonitoringState();
-
-        eventSource.onopen = () => {
-          if (cancelled) {
-            return;
-          }
-          backoff = STREAM_INITIAL_BACKOFF_MS;
-          streamFailureCountRef.current = 0;
-          setIsStreaming(true);
-          monitoringRef.current.recordStreamEvent('open');
-          monitoringRef.current.setStatus('connected');
-          syncMonitoringState();
-        };
-
-        eventSource.onmessage = (event) => {
-          if (cancelled) {
-            return;
-          }
-          monitoringRef.current.recordStreamEvent('message');
-          try {
-            const payload = JSON.parse(event.data) as SourceStatusResponse;
-            applyPayload(payload, 'stream');
-          } catch (err) {
-            console.warn('Failed to parse stream payload', err);
-            monitoringRef.current.recordStreamEvent('parse-error');
-            syncMonitoringState();
-          }
-        };
-
-        eventSource.onerror = (errorEvent) => {
-          if (cancelled) {
-            return;
-          }
-          console.warn('Source status stream disconnected:', errorEvent);
-          setIsStreaming(false);
-          streamFailureCountRef.current += 1;
-          monitoringRef.current.recordStreamEvent('error');
-          monitoringRef.current.setStatus('reconnecting');
-          syncMonitoringState();
-
-          if (eventSourceRef.current) {
-            eventSourceRef.current.close();
-            eventSourceRef.current = null;
-          }
-
-          if (
-            streamFailureCountRef.current >= STREAM_FAILURE_THRESHOLD &&
-            !fallbackUsedRef.current
-          ) {
-            const reason = 'Live source telemetry stream unavailable. Showing cached telemetry while we reconnect.';
-            setError(reason);
-            applyMockData(reason);
-          }
-
-          const cappedBackoff = Math.min(backoff, STREAM_MAX_BACKOFF_MS);
-          const jitter = Math.random() * 0.25 * cappedBackoff;
-          const delay = cappedBackoff + jitter;
-          monitoringRef.current.recordStreamEvent('reconnect-scheduled');
-          syncMonitoringState();
-          if (reconnectTimeoutRef.current) {
-            clearTimeout(reconnectTimeoutRef.current);
-          }
-          reconnectTimeoutRef.current = setTimeout(() => {
-            monitoringRef.current.recordStreamEvent('reconnect');
-            syncMonitoringState();
-            openStream();
-          }, delay);
-          backoff = Math.min(backoff * 2, STREAM_MAX_BACKOFF_MS);
-        };
-      } catch (err) {
-        console.error('Failed to initialise source status stream:', err);
-        monitoringRef.current.recordStreamEvent('error');
-        monitoringRef.current.setStatus('reconnecting');
-        syncMonitoringState();
-        const retryDelay = Math.min(backoff, STREAM_MAX_BACKOFF_MS);
-        if (reconnectTimeoutRef.current) {
-          clearTimeout(reconnectTimeoutRef.current);
-        }
-        reconnectTimeoutRef.current = setTimeout(() => {
-          monitoringRef.current.recordStreamEvent('reconnect');
-          syncMonitoringState();
-          openStream();
-        }, retryDelay);
-        backoff = Math.min(backoff * 2, STREAM_MAX_BACKOFF_MS);
-      }
-    };
-
-    openStream();
+    autoRefreshTimerRef.current = window.setInterval(() => {
+      updateAutoRefreshTarget();
+      void fetchStatus({ suppressLoading: true, context: 'auto' });
+    }, AUTO_REFRESH_INTERVAL_MS);
 
     return () => {
-      cancelled = true;
-      if (eventSourceRef.current) {
-        eventSourceRef.current.close();
-        monitoringRef.current.recordStreamEvent('close');
-        eventSourceRef.current = null;
+      if (autoRefreshTimerRef.current) {
+        clearInterval(autoRefreshTimerRef.current);
+        autoRefreshTimerRef.current = null;
       }
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-        reconnectTimeoutRef.current = null;
-      }
-      syncMonitoringState();
     };
-  }, [applyMockData, applyPayload, syncMonitoringState]);
+  }, [fetchStatus, updateAutoRefreshTarget, autoRefreshSeed]);
 
   const refreshHealth = useCallback(async () => {
+    const nowMs = Date.now();
+    const { allowed, remainingMs } = evaluateManualRefreshCooldown(
+      lastManualRefreshRef.current,
+      MANUAL_REFRESH_COOLDOWN_MS,
+      nowMs,
+    );
+
+    if (!allowed) {
+      setManualRefreshAllowed(false);
+      setManualRefreshMessage(formatRefreshCooldownMessage(remainingMs));
+      return;
+    }
+
+    if (fetchInFlightRef.current) {
+      return;
+    }
+
+    let refreshTriggered = false;
     setIsRefreshing(true);
-    await fetchStatus();
-  }, [fetchStatus]);
+    setManualRefreshAllowed(false);
+    setManualRefreshMessage(null);
+
+    try {
+      refreshTriggered = true;
+      await fetchStatus({ context: 'manual' });
+    } finally {
+      setIsRefreshing(false);
+      if (refreshTriggered && !fetchInFlightRef.current) {
+        const completedAt = Date.now();
+        lastManualRefreshRef.current = completedAt;
+        scheduleManualCooldown(completedAt);
+      } else {
+        setManualRefreshAllowed(true);
+        setManualRefreshMessage(null);
+      }
+    }
+  }, [fetchInFlightRef, fetchStatus, scheduleManualCooldown]);
 
   const performSourceCommand = useCallback(
     async (
@@ -958,7 +1002,7 @@ export function useSourceHealth(): UseSourceHealthReturn {
         setError(`${actionLabel} request failed: ${message}`);
       } finally {
         clearTimeout(timeoutId);
-        fetchStatus(true);
+        fetchStatus({ suppressLoading: true, context: 'manual' });
       }
     },
     [fetchStatus],
@@ -992,17 +1036,31 @@ export function useSourceHealth(): UseSourceHealthReturn {
     [performSourceCommand],
   );
 
+  const lastUpdatedLabel = useMemo(
+    () => formatLastUpdatedLabel(lastUpdated),
+    [lastUpdated],
+  );
+
+  const nextAutoRefreshLabel = useMemo(
+    () => formatNextAutoRefreshLabel(nextAutoRefreshAt),
+    [nextAutoRefreshAt],
+  );
+
   return useMemo(
     () => ({
       sourceHealth,
       loading,
       error,
       lastUpdated,
+      lastUpdatedLabel,
       refreshHealth,
       refreshSource,
       isRefreshing,
       metrics,
-      isStreaming,
+      manualRefreshAllowed,
+      manualRefreshMessage,
+      nextAutoRefreshAt,
+      nextAutoRefreshLabel,
       triggerSourceTest,
       pauseMonitoring,
       resumeMonitoring,
@@ -1015,11 +1073,15 @@ export function useSourceHealth(): UseSourceHealthReturn {
       loading,
       error,
       lastUpdated,
+      lastUpdatedLabel,
       refreshHealth,
       refreshSource,
       isRefreshing,
       metrics,
-      isStreaming,
+      manualRefreshAllowed,
+      manualRefreshMessage,
+      nextAutoRefreshAt,
+      nextAutoRefreshLabel,
       triggerSourceTest,
       pauseMonitoring,
       resumeMonitoring,

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from typing import Dict, Iterable, List, Optional
 
@@ -16,6 +17,8 @@ class SourceImplementationStatus(str, Enum):
     MOCK = "mock"
     PLANNED = "planned"
     MISSING = "missing"
+    SUNSET = "sunset"
+    DEPRECATED = "deprecated"
 
 
 @dataclass
@@ -28,6 +31,9 @@ class SourceRecord:
     implementation_notes: Optional[str] = None
     connector_key: Optional[str] = None
     credibility_score: Optional[float] = None
+    sunset_date: Optional[datetime] = None
+    replacement_source_id: Optional[str] = None
+    migration_guidance: Optional[str] = None
 
 
 FRONTEND_SOURCE_CATALOG: List[Dict[str, str]] = [
@@ -66,6 +72,31 @@ FRONTEND_SOURCE_CATALOG: List[Dict[str, str]] = [
 ]
 
 
+SUNSET_SOURCES_REGISTRY: Dict[str, Dict[str, object]] = {
+    "lean_startup": {
+        "status": SourceImplementationStatus.SUNSET,
+        "sunset_date": datetime(2024, 6, 30),
+        "replacement_source_id": "first_round",
+        "migration_guidance": "Lean Startup playbooks are archived; use First Round Review insights going forward.",
+        "category": "business_intelligence_sources",
+    },
+    "profitwell": {
+        "status": SourceImplementationStatus.DEPRECATED,
+        "sunset_date": datetime(2024, 9, 30),
+        "replacement_source_id": "cb_insights",
+        "migration_guidance": "ProfitWell data is merging into Paddle; rely on CB Insights benchmarks instead.",
+        "category": "business_intelligence_sources",
+    },
+    "pagerduty": {
+        "status": SourceImplementationStatus.SUNSET,
+        "sunset_date": datetime(2025, 1, 15),
+        "replacement_source_id": "datadog",
+        "migration_guidance": "PagerDuty signals consolidate into Datadog incident streams.",
+        "category": "operations_sources",
+    },
+}
+
+
 class SourceInventoryService:
     """Aggregate information about backend source implementation and coverage."""
 
@@ -99,6 +130,7 @@ class SourceInventoryService:
     def _build_source_record(
         self, source_id: str, knowledge: Optional[KnowledgeSource], connector_index: Dict[str, Dict[str, str]]
     ) -> SourceRecord:
+        sunset_info = SUNSET_SOURCES_REGISTRY.get(source_id)
         if source_id in connector_index:
             status = SourceImplementationStatus.IMPLEMENTED
             connector_meta = connector_index[source_id]
@@ -113,6 +145,10 @@ class SourceInventoryService:
             connector_key = None
             category = self._guess_category(source_id)
 
+        if sunset_info:
+            status = sunset_info.get("status", SourceImplementationStatus.SUNSET)
+            category = sunset_info.get("category", category)
+
         return SourceRecord(
             source_id=source_id,
             name=knowledge.name if knowledge else source_id,
@@ -121,9 +157,14 @@ class SourceInventoryService:
             category=category,
             status=status,
             connector_key=connector_key,
+            sunset_date=sunset_info.get("sunset_date") if sunset_info else None,
+            replacement_source_id=sunset_info.get("replacement_source_id") if sunset_info else None,
+            migration_guidance=sunset_info.get("migration_guidance") if sunset_info else None,
         )
 
     def _guess_category(self, source_id: str) -> str:
+        if source_id in SUNSET_SOURCES_REGISTRY:
+            return SUNSET_SOURCES_REGISTRY[source_id].get("category", "uncategorized")
         for entry in self.frontend_catalog:
             if entry["id"] == source_id:
                 return entry.get("category", "uncategorized")
@@ -212,7 +253,20 @@ class SourceInventoryService:
             "organization": record.organization,
             "credibility_score": record.credibility_score,
             "connector_key": record.connector_key,
+            "sunset_date": record.sunset_date.isoformat() if record.sunset_date else None,
+            "replacement_source_id": record.replacement_source_id,
+            "migration_guidance": record.migration_guidance,
         }
+
+    def get_sunset_sources(self) -> List[SourceRecord]:
+        connector_index = self._collect_connector_index()
+        sunset_records: List[SourceRecord] = []
+        for source_id in SUNSET_SOURCES_REGISTRY.keys():
+            knowledge = bailey.knowledge_sources.get(source_id)
+            sunset_records.append(
+                self._build_source_record(source_id, knowledge, connector_index)
+            )
+        return sunset_records
 
     def validate_sources(self, frontend_sources: Optional[Iterable[str]] = None) -> Dict[str, object]:
         frontend_slugs = set(frontend_sources or [entry["id"] for entry in self.frontend_catalog])

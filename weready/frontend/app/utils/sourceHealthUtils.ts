@@ -1,4 +1,5 @@
 import {
+  CacheMetadata,
   CategoryCoverage,
   ConsumerStatus,
   ContradictionSeverity,
@@ -15,6 +16,42 @@ export type ConnectionQuality = 'good' | 'fair' | 'poor' | 'unknown';
 const relativeTimeFormatter = new Intl.RelativeTimeFormat('en', {
   numeric: 'auto',
 });
+
+const MS_IN_SECOND = 1000;
+const MS_IN_MINUTE = 60 * MS_IN_SECOND;
+const MS_IN_HOUR = 60 * MS_IN_MINUTE;
+const DEFAULT_RECOMMENDED_REFRESH_MS = 30 * MS_IN_MINUTE;
+export const DEFAULT_MANUAL_REFRESH_COOLDOWN_MS = 2 * MS_IN_MINUTE;
+
+const refreshModeLabels: Record<NonNullable<CacheMetadata['refreshMode']>, string> = {
+  auto: 'auto-refresh',
+  manual: 'manual refresh',
+  initial: 'initial sync',
+};
+
+const clampNumber = (value: number): number => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  return value;
+};
+
+const formatDurationFromMs = (durationMs: number): string => {
+  const safeDuration = clampNumber(durationMs);
+  if (safeDuration <= 0) {
+    return 'moments';
+  }
+  if (safeDuration < MS_IN_MINUTE) {
+    const seconds = Math.max(1, Math.round(safeDuration / MS_IN_SECOND));
+    return `${seconds} second${seconds === 1 ? '' : 's'}`;
+  }
+  if (safeDuration < MS_IN_HOUR) {
+    const minutes = Math.max(1, Math.round(safeDuration / MS_IN_MINUTE));
+    return `${minutes} minute${minutes === 1 ? '' : 's'}`;
+  }
+  const hours = Math.max(1, Math.round(safeDuration / MS_IN_HOUR));
+  return `${hours} hour${hours === 1 ? '' : 's'}`;
+};
 
 export function formatRelativeTime(value: string | number | Date | null | undefined): string {
   if (value === null || typeof value === 'undefined') {
@@ -55,6 +92,137 @@ export function formatRelativeTime(value: string | number | Date | null | undefi
   }
 
   return 'just now';
+}
+
+export function evaluateManualRefreshCooldown(
+  lastManualRefreshAt: number | null | undefined,
+  cooldownMs: number,
+  nowMs: number = Date.now(),
+): { allowed: boolean; remainingMs: number } {
+  if (!Number.isFinite(cooldownMs) || cooldownMs <= 0) {
+    return { allowed: true, remainingMs: 0 };
+  }
+  if (lastManualRefreshAt == null || !Number.isFinite(lastManualRefreshAt)) {
+    return { allowed: true, remainingMs: 0 };
+  }
+
+  const elapsed = nowMs - lastManualRefreshAt;
+  if (elapsed >= cooldownMs) {
+    return { allowed: true, remainingMs: 0 };
+  }
+
+  const remainingMs = Math.max(0, cooldownMs - elapsed);
+  return { allowed: false, remainingMs };
+}
+
+export function formatRefreshCooldownMessage(remainingMs: number): string {
+  if (remainingMs <= 0) {
+    return 'Refresh is available now.';
+  }
+  if (remainingMs < MS_IN_MINUTE) {
+    const seconds = Math.max(1, Math.ceil(remainingMs / MS_IN_SECOND));
+    return `Please wait ${seconds} second${seconds === 1 ? '' : 's'} before refreshing again.`;
+  }
+  const minutes = Math.ceil(remainingMs / MS_IN_MINUTE);
+  if (minutes === 1) {
+    const seconds = Math.ceil((remainingMs % MS_IN_MINUTE) / MS_IN_SECOND);
+    if (seconds > 0 && seconds < 30) {
+      return `Please wait about 1 minute before refreshing again.`;
+    }
+    return 'Please wait about 1 minute before refreshing again.';
+  }
+  return `Please wait ${minutes} minutes before refreshing again.`;
+}
+
+export function formatLastUpdatedLabel(value: string | Date | null | undefined): string {
+  if (!value) {
+    return 'Last updated: fetching latest telemetry…';
+  }
+  const relative = formatRelativeTime(value);
+  if (relative === 'unknown') {
+    return 'Last updated: unknown';
+  }
+  if (relative === 'just now') {
+    return 'Last updated just now';
+  }
+  return `Last updated ${relative}`;
+}
+
+export function formatNextAutoRefreshLabel(
+  nextAutoRefreshAt: number | null | undefined,
+  nowMs: number = Date.now(),
+): string {
+  if (!nextAutoRefreshAt || !Number.isFinite(nextAutoRefreshAt)) {
+    return 'Auto-refresh scheduling…';
+  }
+
+  const remainingMs = nextAutoRefreshAt - nowMs;
+  if (remainingMs <= 0) {
+    return 'Auto-refresh in progress';
+  }
+
+  const durationLabel = formatDurationFromMs(remainingMs);
+  return `Next auto-refresh in ${durationLabel}`;
+}
+
+export interface CacheFreshnessDescription {
+  status: 'fresh' | 'stale' | 'expired' | 'unknown';
+  description: string;
+  ageMs: number | null;
+  expiredForMs: number;
+  refreshMode: CacheMetadata['refreshMode'] | null | undefined;
+}
+
+export function describeCacheFreshness(
+  metadata: CacheMetadata | null | undefined,
+  ageMs: number | null | undefined,
+  expiredForMs: number | null | undefined,
+  recommendedRefreshMs: number = DEFAULT_RECOMMENDED_REFRESH_MS,
+): CacheFreshnessDescription {
+  if (!metadata) {
+    return {
+      status: 'unknown',
+      description: 'No cached telemetry is available yet.',
+      ageMs: null,
+      expiredForMs: 0,
+      refreshMode: null,
+    };
+  }
+
+  const safeAgeMs = ageMs ?? null;
+  const safeExpiredMs = expiredForMs ?? 0;
+  const lastUpdatedRelative = formatRelativeTime(metadata.lastUpdated);
+  const refreshModeLabel = metadata.refreshMode ? refreshModeLabels[metadata.refreshMode] : 'network fetch';
+
+  if (safeExpiredMs > 0) {
+    const expiredForLabel = formatDurationFromMs(safeExpiredMs);
+    return {
+      status: 'expired',
+      description: `Cached telemetry expired ${expiredForLabel} ago (from ${refreshModeLabel}).`,
+      ageMs: safeAgeMs,
+      expiredForMs: safeExpiredMs,
+      refreshMode: metadata.refreshMode,
+    };
+  }
+
+  if (safeAgeMs != null && safeAgeMs > recommendedRefreshMs) {
+    const staleByLabel = formatDurationFromMs(safeAgeMs - recommendedRefreshMs);
+    return {
+      status: 'stale',
+      description: `Cached telemetry last updated ${lastUpdatedRelative} via ${refreshModeLabel}. Refresh recommended (stale by ${staleByLabel}).`,
+      ageMs: safeAgeMs,
+      expiredForMs: 0,
+      refreshMode: metadata.refreshMode,
+    };
+  }
+
+  return {
+    status: 'fresh',
+    description: `Cached telemetry updated ${lastUpdatedRelative} via ${refreshModeLabel}.`,
+    ageMs: safeAgeMs,
+    expiredForMs: 0,
+    refreshMode: metadata.refreshMode,
+  };
 }
 
 export function formatResponseTime(value: number): string {
@@ -533,16 +701,359 @@ export function formatDataFreshness(
 export function getBusinessImpactDescription(status: ConsumerStatus): string {
   switch (status) {
     case 'ON':
-      return 'Full business insights available from this source';
+      return 'Operating normally — receive the freshest insights from this source in real time.';
     case 'NOT RESPONDING':
-      return 'Historical insights available, new data temporarily delayed';
+      return 'Live updates are delayed, but your historical dashboards and saved insights remain available.';
     case 'OFFLINE':
-      return 'Source unavailable - consider alternative data sources';
+      return 'Source offline right now — lean on recent exports or backup sources while we restore connectivity.';
     case 'SUNSET':
-      return 'Legacy source - migrate to recommended alternatives';
+      return 'This source is being retired — review the recommended migration path to stay ahead.';
     default:
       return 'Impact assessment unavailable';
   }
+}
+
+export type ConsumerStatusTone = 'positive' | 'caution' | 'warning' | 'info' | 'neutral';
+
+export interface ConsumerStatusVisualConfig {
+  status: ConsumerStatus;
+  icon: string;
+  tone: ConsumerStatusTone;
+  badgeClasses: string;
+  indicatorRingClasses: string;
+  emphasisText: string;
+}
+
+const CONSUMER_STATUS_VISUALS: Record<ConsumerStatus, ConsumerStatusVisualConfig> = {
+  'ON': {
+    status: 'ON',
+    icon: 'CheckCircle2',
+    tone: 'positive',
+    badgeClasses: getConsumerStatusBadgeClasses('ON'),
+    indicatorRingClasses: 'ring-emerald-300/60 bg-emerald-50 text-emerald-700',
+    emphasisText: 'Real-time feed live',
+  },
+  'NOT RESPONDING': {
+    status: 'NOT RESPONDING',
+    icon: 'AlertTriangle',
+    tone: 'caution',
+    badgeClasses: getConsumerStatusBadgeClasses('NOT RESPONDING'),
+    indicatorRingClasses: 'ring-amber-300/60 bg-amber-50 text-amber-700',
+    emphasisText: 'Signal delayed — historical data active',
+  },
+  'OFFLINE': {
+    status: 'OFFLINE',
+    icon: 'OctagonAlert',
+    tone: 'warning',
+    badgeClasses: getConsumerStatusBadgeClasses('OFFLINE'),
+    indicatorRingClasses: 'ring-rose-300/60 bg-rose-50 text-rose-700',
+    emphasisText: 'Service offline — action recommended',
+  },
+  'SUNSET': {
+    status: 'SUNSET',
+    icon: 'Clock',
+    tone: 'info',
+    badgeClasses: getConsumerStatusBadgeClasses('SUNSET'),
+    indicatorRingClasses: 'ring-purple-300/60 bg-purple-50 text-purple-700',
+    emphasisText: 'Legacy connector nearing retirement',
+  },
+};
+
+export interface ConsumerStatusDetails {
+  status: ConsumerStatus;
+  headline: string;
+  summary: string;
+  businessImpact: string;
+  recommendedAction: string;
+  tone: ConsumerStatusTone;
+  icon: string;
+  badgeClasses: string;
+  indicatorRingClasses: string;
+}
+
+const CONSUMER_STATUS_DETAILS: Record<ConsumerStatus, ConsumerStatusDetails> = {
+  'ON': {
+    status: 'ON',
+    headline: 'Online and delivering insights',
+    summary: 'We are ingesting fresh data without delay.',
+    businessImpact: getBusinessImpactDescription('ON'),
+    recommendedAction: 'Keep an eye on performance trends to spot emerging opportunities.',
+    tone: 'positive',
+    icon: CONSUMER_STATUS_VISUALS['ON'].icon,
+    badgeClasses: CONSUMER_STATUS_VISUALS['ON'].badgeClasses,
+    indicatorRingClasses: CONSUMER_STATUS_VISUALS['ON'].indicatorRingClasses,
+  },
+  'NOT RESPONDING': {
+    status: 'NOT RESPONDING',
+    headline: 'Temporarily delayed',
+    summary: 'We are retrying the connection while keeping cached insights available.',
+    businessImpact: getBusinessImpactDescription('NOT RESPONDING'),
+    recommendedAction: 'Stay informed with historical dashboards and enable alerts for reconnect updates.',
+    tone: 'caution',
+    icon: CONSUMER_STATUS_VISUALS['NOT RESPONDING'].icon,
+    badgeClasses: CONSUMER_STATUS_VISUALS['NOT RESPONDING'].badgeClasses,
+    indicatorRingClasses: CONSUMER_STATUS_VISUALS['NOT RESPONDING'].indicatorRingClasses,
+  },
+  'OFFLINE': {
+    status: 'OFFLINE',
+    headline: 'Offline — attention needed',
+    summary: 'Live data is not flowing from this connector.',
+    businessImpact: getBusinessImpactDescription('OFFLINE'),
+    recommendedAction: 'Review contingency insights and subscribe to outage notifications.',
+    tone: 'warning',
+    icon: CONSUMER_STATUS_VISUALS['OFFLINE'].icon,
+    badgeClasses: CONSUMER_STATUS_VISUALS['OFFLINE'].badgeClasses,
+    indicatorRingClasses: CONSUMER_STATUS_VISUALS['OFFLINE'].indicatorRingClasses,
+  },
+  'SUNSET': {
+    status: 'SUNSET',
+    headline: 'Sunsetting — plan migration',
+    summary: 'We are wrapping up this connector with a guided replacement path.',
+    businessImpact: getBusinessImpactDescription('SUNSET'),
+    recommendedAction: 'Follow the migration guide to adopt the recommended successor connector.',
+    tone: 'info',
+    icon: CONSUMER_STATUS_VISUALS['SUNSET'].icon,
+    badgeClasses: CONSUMER_STATUS_VISUALS['SUNSET'].badgeClasses,
+    indicatorRingClasses: CONSUMER_STATUS_VISUALS['SUNSET'].indicatorRingClasses,
+  },
+};
+
+export function getConsumerStatusVisual(status: ConsumerStatus): ConsumerStatusVisualConfig {
+  return CONSUMER_STATUS_VISUALS[status] ?? CONSUMER_STATUS_VISUALS['OFFLINE'];
+}
+
+export function getConsumerStatusDetails(status: ConsumerStatus): ConsumerStatusDetails {
+  return CONSUMER_STATUS_DETAILS[status] ?? CONSUMER_STATUS_DETAILS['OFFLINE'];
+}
+
+export interface StatusActionGuidance {
+  label: string;
+  description: string;
+  href?: string;
+}
+
+const STATUS_ACTION_GUIDANCE: Record<ConsumerStatus, StatusActionGuidance[]> = {
+  'ON': [
+    {
+      label: 'View live dashboards',
+      description: 'Open the analytics workspace to act on the newest insights.',
+    },
+    {
+      label: 'Schedule summary export',
+      description: 'Deliver recurring updates to your stakeholders automatically.',
+    },
+  ],
+  'NOT RESPONDING': [
+    {
+      label: 'Enable reconnect alerts',
+      description: 'Get notified as soon as the connector resumes live updates.',
+    },
+    {
+      label: 'Review cached insights',
+      description: 'Stay aligned using the latest successful pull while we restore service.',
+    },
+  ],
+  'OFFLINE': [
+    {
+      label: 'View historical data',
+      description: 'Explore recent exports and identify any coverage gaps.',
+    },
+    {
+      label: 'Contact support',
+      description: 'Work with our team to accelerate restoration and discuss alternatives.',
+    },
+  ],
+  'SUNSET': [
+    {
+      label: 'Open migration guide',
+      description: 'Follow the recommended replacement path to maintain coverage.',
+    },
+    {
+      label: 'Review successor roadmap',
+      description: 'Understand upcoming enhancements and plan adoption with confidence.',
+    },
+  ],
+};
+
+export function getStatusActionGuidance(status: ConsumerStatus): StatusActionGuidance[] {
+  return STATUS_ACTION_GUIDANCE[status] ?? STATUS_ACTION_GUIDANCE['OFFLINE'];
+}
+
+const CATEGORY_VALUE_MATCHERS: Array<{ matcher: RegExp; description: string }> = [
+  {
+    matcher: /market|pricing|trading/i,
+    description: 'Delivers up-to-the-minute market intelligence to guide pricing and portfolio moves.',
+  },
+  {
+    matcher: /sales|revenue|crm/i,
+    description: 'Keeps your revenue teams aligned with live deal, pipeline, and retention signals.',
+  },
+  {
+    matcher: /support|service|ticket/i,
+    description: 'Shows customer health and responsiveness so you can protect satisfaction scores.',
+  },
+  {
+    matcher: /marketing|campaign/i,
+    description: 'Tracks campaign performance and audience engagement to optimise spend.',
+  },
+  {
+    matcher: /finance|billing|expense/i,
+    description: 'Highlights cash flow, billing accuracy, and spend controls for finance leaders.',
+  },
+];
+
+export function getCategoryServiceValue(category: string): string {
+  if (!category) {
+    return 'Helps your team stay informed with the latest operational insights.';
+  }
+
+  const matched = CATEGORY_VALUE_MATCHERS.find(({ matcher }) => matcher.test(category));
+  if (matched) {
+    return matched.description;
+  }
+
+  return `Keeps your ${category.toLowerCase()} intelligence current for faster decisions.`;
+}
+
+export function getSourceServiceValue(
+  sourceName: string,
+  category: string,
+  implementationNotes?: string | null,
+): string {
+  if (implementationNotes && implementationNotes.trim().length > 0) {
+    return implementationNotes.trim();
+  }
+
+  const categoryValue = getCategoryServiceValue(category);
+  return `${sourceName} keeps ${categoryValue.replace(/^Helps |^Keeps /, '').replace(/^Delivers /, '').replace(/^Tracks /, '').replace(/^Highlights /, '')}`.trim();
+}
+
+export interface ManualRefreshFeedback {
+  allowed: boolean;
+  primaryMessage: string;
+  secondaryMessage: string;
+  countdownLabel: string;
+  emphasis: 'ready' | 'cooldown' | 'waiting';
+}
+
+const RATE_LIMITING_EXPLANATION =
+  'We space out manual refreshes to protect partner rate limits and keep service reliable for everyone.';
+
+export function getManualRefreshFeedback(
+  lastManualRefreshAt: number | null | undefined,
+  cooldownMs: number,
+  nowMs: number = Date.now(),
+  manualMessage?: string | null,
+): ManualRefreshFeedback {
+  const { allowed, remainingMs } = evaluateManualRefreshCooldown(
+    lastManualRefreshAt,
+    cooldownMs,
+    nowMs,
+  );
+
+  if (allowed) {
+    return {
+      allowed: true,
+      primaryMessage: manualMessage ?? 'Refresh ready now',
+      secondaryMessage: 'Pull the latest insights on demand or let auto-refresh keep things updated.',
+      countdownLabel: 'Ready',
+      emphasis: 'ready',
+    };
+  }
+
+  const durationLabel = formatDurationFromMs(remainingMs);
+  return {
+    allowed: false,
+    primaryMessage:
+      manualMessage ?? `Please wait ${durationLabel} before refreshing again`,
+    secondaryMessage: RATE_LIMITING_EXPLANATION,
+    countdownLabel: `${durationLabel} remaining`,
+    emphasis: remainingMs <= MS_IN_MINUTE ? 'waiting' : 'cooldown',
+  };
+}
+
+export function getManualRefreshExplainer(): string {
+  return RATE_LIMITING_EXPLANATION;
+}
+
+export interface SourceAccessibilityMetadata {
+  role: 'group';
+  tabIndex: number;
+  ariaLabel: string;
+  ariaDescription: string;
+  statusAnnouncement: string;
+}
+
+export function buildSourceAccessibilityMetadata(args: {
+  sourceName: string;
+  status: ConsumerStatus;
+  category: string;
+  lastUpdatedLabel?: string;
+  businessImpact?: string;
+}): SourceAccessibilityMetadata {
+  const { sourceName, status, category, lastUpdatedLabel, businessImpact } = args;
+  const details = getConsumerStatusDetails(status);
+  const lastUpdated = lastUpdatedLabel ? `. ${lastUpdatedLabel}.` : '';
+  const impact = businessImpact ?? details.businessImpact;
+
+  return {
+    role: 'group',
+    tabIndex: 0,
+    ariaLabel: `${sourceName} — ${details.headline}`,
+    ariaDescription: `${impact} ${lastUpdated} Category: ${category}. Recommended action: ${details.recommendedAction}.`,
+    statusAnnouncement: `${sourceName} status ${status}. ${impact}`,
+  };
+}
+
+export type NotificationTone = 'positive' | 'caution' | 'warning' | 'info';
+
+export interface StatusNotification {
+  tone: NotificationTone;
+  headline: string;
+  body: string;
+}
+
+export function createStatusNotification(
+  sourceName: string,
+  status: ConsumerStatus,
+): StatusNotification {
+  const details = getConsumerStatusDetails(status);
+  return {
+    tone: details.tone,
+    headline: `${sourceName} is ${status}`,
+    body: `${details.summary} ${details.businessImpact}`,
+  };
+}
+
+export interface KeyboardEventLike {
+  key: string;
+  preventDefault: () => void;
+  shiftKey?: boolean;
+  metaKey?: boolean;
+  ctrlKey?: boolean;
+  altKey?: boolean;
+}
+
+export function isPrimaryActionKey(event: KeyboardEventLike): boolean {
+  const { key } = event;
+  return key === 'Enter' || key === ' ' || key === 'Spacebar';
+}
+
+export function handleKeyboardActivation(
+  event: KeyboardEventLike,
+  callback: () => void,
+): void {
+  if (isPrimaryActionKey(event)) {
+    event.preventDefault();
+    callback();
+  }
+}
+
+export function getKeyboardNavigationHint(index: number, total: number): string {
+  if (total <= 0) {
+    return 'Press tab to explore source details.';
+  }
+  return `Source ${index + 1} of ${total}. Use arrow keys or tab to navigate.`;
 }
 
 export function mergeInventoryWithHealth(
